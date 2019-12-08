@@ -1,8 +1,5 @@
 ﻿using System;
 
-namespace NetDaemonLib
-{
-    public class HassClient
-    {
-    }
+namespace HassClient {
+    public class HassClient { }
 }

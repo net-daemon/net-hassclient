@@ -3,8 +3,8 @@
     "type": "result",
     "success": true,
     "result": {
-        "latitude": 63.2398549,
-        "longitude": 16.4412267,
+        "latitude": 62.2398549,
+        "longitude": 15.4412267,
         "elevation": 49,
         "unit_system": {
             "length": "km",

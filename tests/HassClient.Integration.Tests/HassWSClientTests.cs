@@ -1,18 +1,17 @@
 using System;
-using Xunit;
-using Microsoft.AspNetCore.SignalR;
 using System.Threading.Tasks;
+using Xunit;
 namespace NetDaemonLibTest
 {
     public class UnitTest1 : IClassFixture<HomeAssistantMockFixture>
     {
         HomeAssistantMockFixture mockFixture;
 
-
         public UnitTest1(HomeAssistantMockFixture fixture)
         {
             mockFixture = fixture;
         }
+
         [Fact]
         async public void Test1()
         {
