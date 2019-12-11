@@ -53,6 +53,7 @@ public class HassMockStartup {
     // Get the path to mock testdata
     private readonly string mockTestdataPath = Path.Combine (AppContext.BaseDirectory.Substring (0, AppContext.BaseDirectory.LastIndexOf ("/bin")), "Mocks", "testdata");
     // Home Assistant will always prettyprint responses so so do the mock
+    private readonly byte[] authOkMessage = File.ReadAllBytes (Path.Combine (AppContext.BaseDirectory.Substring (0, AppContext.BaseDirectory.LastIndexOf ("/bin")), "Mocks", "testdata", "auth_ok.json"));
     private JsonSerializerOptions serializeOptions = new JsonSerializerOptions {
         WriteIndented = true
     };
@@ -110,7 +111,7 @@ public class HassMockStartup {
                         var authMessage = JsonSerializer.Deserialize<AuthMessage> (new ReadOnlySpan<byte> (buffer, 0, result.Count));
                         if (authMessage.AccessToken == "ABCDEFGHIJKLMNOPQ") {
                             // Hardcoded to be correct for testcase
-                            byte[] authOkMessage = File.ReadAllBytes (Path.Combine (this.mockTestdataPath, "auth_ok.json"));
+                            // byte[] authOkMessage = File.ReadAllBytes (Path.Combine (this.mockTestdataPath, "auth_ok.json"));
                             await webSocket.SendAsync (new ArraySegment<byte> (authOkMessage, 0, authOkMessage.Length), WebSocketMessageType.Text, true, CancellationToken.None);
                         } else {
                             // Hardcoded to be correct for testcase
