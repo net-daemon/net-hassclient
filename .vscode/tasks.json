@@ -13,7 +13,7 @@
                 "/property:GenerateFullPaths=true",
                 // Do not generate summary otherwise it leads to duplicate errors in Problems panel
                 "/consoleloggerparameters:NoSummary",
-                "${workspaceFolder}/src/WS/WS.csproj"
+                "${workspaceFolder}/net-hassclient.sln"
             ],
             "group": "build",
             "presentation": {

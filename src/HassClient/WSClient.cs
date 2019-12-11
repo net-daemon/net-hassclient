@@ -9,6 +9,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 
 [assembly : InternalsVisibleTo ("HassClientIntegrationTests")]
+[assembly : InternalsVisibleTo ("HassClient.Performance.Tests")]
 
 namespace HassClient {
 

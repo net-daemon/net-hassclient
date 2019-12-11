@@ -1,13 +1,17 @@
 using System;
 using System.Threading.Tasks;
 using HassClient;
+using HassClient.Performance.Tests.Mocks;
 using Xunit;
-namespace NetDaemonLibTest {
+using Xunit.Abstractions;
+
+namespace HassClient.Performance.Tests {
     public class UnitTest1 : IClassFixture<HomeAssistantMockFixture> {
         HomeAssistantMockFixture mockFixture;
-
-        public UnitTest1 (HomeAssistantMockFixture fixture) {
+        private readonly ITestOutputHelper output;
+        public UnitTest1 (HomeAssistantMockFixture fixture, ITestOutputHelper output) {
             mockFixture = fixture;
+            this.output = output;
         }
 
         [Fact]
@@ -38,18 +42,29 @@ namespace NetDaemonLibTest {
 
         [Fact]
         public async void TestPerformance () {
-            var NR_OF_REQUESTS = 800000;
+            var NR_OF_REQUESTS = 100000;
             WSClient wscli = new WSClient ();
             var result = await wscli.ConnectAsync (new Uri ("ws://127.0.0.1:5001/api/websocket"));
             var message = await wscli.WaitForMessage ();
             var stopWatch = System.Diagnostics.Stopwatch.StartNew ();
-            for (int i = 0; i < NR_OF_REQUESTS; i++) {
-                await wscli.SendMessage (new AuthMessage { AccessToken = "ABCDEFGHIJKLMNOPQ" });
-                message = await wscli.WaitForMessage ();
+            Task first = Task.Run (async () => {
+                for (int i = 0; i < NR_OF_REQUESTS; i++) {
+                    await wscli.SendMessage (new AuthMessage { AccessToken = "ABCDEFGHIJKLMNOPQ" });
+                    message = await wscli.WaitForMessage ();
 
-            }
+                }
+            });
+            Task second = Task.Run (async () => {
+                for (int i = 0; i < NR_OF_REQUESTS; i++) {
+                    await wscli.SendMessage (new AuthMessage { AccessToken = "ABCDEFGHIJKLMNOPQ" });
+                    message = await wscli.WaitForMessage ();
+
+                }
+            });
+            Task.WaitAll (first, second);
             stopWatch.Stop ();
-            System.IO.File.WriteAllText ("/tmp/perfresult.txt", $"Took {stopWatch.ElapsedMilliseconds / 1000} seconds with performance of {NR_OF_REQUESTS / (stopWatch.ElapsedMilliseconds / 1000)} roundtrips/s");
+            output.WriteLine ("TOMAS");
+            output.WriteLine ("Took {0} seconds with performance of {1} roundtrips/s", stopWatch.ElapsedMilliseconds / 1000, NR_OF_REQUESTS / (stopWatch.ElapsedMilliseconds / 1000));
             await wscli.DisconnectAsync ();
         }
     }
