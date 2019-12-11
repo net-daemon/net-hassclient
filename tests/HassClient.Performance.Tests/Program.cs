@@ -8,21 +8,21 @@ namespace HassClient.Performance.Tests {
     class Program {
         public static async Task Main () {
             using var mock = new HomeAssistantMockHandler ();
-            var NR_OF_REQUESTS = 100000;
+            var NR_OF_REQUESTS = 50000;
             WSClient wscli = new WSClient ();
             var result = await wscli.ConnectAsync (new Uri ("ws://127.0.0.1:5001/api/websocket"));
             var message = await wscli.WaitForMessage ();
             var stopWatch = System.Diagnostics.Stopwatch.StartNew ();
             Task first = Task.Run (async () => {
                 for (int i = 0; i < NR_OF_REQUESTS; i++) {
-                    await wscli.SendMessage (new AuthMessage { AccessToken = "ABCDEFGHIJKLMNOPQ" });
+                    wscli.SendMessage (new AuthMessage { AccessToken = "ABCDEFGHIJKLMNOPQ" });
                     message = await wscli.WaitForMessage ();
 
                 }
             });
             Task second = Task.Run (async () => {
                 for (int i = 0; i < NR_OF_REQUESTS; i++) {
-                    await wscli.SendMessage (new AuthMessage { AccessToken = "ABCDEFGHIJKLMNOPQ" });
+                    wscli.SendMessage (new AuthMessage { AccessToken = "ABCDEFGHIJKLMNOPQ" });
                     message = await wscli.WaitForMessage ();
 
                 }

@@ -5,7 +5,7 @@
     <LangVersion>8.0</LangVersion>
   </PropertyGroup>
 
-  <ItemGroup>
+   <ItemGroup>
     <PackageReference Include="System.IO.Pipelines" Version="4.7.0" />
   </ItemGroup>
 

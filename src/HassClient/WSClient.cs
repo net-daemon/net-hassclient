@@ -18,7 +18,7 @@ namespace HassClient {
 
         Task DisconnectAsync ();
 
-        Task SendMessage (MessageBase message);
+        bool SendMessage (MessageBase message);
     }
 
     /// <summary>
@@ -48,8 +48,9 @@ namespace HassClient {
             return await readChannel.Reader.ReadAsync ();
         }
 
-        public async Task SendMessage (MessageBase message) {
-            await this.writeChannel.Writer.WriteAsync (message);
+        public bool SendMessage (MessageBase message) {
+            return this.writeChannel.Writer.TryWrite(message);
+            //await this.writeChannel.Writer.WriteAsync (message);
         }
         public async Task<bool> ConnectAsync (Uri url) {
             // Check if we already have a websocket running
@@ -106,7 +107,8 @@ namespace HassClient {
                     try {
                         m = await JsonSerializer.DeserializeAsync<MessageBase> (reader.AsStream ());
                         await reader.CompleteAsync ();
-                        await this.readChannel.Writer.WriteAsync (m);
+                        // Todo: check for faults here
+                        this.readChannel.Writer.TryWrite (m);
 
                     } catch (System.Exception e) {
 
