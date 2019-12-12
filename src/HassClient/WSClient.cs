@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.IO.Pipelines;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
@@ -27,30 +26,77 @@ namespace HassClient {
     /// This class is threadsafe
     /// </summary>
     internal class WSClient : IWsClient {
-        private static readonly int CHANNEL_WRITE_SIZE = 100;
+        /// <summary>
+        /// Default size for channel
+        /// </summary>
+        private static readonly int CHANNEL_SIZE = 200;
+
+        /// <summary>
+        /// Default read buffer size for websockets
+        /// </summary>
         public static readonly int RECIEIVE_BUFFER_SIZE = 1024 * 4;
 
-        private JsonSerializerOptions serializeOptions = new JsonSerializerOptions {
+        /// <summary>
+        /// Default Json serialization options, Hass expects intended
+        /// </summary>
+        private JsonSerializerOptions defaultSerializerOptions = new JsonSerializerOptions {
             WriteIndented = true
         };
 
-        private ClientWebSocket client_ws = null;
-        private CancellationTokenSource cancel_source = new CancellationTokenSource ();
-        private Task readTask = null;
+        /// <summary>
+        /// The underlying currently connected socket or null if not connected
+        /// </summary>
+        private ClientWebSocket? client_ws = null;
 
-        private Channel<MessageBase> writeChannel = null;
-        private Channel<MessageBase> readChannel = null;
-        private Task writeTask = null;
-        // System.IO.Pipes.
+        /// <summary>
+        /// Used to cancel all asyncronus work
+        /// </summary>
+        private CancellationTokenSource cancelSource = new CancellationTokenSource ();
 
-        public async Task<MessageBase> WaitForMessage () {
+        /// <summary>
+        /// Async task to read all incoming messages
+        /// </summary>
+        private Task? readMessagePumpTask = null;
+
+        /// <summary>
+        /// Async task to write messages
+        /// </summary>
+        private Task? writeMessagePumpTask = null;
+
+        /// <summary>
+        /// Channel used as a async thread safe way to wite messages to the websocket
+        /// </summary>
+        private Channel<MessageBase> writeChannel = Channel.CreateBounded<MessageBase> (WSClient.CHANNEL_SIZE);
+
+        /// <summary>
+        /// Channel used as a async thread safe way to read messages from the websocket
+        /// </summary>
+        private Channel<HassMessage> readChannel = Channel.CreateBounded<HassMessage> (WSClient.CHANNEL_SIZE);
+
+        /// <summary>
+        /// Wait and read next message from websocket
+        /// </summary>
+        /// <returns>Returns a message</returns>
+        public async Task<HassMessage> ReadMessageAsync () {
             await readChannel.Reader.WaitToReadAsync ();
             return await readChannel.Reader.ReadAsync ();
         }
 
+        /// <summary>
+        /// Message id sent in command messages
+        /// </summary>
+        private int messageId = 0;
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
         public bool SendMessage (MessageBase message) {
-            return this.writeChannel.Writer.TryWrite(message);
-            //await this.writeChannel.Writer.WriteAsync (message);
+            if (message is IMessageHasId messageWithId) {
+                messageWithId.Id = ++this.messageId;
+            }
+
+            return this.writeChannel.Writer.TryWrite (message);
         }
         public async Task<bool> ConnectAsync (Uri url) {
             // Check if we already have a websocket running
@@ -59,14 +105,12 @@ namespace HassClient {
             }
 
             var ws = new System.Net.WebSockets.ClientWebSocket ();
-            await ws.ConnectAsync (url, cancel_source.Token);
+            await ws.ConnectAsync (url, cancelSource.Token);
 
             if (ws.State == WebSocketState.Open) {
                 this.client_ws = ws;
-                this.writeChannel = Channel.CreateBounded<MessageBase> (WSClient.CHANNEL_WRITE_SIZE);
-                this.readChannel = Channel.CreateBounded<MessageBase> (WSClient.CHANNEL_WRITE_SIZE);
-                this.readTask = Task.Run (ReadMessagePump);
-                this.writeTask = Task.Run (WriteMessagePump);
+                this.readMessagePumpTask = Task.Run (ReadMessagePump);
+                this.writeMessagePumpTask = Task.Run (WriteMessagePump);
                 return true;
             }
             return false;
@@ -83,29 +127,31 @@ namespace HassClient {
                 await this.client_ws.CloseAsync (WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
             }
             // Cancel all operations on the socket
-            cancel_source.Cancel ();
+            cancelSource.Cancel ();
             // Wait for read and write tasks to complete max 5 seconds
-            Task.WaitAll (new Task[] { this.readTask, this.writeTask }, 5000, CancellationToken.None);
+            if (this.readMessagePumpTask != null && this.writeMessagePumpTask != null)
+                Task.WaitAll (new Task[] { this.readMessagePumpTask, this.writeMessagePumpTask }, 5000, CancellationToken.None);
         }
 
         private async void ReadMessagePump () {
+            if (this.client_ws == null)
+                throw new MissingMemberException ("client_ws is null!");
 
-            while (!cancel_source.IsCancellationRequested && !this.client_ws.CloseStatus.HasValue) {
+            while (!cancelSource.IsCancellationRequested && !this.client_ws.CloseStatus.HasValue) {
                 var pipe = new Pipe ();
                 var writer = pipe.Writer;
                 var reader = pipe.Reader;
 
                 Memory<byte> memory = writer.GetMemory (WSClient.RECIEIVE_BUFFER_SIZE);
-                var result = await this.client_ws.ReceiveAsync (memory, cancel_source.Token);
+                var result = await this.client_ws.ReceiveAsync (memory, cancelSource.Token);
                 if (result.Count == 0) break; // We canceled.
                 writer.Advance (result.Count);
                 if (result.EndOfMessage) {
 
                     await writer.FlushAsync ();
                     await writer.CompleteAsync ();
-                    MessageBase m = null;
                     try {
-                        m = await JsonSerializer.DeserializeAsync<MessageBase> (reader.AsStream ());
+                        var m = await JsonSerializer.DeserializeAsync<HassMessage> (reader.AsStream ());
                         await reader.CompleteAsync ();
                         // Todo: check for faults here
                         this.readChannel.Writer.TryWrite (m);
@@ -120,12 +166,15 @@ namespace HassClient {
             }
         }
         private async void WriteMessagePump () {
-            while (!cancel_source.IsCancellationRequested && !this.client_ws.CloseStatus.HasValue) {
-                try {
-                    var nextMessage = await writeChannel.Reader.ReadAsync (cancel_source.Token);
-                    var result = JsonSerializer.SerializeToUtf8Bytes (nextMessage, nextMessage.GetType (), serializeOptions);
+            if (this.client_ws == null)
+                throw new MissingMemberException ("client_ws is null!");
 
-                    await this.client_ws.SendAsync (result, WebSocketMessageType.Text, true, cancel_source.Token);
+            while (!cancelSource.IsCancellationRequested && !this.client_ws.CloseStatus.HasValue) {
+                try {
+                    var nextMessage = await writeChannel.Reader.ReadAsync (cancelSource.Token);
+                    var result = JsonSerializer.SerializeToUtf8Bytes (nextMessage, nextMessage.GetType (), defaultSerializerOptions);
+
+                    await this.client_ws.SendAsync (result, WebSocketMessageType.Text, true, cancelSource.Token);
                 } catch (System.OperationCanceledException) {
                     // Canceled the thread
                     break;
@@ -137,6 +186,5 @@ namespace HassClient {
             }
         }
     }
-    // while ( return;
-    // }
+
 }

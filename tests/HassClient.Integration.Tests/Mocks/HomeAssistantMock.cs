@@ -170,7 +170,7 @@ namespace HassClient.Performance.Tests.Mocks {
             public Boolean Success { get; set; } = true;
 
             [JsonPropertyName ("result")]
-            public Object Result { get; set; }
+            public Object Result { get; set; } = "some result";
         }
     }
 }
