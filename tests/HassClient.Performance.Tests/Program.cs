@@ -32,7 +32,7 @@ namespace HassClient.Performance.Tests {
             stopWatch.Stop ();
             Console.WriteLine ("Took {0} seconds with performance of {1} roundtrips/s", stopWatch.ElapsedMilliseconds / 1000, NR_OF_REQUESTS / (stopWatch.ElapsedMilliseconds / 1000));
             Console.WriteLine ("DISCONNECTS!");
-            await wscli.DisconnectAsync ();
+            await wscli.CloseAsync ();
         }
     }
 
