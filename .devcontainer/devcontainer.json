@@ -7,7 +7,7 @@
 	// You can edit these settings after create using File > Preferences > Settings > Remote.
 	"settings": {
 		"terminal.integrated.shell.linux": "/bin/bash",
-		"dotnet-test-explorer.testProjectPath": "tests/HassClient.Tests"
+		"dotnet-test-explorer.testProjectPath": "tests/HassClient.Integration.Tests"
 	},
 	"postCreateCommand": "dotnet restore src/HassClient && dotnet restore tests/HassClient.Tests",
 	// Uncomment the next line if you want to publish any ports.
