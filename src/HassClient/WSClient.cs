@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 
 [assembly: InternalsVisibleTo("HassClientIntegrationTests")]
@@ -36,74 +37,93 @@ namespace HassClient
         /// <summary>
         /// The max time we will wait for the socket to gracefully close
         /// </summary>
-        private static readonly int MAX_WAITTIME_SOCKET_CLOSE = 5000; // 5 seconds
+        private static readonly int _MAX_WAITTIME_SOCKET_CLOSE = 5000; // 5 seconds
 
         /// <summary>
         /// Default size for channel
         /// </summary>
-        private static readonly int CHANNEL_SIZE = 200;
+        private static readonly int _DEFAULT_CHANNEL_SIZE = 200;
 
         /// <summary>
         /// Default read buffer size for websockets
         /// </summary>
-        public static readonly int RECIEIVE_BUFFER_SIZE = 1024 * 4;
+        private static readonly int _DEFAULT_RECIEIVE_BUFFER_SIZE = 1024 * 4;
 
         /// <summary>
         /// Indicates if client is valid
         /// </summary>
-        private bool isValid = false;
+        private bool _isValid = false;
 
         /// <summary>
         /// Default Json serialization options, Hass expects intended
         /// </summary>
         private JsonSerializerOptions defaultSerializerOptions = new JsonSerializerOptions
         {
-            WriteIndented = true
+            WriteIndented = false
         };
 
         /// <summary>
         /// The underlying currently connected socket or null if not connected
         /// </summary>
-        private ClientWebSocket? client_ws = null;
+        private ClientWebSocket? _ws = null;
 
         /// <summary>
         /// Used to cancel all asyncronus work
         /// </summary>
-        private CancellationTokenSource cancelSource = new CancellationTokenSource();
+        private CancellationTokenSource _cancelSource = new CancellationTokenSource();
 
         /// <summary>
         /// Async task to read all incoming messages
         /// </summary>
-        private Task? readMessagePumpTask = null;
+        private Task? _readMessagePumpTask = null;
 
         /// <summary>
         /// Async task to write messages
         /// </summary>
-        private Task? writeMessagePumpTask = null;
+        private Task? _writeMessagePumpTask = null;
 
         /// <summary>
         /// Channel used as a async thread safe way to wite messages to the websocket
         /// </summary>
-        private Channel<MessageBase> writeChannel = Channel.CreateBounded<MessageBase>(WSClient.CHANNEL_SIZE);
+        private Channel<MessageBase> _writeChannel = Channel.CreateBounded<MessageBase>(WSClient._DEFAULT_CHANNEL_SIZE);
 
         /// <summary>
         /// Channel used as a async thread safe way to read messages from the websocket
         /// </summary>
-        private Channel<HassMessage> readChannel = Channel.CreateBounded<HassMessage>(WSClient.CHANNEL_SIZE);
+        private Channel<HassMessage> _readChannel = Channel.CreateBounded<HassMessage>(WSClient._DEFAULT_CHANNEL_SIZE);
+
+        private ILogger? _logger = null;
+        public WSClient(ILoggerFactory? factory = null)
+        {
+            if (factory == null)
+            {
+                factory = LoggerFactory.Create(builder =>
+                {
+                    builder
+                        .ClearProviders()
+                        .AddFilter("HassClient.WSClient", LogLevel.Trace)
+                        .AddConsole();
+                });
+
+            }
+            _logger = factory?.CreateLogger<WSClient>();
+
+        }
 
         /// <summary>
         /// Wait and read next message from websocket
         /// </summary>
         /// <returns>Returns a message</returns>
+        /// <exception>OperationCanceledException if the operation is canceled.</exception>
         public async Task<HassMessage> ReadMessageAsync()
         {
-            return await readChannel.Reader.ReadAsync();
+            return await _readChannel.Reader.ReadAsync(this._cancelSource.Token);
         }
 
         /// <summary>
         /// Message id sent in command messages
         /// </summary>
-        private int messageId = 0;
+        private int _messageId = 0;
 
         /// <summary>
         /// Thread safe dicitionary that holds information about all command and command id:s
@@ -111,7 +131,6 @@ namespace HassClient
         /// </summary>
         /// <typeparam name="int">The message id sen in command message</typeparam>
         /// <typeparam name="string">The message type</typeparam>
-        /// <returns></returns>
         public static ConcurrentDictionary<int, string> CommandsSent { get; set; } = new ConcurrentDictionary<int, string>(32, 200);
 
         /// <summary>
@@ -121,14 +140,15 @@ namespace HassClient
         /// <returns>Returns true if succeeded sending message</returns>
         public bool SendMessage(MessageBase message)
         {
+            _logger.LogTrace($"Sends message {message.Type}");
             if (message is CommandMessage commandMessage)
             {
-                commandMessage.Id = ++this.messageId;
+                commandMessage.Id = ++this._messageId;
                 //We save the type of command so we can deserialize the correct message later
-                CommandsSent[this.messageId] = commandMessage.Type;
+                CommandsSent[this._messageId] = commandMessage.Type;
 
             }
-            return this.writeChannel.Writer.TryWrite(message);
+            return this._writeChannel.Writer.TryWrite(message);
         }
 
         /// <summary>
@@ -139,25 +159,28 @@ namespace HassClient
         public async Task<bool> ConnectAsync(Uri url)
         {
             // Check if we already have a websocket running
-            if (this.client_ws != null)
+            if (this._ws != null)
             {
-                throw new InvalidOperationException("Can't call connect on connected websocket.");
+                throw new InvalidOperationException("Allready connected to the remote websocket.");
             }
 
             var ws = new System.Net.WebSockets.ClientWebSocket();
-            await ws.ConnectAsync(url, cancelSource.Token);
+            await ws.ConnectAsync(url, _cancelSource.Token);
 
             if (ws.State == WebSocketState.Open)
             {
                 // Initialize the states
-                this.isValid = true;
-                this.isClosing = false;
-                cancelSource = new CancellationTokenSource();
-                this.client_ws = ws;
-                this.readMessagePumpTask = Task.Run(ReadMessagePump);
-                this.writeMessagePumpTask = Task.Run(WriteMessagePump);
+                this._isValid = true;
+                this._isClosing = false;
+                _cancelSource = new CancellationTokenSource();
+                this._ws = ws;
+                this._readMessagePumpTask = Task.Run(ReadMessagePump);
+                this._writeMessagePumpTask = Task.Run(WriteMessagePump);
+                _logger.LogTrace($"Connected to websocket ({url})");
                 return true;
             }
+            _logger.LogTrace($"Failed to connect to websocket socket state: {ws.State}");
+
             return false;
 
         }
@@ -166,7 +189,7 @@ namespace HassClient
         /// Indicates if we are in the process of closing the socket and cleaning up resources
         /// Avoids recursive states
         /// </summary>
-        private bool isClosing = false;
+        private bool _isClosing = false;
 
         /// <summary>
         /// Close the websocket gracefully
@@ -180,22 +203,25 @@ namespace HassClient
         /// <returns></returns>
         private async Task DoNormalClosureOfWebSocket()
         {
-            if (this.client_ws != null &&
-                (this.client_ws.State == WebSocketState.CloseReceived ||
-                this.client_ws.State == WebSocketState.Open ||
-                this.client_ws.State == WebSocketState.CloseSent))
+            _logger.LogTrace($"Do normal close of websocket");
+
+            if (this._ws != null &&
+                (this._ws.State == WebSocketState.CloseReceived ||
+                this._ws.State == WebSocketState.Open ||
+                this._ws.State == WebSocketState.CloseSent))
             {
-                var timeout = new CancellationTokenSource(WSClient.MAX_WAITTIME_SOCKET_CLOSE);
+                var timeout = new CancellationTokenSource(WSClient._MAX_WAITTIME_SOCKET_CLOSE);
                 try
                 {
                     // Send close message (some bug n CloseAsync makes we have to do it this way)
-                    await this.client_ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
+                    await this._ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
                     // Wait for readpump finishing when receiving the close message
-                    this.readMessagePumpTask?.Wait(timeout.Token);
+                    this._readMessagePumpTask?.Wait(timeout.Token);
                 }
                 catch (OperationCanceledException)
                 {
                     // normal upon task/token cancellation, disregard
+                    _logger.LogTrace($"Close operations took more than 5 seconds.. closing hard!");
                 }
             }
         }
@@ -206,25 +232,30 @@ namespace HassClient
         {
             lock (this)
             {
-                if (isClosing) return;
+                if (_isClosing) return;
             }
+
+            _logger.LogTrace($"Async close websocket");
+
             // First do websocket close management
             await DoNormalClosureOfWebSocket();
             // Cancel all async stuff
-            this.cancelSource.Cancel();
+            this._cancelSource.Cancel();
 
             // Wait for read and write tasks to complete max 5 seconds
-            if (this.readMessagePumpTask != null && this.writeMessagePumpTask != null)
-                Task.WaitAll(new Task[] { this.readMessagePumpTask, this.writeMessagePumpTask },
-                    WSClient.MAX_WAITTIME_SOCKET_CLOSE, CancellationToken.None);
+            if (this._readMessagePumpTask != null && this._writeMessagePumpTask != null)
+                Task.WaitAll(new Task[] { this._readMessagePumpTask, this._writeMessagePumpTask },
+                    WSClient._MAX_WAITTIME_SOCKET_CLOSE, CancellationToken.None);
 
 
-            this.client_ws?.Dispose();
-            this.client_ws = null;
+            this._ws?.Dispose();
+            this._ws = null;
 
-            this.isValid = false;
-            this.isClosing = false;
-            this.cancelSource = new CancellationTokenSource();
+            this._isValid = false;
+            this._isClosing = false;
+            this._cancelSource = new CancellationTokenSource();
+
+            _logger.LogTrace($"Async close websocket done");
         }
 
         /// <summary>
@@ -234,10 +265,6 @@ namespace HassClient
         {
             Dispose(true);
             // This object will be cleaned up by the Dispose method.
-            // Therefore, you should call GC.SupressFinalize to
-            // take this object off the finalization queue
-            // and prevent finalization code for this object
-            // from executing a second time.
             GC.SuppressFinalize(this);
         }
 
@@ -251,8 +278,8 @@ namespace HassClient
                 //
                 if (disposing)
                 {
-                    this.client_ws?.Dispose();
-                    this.cancelSource.Dispose();
+                    this._ws?.Dispose();
+                    this._cancelSource.Dispose();
                 }
                 disposed = true;
             }
@@ -263,22 +290,26 @@ namespace HassClient
         /// </summary>
         private async void ReadMessagePump()
         {
-            if (this.client_ws == null)
-                throw new MissingMemberException("client_ws is null!");
+            _logger?.LogTrace($"Start ReadMessagePump");
+
+            if (this._ws == null)
+                throw new MissingMemberException("_ws is null!");
 
             var pipe = new Pipe();
             var totalCount = 0;
 
-            while (!cancelSource.IsCancellationRequested && !this.client_ws.CloseStatus.HasValue)
+            // While not canceled and websocket is not closed
+            while (!_cancelSource.IsCancellationRequested && !this._ws.CloseStatus.HasValue)
             {
                 try
                 {
-                    Memory<byte> memory = pipe.Writer.GetMemory(WSClient.RECIEIVE_BUFFER_SIZE);
+                    Memory<byte> memory = pipe.Writer.GetMemory(WSClient._DEFAULT_RECIEIVE_BUFFER_SIZE);
 
-                    var result = await this.client_ws.ReceiveAsync(memory, cancelSource.Token);
+                    var result = await this._ws.ReceiveAsync(memory, _cancelSource.Token);
 
                     if (result.MessageType == WebSocketMessageType.Close || result.Count == 0)
                     {
+                        await this.CloseAsync();
                         // Remote disconnected just leave the readpump
                         return;
                     }
@@ -294,7 +325,7 @@ namespace HassClient
                             var m = await JsonSerializer.DeserializeAsync<HassMessage>(pipe.Reader.AsStream());
                             await pipe.Reader.CompleteAsync();
                             // Todo: check for faults here
-                            this.readChannel.Writer.TryWrite(m);
+                            this._readChannel.Writer.TryWrite(m);
                             pipe = new Pipe();
                             totalCount = 0;
 
@@ -304,7 +335,10 @@ namespace HassClient
                             // Todo: Log the seralizer error here later but continue receive
                             // messages from the server. Then we can survive the server
                             // Sending bad json messages
-                            throw e;
+                            _logger?.LogDebug(e, "Error deserialize json response");
+                            // Make sure we put a small delay incase we have severe error so the loop
+                            // doesnt kill the server
+                            await Task.Delay(20);
                         }
 
                     }
@@ -316,20 +350,22 @@ namespace HassClient
                 }
 
             }
+            _logger?.LogTrace($"Exit ReadMessagePump");
         }
         private async void WriteMessagePump()
         {
-            if (this.client_ws == null)
+            _logger?.LogTrace($"Start WriteMessagePump");
+            if (this._ws == null)
                 throw new MissingMemberException("client_ws is null!");
 
-            while (!cancelSource.IsCancellationRequested && !this.client_ws.CloseStatus.HasValue)
+            while (!_cancelSource.IsCancellationRequested && !this._ws.CloseStatus.HasValue)
             {
                 try
                 {
-                    var nextMessage = await writeChannel.Reader.ReadAsync(cancelSource.Token);
+                    var nextMessage = await _writeChannel.Reader.ReadAsync(_cancelSource.Token);
                     var result = JsonSerializer.SerializeToUtf8Bytes(nextMessage, nextMessage.GetType(), defaultSerializerOptions);
 
-                    await this.client_ws.SendAsync(result, WebSocketMessageType.Text, true, cancelSource.Token);
+                    await this._ws.SendAsync(result, WebSocketMessageType.Text, true, _cancelSource.Token);
                 }
                 catch (System.OperationCanceledException)
                 {
@@ -343,7 +379,9 @@ namespace HassClient
                 }
 
             }
+            _logger?.LogTrace($"Exit WriteMessagePump");
         }
+
     }
 
 }

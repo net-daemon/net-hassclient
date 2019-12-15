@@ -51,6 +51,18 @@ namespace HassClient.Integration.Tests
             await wscli.CloseAsync();
 
         }
+        [Fact]
+        public async void TestServerDisconnect()
+        {
+            using WSClient wscli = new WSClient();
+            var result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
+            var message = await wscli.ReadMessageAsync();
+
+
+            wscli.SendMessage(new MessageBase { Type = "fake_disconnect_test" });
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await wscli.ReadMessageAsync());
+            await wscli.CloseAsync();
+        }
 
         [Fact]
         public async void TestGetStatesMessage()
@@ -107,7 +119,7 @@ namespace HassClient.Integration.Tests
             var lastChanged = stateMessage?.OldState?.LastChanged;
             // Convert utc date to local so we can compare, this test will be ok on any timezone
             var target = new DateTime(2019, 2, 17, 11, 41, 08, DateTimeKind.Utc).ToLocalTime();
-        
+
             Assert.True(lastChanged?.Year == target.Year);
             Assert.True(lastChanged?.Month == target.Month);
             Assert.True(lastChanged?.Day == target.Day);

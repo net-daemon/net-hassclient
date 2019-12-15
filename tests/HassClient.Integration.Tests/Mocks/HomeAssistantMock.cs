@@ -121,8 +121,8 @@ namespace HassClient.Performance.Tests.Mocks
                 var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                 while (!result.CloseStatus.HasValue)
                 {
-                    var hassMessag = JsonSerializer.Deserialize<HassMessage>(new ReadOnlySpan<byte>(buffer, 0, result.Count));
-                    switch (hassMessag.Type)
+                    var hassMessage = JsonSerializer.Deserialize<HassMessage>(new ReadOnlySpan<byte>(buffer, 0, result.Count));
+                    switch (hassMessage.Type)
                     {
                         // We have an auth message
                         case "auth":
@@ -163,6 +163,25 @@ namespace HassClient.Performance.Tests.Mocks
                             await webSocket.SendAsync(new ArraySegment<byte>(stateReusultMessage, 0, stateReusultMessage.Length), WebSocketMessageType.Text, true, CancellationToken.None);
 
                             break;
+
+                        case "fake_disconnect_test":
+                            // This is not a real home assistant message, just used to test disconnect from socket.
+                            // This one tests a normal disconnect
+                            var timeout = new CancellationTokenSource(5000);
+                            try
+                            {
+                                // Send close message (some bug n CloseAsync makes we have to do it this way)
+                                await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
+                                // Wait for close message
+                                await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), timeout.Token);
+
+                            }
+                            catch (OperationCanceledException)
+                            {
+
+                            }
+                            return;
+
                     }
                     // Wait for incoming messages
                     result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
