@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
+
 [assembly: InternalsVisibleTo("HassClientIntegrationTests")]
 [assembly: InternalsVisibleTo("HassClient.Performance.Tests")]
 
@@ -247,6 +248,7 @@ namespace HassClient
             {
                 // If disposing equals true, dispose all managed
                 // and unmanaged resources.
+                //
                 if (disposing)
                 {
                     this.client_ws?.Dispose();

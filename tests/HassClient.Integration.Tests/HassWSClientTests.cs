@@ -105,8 +105,9 @@ namespace HassClient.Integration.Tests
 
             // Test the date and time conversions that it matches UTC time
             var lastChanged = stateMessage?.OldState?.LastChanged;
-            var target = new DateTime(2019, 2, 17, 11, 41, 08, DateTimeKind.Utc);
-
+            // Convert utc date to local so we can compare, this test will be ok on any timezone
+            var target = new DateTime(2019, 2, 17, 11, 41, 08, DateTimeKind.Utc).ToLocalTime();
+        
             Assert.True(lastChanged?.Year == target.Year);
             Assert.True(lastChanged?.Month == target.Month);
             Assert.True(lastChanged?.Day == target.Day);
