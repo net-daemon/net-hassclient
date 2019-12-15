@@ -17,6 +17,7 @@ namespace HassClient
         [JsonPropertyName("type")]
         public string Type { get; set; } = "";
     }
+    [JsonConverter(typeof(HassMessageConverter))]
     public class HassMessage : MessageBase
     {
         [JsonPropertyName("id")]
@@ -28,13 +29,32 @@ namespace HassClient
         [JsonPropertyName("success")]
         public bool? Success { get; set; }
 
+
         [JsonPropertyName("event")]
         [JsonConverter(typeof(EventMessageConverter))]
         public EventMessage? Event { get; set; }
 
+
+        [JsonPropertyName("result")]
+        public JsonElement? ResultElement { get; set; } = null;
+
+        public object? Result { get; set; }
+
     }
 
+    public class ResultData
+    {
 
+    }
+
+    /// <summary>
+    /// Hacky way to be able to serailize the Hassmessage using a converter and
+    /// still able to use standard deseialization
+    /// </summary>
+    internal class HassMessageSerializer : HassMessage
+    {
+
+    }
 
     public class EventMessage
     {
@@ -99,23 +119,25 @@ namespace HassClient
         public string AccessToken { get; set; } = "";
     }
 
-    public class SubscribeEventMessage : MessageBase, IMessageHasId
+    public class CommandMessage : MessageBase
     {
-        public SubscribeEventMessage() => this.Type = "subscribe_events";
-
         [JsonPropertyName("id")]
         public int Id { get; set; } = 0;
+    }
+
+    public class SubscribeEventMessage : CommandMessage
+    {
+        public SubscribeEventMessage() => this.Type = "subscribe_events";
 
         [JsonPropertyName("event_type")]
         public string? EventType { get; set; }
     }
 
-    public class GetStatesMessage : MessageBase, IMessageHasId
+    public class GetStatesMessage : CommandMessage, IMessageHasId
     {
         public GetStatesMessage() => this.Type = "get_states";
 
-        [JsonPropertyName("id")]
-        public int Id { get; set; } = 0;
+
     }
 
     #region -- Json Extensions
@@ -137,6 +159,45 @@ namespace HassClient
             return document.RootElement.ToObject<T>(options);
         }
 
+    }
+
+    /// <summary>
+    /// Converter that intercepts EventMessages and serializes the correct data structure
+    /// </summary>
+    public class HassMessageConverter : JsonConverter<HassMessage>
+    {
+        public override HassMessage Read(
+            ref Utf8JsonReader reader,
+            Type typeToConvert,
+            JsonSerializerOptions options)
+        {
+
+
+            var m = JsonSerializer.Deserialize<HassMessageSerializer>(ref reader, options);
+
+            if (m.Id > 0)
+            {
+                string? command = "";
+                // It is an command response, get command
+                if (WSClient.CommandsSent.Remove(m.Id, out command))
+                {
+                    switch (command)
+                    {
+                        case "get_states":
+                            m.Result = m.ResultElement?.ToObject<List<StateMessage>>();
+                            break;
+                    }
+                }
+            }
+
+            return m as HassMessage;
+        }
+
+        public override void Write(
+            Utf8JsonWriter writer,
+            HassMessage value,
+            JsonSerializerOptions options) =>
+                throw new InvalidOperationException("Serialization not supported for the class EventMessage.");
     }
 
     /// <summary>
@@ -169,6 +230,9 @@ namespace HassClient
             JsonSerializerOptions options) =>
                 throw new InvalidOperationException("Serialization not supported for the class EventMessage.");
     }
+
+
+
     #endregion
 
 }

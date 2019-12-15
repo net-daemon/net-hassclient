@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO.Pipelines;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
@@ -104,17 +105,28 @@ namespace HassClient
         private int messageId = 0;
 
         /// <summary>
+        /// Thread safe dicitionary that holds information about all command and command id:s
+        /// Is used to correclty deserialize the result messages from commands.
+        /// </summary>
+        /// <typeparam name="int">The message id sen in command message</typeparam>
+        /// <typeparam name="string">The message type</typeparam>
+        /// <returns></returns>
+        public static ConcurrentDictionary<int, string> CommandsSent { get; set; } = new ConcurrentDictionary<int, string>(32, 200);
+
+        /// <summary>
         /// Sends a message through the websocket
         /// </summary>
         /// <param name="message"></param>
         /// <returns>Returns true if succeeded sending message</returns>
         public bool SendMessage(MessageBase message)
         {
-            if (message is IMessageHasId messageWithId)
+            if (message is CommandMessage commandMessage)
             {
-                messageWithId.Id = ++this.messageId;
-            }
+                commandMessage.Id = ++this.messageId;
+                //We save the type of command so we can deserialize the correct message later
+                CommandsSent[this.messageId] = commandMessage.Type;
 
+            }
             return this.writeChannel.Writer.TryWrite(message);
         }
 
@@ -253,7 +265,7 @@ namespace HassClient
                 throw new MissingMemberException("client_ws is null!");
 
             var pipe = new Pipe();
-
+            var totalCount = 0;
 
             while (!cancelSource.IsCancellationRequested && !this.client_ws.CloseStatus.HasValue)
             {
@@ -269,9 +281,10 @@ namespace HassClient
                         return;
                     }
                     pipe.Writer.Advance(result.Count);
+                    totalCount += result.Count;
+
                     if (result.EndOfMessage)
                     {
-
                         await pipe.Writer.FlushAsync();
                         await pipe.Writer.CompleteAsync();
                         try
@@ -281,6 +294,7 @@ namespace HassClient
                             // Todo: check for faults here
                             this.readChannel.Writer.TryWrite(m);
                             pipe = new Pipe();
+                            totalCount = 0;
 
                         }
                         catch (System.Exception e)

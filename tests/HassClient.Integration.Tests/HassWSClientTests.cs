@@ -5,6 +5,7 @@ using System.Text.Json;
 using HassClient.Performance.Tests.Mocks;
 using Xunit;
 using Xunit.Abstractions;
+using System.Collections.Generic;
 
 namespace HassClient.Integration.Tests
 {
@@ -50,6 +51,7 @@ namespace HassClient.Integration.Tests
             await wscli.CloseAsync();
 
         }
+
         [Fact]
         public async void TestGetStatesMessage()
         {
@@ -61,10 +63,14 @@ namespace HassClient.Integration.Tests
             // Send the get states message
             wscli.SendMessage(new GetStatesMessage { });
 
-            // Read response result
+            // Read response result, see result_states.json file for this result
             var message = await wscli.ReadMessageAsync();
+            var wsResult = message?.Result as List<StateMessage>;
 
-            // Assert.True(true);
+            Assert.True(wsResult?[8].EntityId == "binary_sensor.vardagsrum_pir");
+            Assert.True(wsResult?[8].State == "on");
+            Assert.True(((JsonElement)wsResult?[8].Attributes?["on"]).GetBoolean() == true);
+
             await wscli.CloseAsync();
         }
 
