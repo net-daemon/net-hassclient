@@ -57,9 +57,9 @@ namespace HassClient.Performance.Tests.Mocks
     public class HassMockStartup
     {
         // Get the path to mock testdata
-        private readonly string mockTestdataPath = Path.Combine(AppContext.BaseDirectory.Substring(0, AppContext.BaseDirectory.LastIndexOf($"{Path.DirectorySeparatorChar}bin")), "Mocks", "testdata");
+        private readonly string mockTestdataPath = Path.Combine(AppContext.BaseDirectory, "Mocks", "testdata");
         // Home Assistant will always prettyprint responses so so do the mock
-        private readonly byte[] authOkMessage = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory.Substring(0, AppContext.BaseDirectory.LastIndexOf($"{Path.DirectorySeparatorChar}bin")), "Mocks", "testdata", "auth_ok.json"));
+        private readonly byte[] authOkMessage = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Mocks", "testdata", "auth_ok.json"));
         private JsonSerializerOptions serializeOptions = new JsonSerializerOptions
         {
             WriteIndented = true

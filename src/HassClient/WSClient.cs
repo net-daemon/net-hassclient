@@ -16,6 +16,9 @@ using Microsoft.Extensions.Logging;
 namespace HassClient
 {
 
+    /// <summary>
+    /// The interface for ws client
+    /// </summary>
     internal interface IWsClient
     {
         Task<bool> ConnectAsync(Uri url);
@@ -374,7 +377,8 @@ namespace HassClient
                 }
                 catch (System.Exception e)
                 {
-                    // Todo: log
+                    _logger?.LogWarning($"Exit WriteMessagePump");
+                    await Task.Delay(20); // Incase we are looping add a delay
                     throw e;
                 }
 
