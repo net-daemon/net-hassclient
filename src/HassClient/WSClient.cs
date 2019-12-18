@@ -104,7 +104,7 @@ namespace HassClient
                 {
                     builder
                         .ClearProviders()
-                        .AddFilter("HassClient.WSClient", LogLevel.Trace)
+                        .AddFilter("HassClient.WSClient", LogLevel.Error)
                         .AddConsole();
                 });
 
