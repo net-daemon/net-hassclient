@@ -19,8 +19,13 @@ namespace HassClient
     /// <summary>
     /// The interface for ws client
     /// </summary>
-    internal interface IWsClient
+    public interface IWsClient
     {
+        /// <summary>
+        /// Connects to the Home Assistant websocket
+        /// </summary>
+        /// <param name="url">The url to the websocket. Typically host:8192/api/websocket</param>
+        /// <returns>Returns true if connected</returns>
         Task<bool> ConnectAsync(Uri url);
 
         Task CloseAsync();
