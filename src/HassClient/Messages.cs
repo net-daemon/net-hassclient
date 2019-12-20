@@ -181,7 +181,7 @@ namespace HassClient
             if (m.Id > 0)
             {
                 // It is an command response, get command
-                if (WSClient.CommandsSent.Remove(m.Id, out string command))
+                if (HassClient.CommandsSent.Remove(m.Id, out string? command))
                 {
                     switch (command)
                     {
