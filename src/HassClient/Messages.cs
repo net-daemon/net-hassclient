@@ -113,7 +113,7 @@ namespace HassClient
 
     public class AuthMessage : MessageBase
     {
-        public AuthMessage() => this.Type = "auth";
+        public AuthMessage() => Type = "auth";
 
         [JsonPropertyName("access_token")]
         public string AccessToken { get; set; } = "";
@@ -127,7 +127,7 @@ namespace HassClient
 
     public class SubscribeEventMessage : CommandMessage
     {
-        public SubscribeEventMessage() => this.Type = "subscribe_events";
+        public SubscribeEventMessage() => Type = "subscribe_events";
 
         [JsonPropertyName("event_type")]
         public string? EventType { get; set; }
@@ -135,7 +135,7 @@ namespace HassClient
 
     public class GetStatesMessage : CommandMessage, IMessageHasId
     {
-        public GetStatesMessage() => this.Type = "get_states";
+        public GetStatesMessage() => Type = "get_states";
 
 
     }
@@ -148,7 +148,10 @@ namespace HassClient
         {
             var bufferWriter = new ArrayBufferWriter<byte>();
             using (var writer = new Utf8JsonWriter(bufferWriter))
+            {
                 element.WriteTo(writer);
+            }
+
             return JsonSerializer.Deserialize<T>(bufferWriter.WrittenSpan, options);
         }
 
@@ -173,13 +176,12 @@ namespace HassClient
         {
 
 
-            var m = JsonSerializer.Deserialize<HassMessageSerializer>(ref reader, options);
+            HassMessageSerializer m = JsonSerializer.Deserialize<HassMessageSerializer>(ref reader, options);
 
             if (m.Id > 0)
             {
-                string? command = "";
                 // It is an command response, get command
-                if (WSClient.CommandsSent.Remove(m.Id, out command))
+                if (WSClient.CommandsSent.Remove(m.Id, out string command))
                 {
                     switch (command)
                     {
@@ -212,7 +214,7 @@ namespace HassClient
         {
 
 
-            var m = JsonSerializer.Deserialize<EventMessage>(ref reader, options);
+            EventMessage m = JsonSerializer.Deserialize<EventMessage>(ref reader, options);
 
             switch (m.EventType)
             {

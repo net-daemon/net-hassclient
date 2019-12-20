@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.IO.Pipelines;
@@ -7,7 +8,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 
 [assembly: InternalsVisibleTo("HassClientIntegrationTests")]
@@ -65,7 +65,7 @@ namespace HassClient
         /// <summary>
         /// Default Json serialization options, Hass expects intended
         /// </summary>
-        private JsonSerializerOptions defaultSerializerOptions = new JsonSerializerOptions
+        private readonly JsonSerializerOptions defaultSerializerOptions = new JsonSerializerOptions
         {
             WriteIndented = false
         };
@@ -93,40 +93,37 @@ namespace HassClient
         /// <summary>
         /// Channel used as a async thread safe way to wite messages to the websocket
         /// </summary>
-        private Channel<MessageBase> _writeChannel = Channel.CreateBounded<MessageBase>(WSClient._DEFAULT_CHANNEL_SIZE);
+        private readonly Channel<MessageBase> _writeChannel = Channel.CreateBounded<MessageBase>(WSClient._DEFAULT_CHANNEL_SIZE);
 
         /// <summary>
         /// Channel used as a async thread safe way to read messages from the websocket
         /// </summary>
-        private Channel<HassMessage> _readChannel = Channel.CreateBounded<HassMessage>(WSClient._DEFAULT_CHANNEL_SIZE);
+        private readonly Channel<HassMessage> _readChannel = Channel.CreateBounded<HassMessage>(WSClient._DEFAULT_CHANNEL_SIZE);
 
-        private ILogger? _logger = null;
+        private readonly ILogger? _logger = null;
         public WSClient(ILoggerFactory? factory = null)
         {
-            if (factory == null)
-            {
-                factory = LoggerFactory.Create(builder =>
-                {
-                    builder
-                        .ClearProviders()
-                        .AddFilter("HassClient.WSClient", LogLevel.Error)
-                        .AddConsole();
-                });
-
-            }
-            _logger = factory?.CreateLogger<WSClient>();
-
+            factory ??= _getDefaultLoggerFactory;
+            _logger = factory.CreateLogger<WSClient>();
         }
+
+        /// <summary>
+        /// The default logger
+        /// </summary>
+        private static ILoggerFactory _getDefaultLoggerFactory => LoggerFactory.Create(builder =>
+                                                                               {
+                                                                                   builder
+                                                                                       .ClearProviders()
+                                                                                       .AddFilter("HassClient.WSClient", LogLevel.Information)
+                                                                                       .AddConsole();
+                                                                               });
 
         /// <summary>
         /// Wait and read next message from websocket
         /// </summary>
         /// <returns>Returns a message</returns>
         /// <exception>OperationCanceledException if the operation is canceled.</exception>
-        public async Task<HassMessage> ReadMessageAsync()
-        {
-            return await _readChannel.Reader.ReadAsync(this._cancelSource.Token);
-        }
+        public async Task<HassMessage> ReadMessageAsync() => await _readChannel.Reader.ReadAsync(_cancelSource.Token);
 
         /// <summary>
         /// Message id sent in command messages
@@ -151,12 +148,11 @@ namespace HassClient
             _logger.LogTrace($"Sends message {message.Type}");
             if (message is CommandMessage commandMessage)
             {
-                commandMessage.Id = ++this._messageId;
+                commandMessage.Id = ++_messageId;
                 //We save the type of command so we can deserialize the correct message later
-                CommandsSent[this._messageId] = commandMessage.Type;
-
+                CommandsSent[_messageId] = commandMessage.Type;
             }
-            return this._writeChannel.Writer.TryWrite(message);
+            return _writeChannel.Writer.TryWrite(message);
         }
 
         /// <summary>
@@ -167,30 +163,43 @@ namespace HassClient
         public async Task<bool> ConnectAsync(Uri url)
         {
             // Check if we already have a websocket running
-            if (this._ws != null)
+            if (_ws != null)
             {
                 throw new InvalidOperationException("Allready connected to the remote websocket.");
             }
-
-            var ws = new System.Net.WebSockets.ClientWebSocket();
-            await ws.ConnectAsync(url, _cancelSource.Token);
-
-            if (ws.State == WebSocketState.Open)
+            try
             {
-                // Initialize the states
-                this._isValid = true;
-                this._isClosing = false;
-                _cancelSource = new CancellationTokenSource();
-                this._ws = ws;
-                this._readMessagePumpTask = Task.Run(ReadMessagePump);
-                this._writeMessagePumpTask = Task.Run(WriteMessagePump);
-                _logger.LogTrace($"Connected to websocket ({url})");
-                return true;
+                var ws = new System.Net.WebSockets.ClientWebSocket();
+                await ws.ConnectAsync(url, _cancelSource.Token);
+
+                if (ws.State == WebSocketState.Open)
+                {
+                    _ws = ws;
+                    // Initialize the states
+                    initStates();
+                    _logger.LogTrace($"Connected to websocket ({url})");
+                    return true;
+                }
+                _logger.LogDebug($"Failed to connect to websocket socket state: {ws.State}");
+                return false;
             }
-            _logger.LogTrace($"Failed to connect to websocket socket state: {ws.State}");
+            catch (Exception e)
+            {
+                _logger.LogError($"Failed to connect to Home Assistant on {url}");
+                _logger.LogDebug(e, $"Failed to connect to Home Assistant on {url}");
+            }
 
             return false;
 
+        }
+
+        private void initStates()
+        {
+            _isValid = true;
+            _isClosing = false;
+            _cancelSource = new CancellationTokenSource();
+            _readMessagePumpTask = Task.Run(ReadMessagePump);
+            _writeMessagePumpTask = Task.Run(WriteMessagePump);
         }
 
         /// <summary>
@@ -213,18 +222,18 @@ namespace HassClient
         {
             _logger.LogTrace($"Do normal close of websocket");
 
-            if (this._ws != null &&
-                (this._ws.State == WebSocketState.CloseReceived ||
-                this._ws.State == WebSocketState.Open ||
-                this._ws.State == WebSocketState.CloseSent))
+            if (_ws != null &&
+                (_ws.State == WebSocketState.CloseReceived ||
+                _ws.State == WebSocketState.Open ||
+                _ws.State == WebSocketState.CloseSent))
             {
                 var timeout = new CancellationTokenSource(WSClient._MAX_WAITTIME_SOCKET_CLOSE);
                 try
                 {
                     // Send close message (some bug n CloseAsync makes we have to do it this way)
-                    await this._ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
+                    await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
                     // Wait for readpump finishing when receiving the close message
-                    this._readMessagePumpTask?.Wait(timeout.Token);
+                    _readMessagePumpTask?.Wait(timeout.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -240,7 +249,10 @@ namespace HassClient
         {
             lock (this)
             {
-                if (_isClosing) return;
+                if (_isClosing)
+                {
+                    return;
+                }
             }
 
             _logger.LogTrace($"Async close websocket");
@@ -248,20 +260,21 @@ namespace HassClient
             // First do websocket close management
             await DoNormalClosureOfWebSocket();
             // Cancel all async stuff
-            this._cancelSource.Cancel();
+            _cancelSource.Cancel();
 
             // Wait for read and write tasks to complete max 5 seconds
-            if (this._readMessagePumpTask != null && this._writeMessagePumpTask != null)
-                Task.WaitAll(new Task[] { this._readMessagePumpTask, this._writeMessagePumpTask },
+            if (_readMessagePumpTask != null && _writeMessagePumpTask != null)
+            {
+                Task.WaitAll(new Task[] { _readMessagePumpTask, _writeMessagePumpTask },
                     WSClient._MAX_WAITTIME_SOCKET_CLOSE, CancellationToken.None);
+            }
 
+            _ws?.Dispose();
+            _ws = null;
 
-            this._ws?.Dispose();
-            this._ws = null;
-
-            this._isValid = false;
-            this._isClosing = false;
-            this._cancelSource = new CancellationTokenSource();
+            _isValid = false;
+            _isClosing = false;
+            _cancelSource = new CancellationTokenSource();
 
             _logger.LogTrace($"Async close websocket done");
         }
@@ -279,15 +292,15 @@ namespace HassClient
         private bool disposed = false;
         protected virtual void Dispose(bool disposing)
         {
-            if (!this.disposed)
+            if (!disposed)
             {
                 // If disposing equals true, dispose all managed
                 // and unmanaged resources.
                 //
                 if (disposing)
                 {
-                    this._ws?.Dispose();
-                    this._cancelSource.Dispose();
+                    _ws?.Dispose();
+                    _cancelSource.Dispose();
                 }
                 disposed = true;
             }
@@ -300,24 +313,26 @@ namespace HassClient
         {
             _logger?.LogTrace($"Start ReadMessagePump");
 
-            if (this._ws == null)
+            if (_ws == null)
+            {
                 throw new MissingMemberException("_ws is null!");
+            }
 
             var pipe = new Pipe();
-            var totalCount = 0;
+            int totalCount = 0;
 
             // While not canceled and websocket is not closed
-            while (!_cancelSource.IsCancellationRequested && !this._ws.CloseStatus.HasValue)
+            while (!_cancelSource.IsCancellationRequested && !_ws.CloseStatus.HasValue)
             {
                 try
                 {
                     Memory<byte> memory = pipe.Writer.GetMemory(WSClient._DEFAULT_RECIEIVE_BUFFER_SIZE);
 
-                    var result = await this._ws.ReceiveAsync(memory, _cancelSource.Token);
+                    ValueWebSocketReceiveResult result = await _ws.ReceiveAsync(memory, _cancelSource.Token);
 
                     if (result.MessageType == WebSocketMessageType.Close || result.Count == 0)
                     {
-                        await this.CloseAsync();
+                        await CloseAsync();
                         // Remote disconnected just leave the readpump
                         return;
                     }
@@ -330,10 +345,10 @@ namespace HassClient
                         await pipe.Writer.CompleteAsync();
                         try
                         {
-                            var m = await JsonSerializer.DeserializeAsync<HassMessage>(pipe.Reader.AsStream());
+                            HassMessage m = await JsonSerializer.DeserializeAsync<HassMessage>(pipe.Reader.AsStream());
                             await pipe.Reader.CompleteAsync();
                             // Todo: check for faults here
-                            this._readChannel.Writer.TryWrite(m);
+                            _readChannel.Writer.TryWrite(m);
                             pipe = new Pipe();
                             totalCount = 0;
 
@@ -363,17 +378,19 @@ namespace HassClient
         private async void WriteMessagePump()
         {
             _logger?.LogTrace($"Start WriteMessagePump");
-            if (this._ws == null)
+            if (_ws == null)
+            {
                 throw new MissingMemberException("client_ws is null!");
+            }
 
-            while (!_cancelSource.IsCancellationRequested && !this._ws.CloseStatus.HasValue)
+            while (!_cancelSource.IsCancellationRequested && !_ws.CloseStatus.HasValue)
             {
                 try
                 {
-                    var nextMessage = await _writeChannel.Reader.ReadAsync(_cancelSource.Token);
-                    var result = JsonSerializer.SerializeToUtf8Bytes(nextMessage, nextMessage.GetType(), defaultSerializerOptions);
+                    MessageBase nextMessage = await _writeChannel.Reader.ReadAsync(_cancelSource.Token);
+                    byte[] result = JsonSerializer.SerializeToUtf8Bytes(nextMessage, nextMessage.GetType(), defaultSerializerOptions);
 
-                    await this._ws.SendAsync(result, WebSocketMessageType.Text, true, _cancelSource.Token);
+                    await _ws.SendAsync(result, WebSocketMessageType.Text, true, _cancelSource.Token);
                 }
                 catch (System.OperationCanceledException)
                 {

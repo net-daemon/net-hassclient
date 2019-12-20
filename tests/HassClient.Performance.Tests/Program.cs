@@ -1,43 +1,41 @@
-﻿using System;
-using System.Threading;
+﻿using HassClient.Performance.Tests.Mocks;
+using System;
 using System.Threading.Tasks;
-using HassClient;
-using HassClient.Performance.Tests.Mocks;
 
 namespace HassClient.Performance.Tests
 {
-    class Program
+    internal class Program
     {
         public static async Task Main()
         {
             using var mock = new HomeAssistantMockHandler();
-            var NR_OF_REQUESTS = 200000;
-            WSClient wscli = new WSClient();
-            var result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
-            var message = await wscli.ReadMessageAsync();
+            int NR_OF_REQUESTS = 200000;
+            var wscli = new WSClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
+            HassMessage message = await wscli.ReadMessageAsync();
 
-            WSClient wscli2 = new WSClient();
-            var result2 = await wscli2.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
-            var message2 = await wscli2.ReadMessageAsync();
+            var wscli2 = new WSClient();
+            bool result2 = await wscli2.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
+            HassMessage message2 = await wscli2.ReadMessageAsync();
 
-            WSClient wscli3 = new WSClient();
-            var result3 = await wscli3.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
-            var message3 = await wscli3.ReadMessageAsync();
+            var wscli3 = new WSClient();
+            bool result3 = await wscli3.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
+            HassMessage message3 = await wscli3.ReadMessageAsync();
 
-            WSClient wscli4 = new WSClient();
-            var result4 = await wscli4.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
-            var message4 = await wscli4.ReadMessageAsync();
+            var wscli4 = new WSClient();
+            bool result4 = await wscli4.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
+            HassMessage message4 = await wscli4.ReadMessageAsync();
 
-            WSClient wscli5 = new WSClient();
-            var result5 = await wscli5.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
-            var message5 = await wscli5.ReadMessageAsync();
+            var wscli5 = new WSClient();
+            bool result5 = await wscli5.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
+            HassMessage message5 = await wscli5.ReadMessageAsync();
 
-            WSClient wscli6 = new WSClient();
-            var result6 = await wscli6.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
-            var message6 = await wscli6.ReadMessageAsync();
+            var wscli6 = new WSClient();
+            bool result6 = await wscli6.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
+            HassMessage message6 = await wscli6.ReadMessageAsync();
 
             var stopWatch = System.Diagnostics.Stopwatch.StartNew();
-            Task first = Task.Run(async () =>
+            var first = Task.Run(async () =>
             {
                 for (int i = 0; i < NR_OF_REQUESTS; i++)
                 {
@@ -46,7 +44,7 @@ namespace HassClient.Performance.Tests
 
                 }
             });
-            Task second = Task.Run(async () =>
+            var second = Task.Run(async () =>
             {
                 for (int i = 0; i < NR_OF_REQUESTS; i++)
                 {
@@ -56,7 +54,7 @@ namespace HassClient.Performance.Tests
                 }
             });
 
-            Task third = Task.Run(async () =>
+            var third = Task.Run(async () =>
             {
                 for (int i = 0; i < NR_OF_REQUESTS; i++)
                 {
@@ -66,7 +64,7 @@ namespace HassClient.Performance.Tests
                 }
             });
 
-            Task fourth = Task.Run(async () =>
+            var fourth = Task.Run(async () =>
             {
                 for (int i = 0; i < NR_OF_REQUESTS; i++)
                 {
@@ -76,7 +74,7 @@ namespace HassClient.Performance.Tests
                 }
             });
 
-            Task fifth = Task.Run(async () =>
+            var fifth = Task.Run(async () =>
             {
                 for (int i = 0; i < NR_OF_REQUESTS; i++)
                 {
@@ -86,7 +84,7 @@ namespace HassClient.Performance.Tests
                 }
             });
 
-            Task sixth = Task.Run(async () =>
+            var sixth = Task.Run(async () =>
             {
                 for (int i = 0; i < NR_OF_REQUESTS; i++)
                 {
@@ -113,14 +111,8 @@ namespace HassClient.Performance.Tests
 
     public class HomeAssistantMockHandler : IDisposable
     {
-        HomeAssistantMock mock;
-        public HomeAssistantMockHandler()
-        {
-            mock = new HomeAssistantMock();
-        }
-        public void Dispose()
-        {
-            mock.Stop();
-        }
+        private readonly HomeAssistantMock mock;
+        public HomeAssistantMockHandler() => mock = new HomeAssistantMock();
+        public void Dispose() => mock.Stop();
     }
 }

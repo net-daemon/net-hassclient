@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 
 namespace HassClient
@@ -9,28 +10,55 @@ namespace HassClient
     public interface IHassClient
     {
         Task<bool> ConnectAsync(Uri uri);
+        Task CloseAsync();
     }
 
-    public class HassClient : IHassClient {
+    public class HassClient : IHassClient
+    {
         private HassClient() { }
 
-        IWsClient? _wsClient = null;
-        public HassClient(IWsClient wsClient)
+        private readonly IWsClient? _wsClient = null;
+        private readonly ILogger? _logger = null;
+
+        public HassClient(IWsClient wsClient, ILoggerFactory? factory = null)
         {
-            _wsClient = wsClient;
+            // Logger setup
+            factory ??= DefaultLoggerFactory;
+            _logger = factory.CreateLogger<WSClient>();
+
+            _wsClient = wsClient ?? new WSClient(factory);
+
         }
+
+        private static ILoggerFactory DefaultLoggerFactory => LoggerFactory.Create(builder =>
+                           {
+                               builder
+                                   .ClearProviders()
+                                   .AddFilter("HassClient.WSClient", LogLevel.Information)
+                                   .AddConsole();
+                           });
 
         public async Task<bool> ConnectAsync(Uri uri)
         {
-            if (uri == null || _wsClient == null)
-                throw new ArgumentNullException("uri", "_wsClient or uri is null");
+            if (uri == null)
+            {
+                throw new ArgumentNullException(nameof(uri), $"{ nameof(uri) } is null");
+            }
 
-            return await _wsClient.ConnectAsync(uri);
+            try
+            {
+                return await _wsClient?.ConnectAsync(uri)!;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Failed to connect to Home Assistant on {uri}");
+                _logger.LogDebug(e, $"Failed to connect to Home Assistant on {uri}");
+                return false;
+            }
+
         }
 
-        public async Task CloseAsync()
-        {
-            await _wsClient?.CloseAsync();
-        }
+        public async Task CloseAsync() => await _wsClient?.CloseAsync()!;
+        public async Task<HassMessage> ReadMessageAsync() => await _wsClient?.ReadMessageAsync()!;
     }
 }

@@ -13,7 +13,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HassClientIntegrationTests"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HassClient.Performance.Tests", "tests\HassClient.Performance.Tests\HassClient.Performance.Tests.csproj", "{CC43A306-9E25-47A8-A7A9-4E9ACE97CD77}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HassClient.Unit.Tests", "tests\HassClient.Unit.Tests\HassClient.Unit.Tests.csproj", "{04D61699-5E9F-4A2E-9AA8-E93358E09449}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HassClient.Unit.Tests", "tests\HassClient.Unit.Tests\HassClient.Unit.Tests.csproj", "{04D61699-5E9F-4A2E-9AA8-E93358E09449}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7566F68A-AE1E-4BD8-B03A-54CDCDB05F15}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

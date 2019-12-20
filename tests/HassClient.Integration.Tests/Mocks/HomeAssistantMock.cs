@@ -1,3 +1,8 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using System;
 using System.IO;
 using System.Net.WebSockets;
@@ -5,12 +10,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 namespace HassClient.Performance.Tests.Mocks
 {
     /// <summary>
@@ -20,7 +19,7 @@ namespace HassClient.Performance.Tests.Mocks
     public class HomeAssistantMock
     {
         public static readonly int RECIEIVE_BUFFER_SIZE = 1024 * 4;
-        IHost host = null;
+        private readonly IHost host = null;
 
         public HomeAssistantMock()
         {
@@ -60,16 +59,12 @@ namespace HassClient.Performance.Tests.Mocks
         private readonly string mockTestdataPath = Path.Combine(AppContext.BaseDirectory, "Mocks", "testdata");
         // Home Assistant will always prettyprint responses so so do the mock
         private readonly byte[] authOkMessage = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Mocks", "testdata", "auth_ok.json"));
-        private JsonSerializerOptions serializeOptions = new JsonSerializerOptions
+        private readonly JsonSerializerOptions serializeOptions = new JsonSerializerOptions
         {
             WriteIndented = true
         };
 
-        public HassMockStartup(IConfiguration configuration)
-        {
-            Configuration = configuration;
-
-        }
+        public HassMockStartup(IConfiguration configuration) => Configuration = configuration;
 
         public IConfiguration Configuration { get; }
 
@@ -91,7 +86,7 @@ namespace HassClient.Performance.Tests.Mocks
                 {
                     if (context.WebSockets.IsWebSocketRequest)
                     {
-                        var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+                        WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
 
                         await ProcessWS(webSocket);
                         return;
@@ -114,19 +109,19 @@ namespace HassClient.Performance.Tests.Mocks
             try
             {
                 // First send auth required to the client
-                byte[] authRequiredMessage = File.ReadAllBytes(Path.Combine(this.mockTestdataPath, "auth_required.json"));
+                byte[] authRequiredMessage = File.ReadAllBytes(Path.Combine(mockTestdataPath, "auth_required.json"));
                 await webSocket.SendAsync(new ArraySegment<byte>(authRequiredMessage, 0, authRequiredMessage.Length), WebSocketMessageType.Text, true, CancellationToken.None);
 
                 // Wait for incoming messages
-                var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                 while (!result.CloseStatus.HasValue)
                 {
-                    var hassMessage = JsonSerializer.Deserialize<HassMessage>(new ReadOnlySpan<byte>(buffer, 0, result.Count));
+                    HassMessage hassMessage = JsonSerializer.Deserialize<HassMessage>(new ReadOnlySpan<byte>(buffer, 0, result.Count));
                     switch (hassMessage.Type)
                     {
                         // We have an auth message
                         case "auth":
-                            var authMessage = JsonSerializer.Deserialize<AuthMessage>(new ReadOnlySpan<byte>(buffer, 0, result.Count));
+                            AuthMessage authMessage = JsonSerializer.Deserialize<AuthMessage>(new ReadOnlySpan<byte>(buffer, 0, result.Count));
                             if (authMessage.AccessToken == "ABCDEFGHIJKLMNOPQ")
                             {
                                 // Hardcoded to be correct for testcase
@@ -136,30 +131,30 @@ namespace HassClient.Performance.Tests.Mocks
                             else
                             {
                                 // Hardcoded to be correct for testcase
-                                byte[] authNotOkMessage = File.ReadAllBytes(Path.Combine(this.mockTestdataPath, "auth_notok.json"));
+                                byte[] authNotOkMessage = File.ReadAllBytes(Path.Combine(mockTestdataPath, "auth_notok.json"));
                                 await webSocket.SendAsync(new ArraySegment<byte>(authNotOkMessage, 0, authNotOkMessage.Length), WebSocketMessageType.Text, true, CancellationToken.None);
                                 // Hass will normally close session here but for the sake of testing it wont
                             }
                             break;
                         case "subscribe_events":
-                            var subscribeEventMessage = JsonSerializer.Deserialize<SendCommandMessage>(new ReadOnlySpan<byte>(buffer, 0, result.Count));
+                            SendCommandMessage subscribeEventMessage = JsonSerializer.Deserialize<SendCommandMessage>(new ReadOnlySpan<byte>(buffer, 0, result.Count));
                             var response = new ResultMessage
                             {
                                 Id = subscribeEventMessage.Id
                             };
                             // First send normal ok response
-                            var responseString = JsonSerializer.SerializeToUtf8Bytes(response, typeof(ResultMessage), this.serializeOptions);
+                            byte[] responseString = JsonSerializer.SerializeToUtf8Bytes(response, typeof(ResultMessage), serializeOptions);
                             await webSocket.SendAsync(new ArraySegment<byte>(responseString, 0, responseString.Length), WebSocketMessageType.Text, true, CancellationToken.None);
                             // For tests send a event message
-                            byte[] newEventMessage = File.ReadAllBytes(Path.Combine(this.mockTestdataPath, "event.json"));
+                            byte[] newEventMessage = File.ReadAllBytes(Path.Combine(mockTestdataPath, "event.json"));
                             await webSocket.SendAsync(new ArraySegment<byte>(newEventMessage, 0, newEventMessage.Length), WebSocketMessageType.Text, true, CancellationToken.None);
                             // Hass will normally close session here but for the sake of testing it wont
 
                             break;
 
                         case "get_states":
-                            var getStatesMessage = JsonSerializer.Deserialize<SendCommandMessage>(new ReadOnlySpan<byte>(buffer, 0, result.Count));
-                            byte[] stateReusultMessage = File.ReadAllBytes(Path.Combine(this.mockTestdataPath, "result_states.json"));
+                            SendCommandMessage getStatesMessage = JsonSerializer.Deserialize<SendCommandMessage>(new ReadOnlySpan<byte>(buffer, 0, result.Count));
+                            byte[] stateReusultMessage = File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_states.json"));
                             await webSocket.SendAsync(new ArraySegment<byte>(stateReusultMessage, 0, stateReusultMessage.Length), WebSocketMessageType.Text, true, CancellationToken.None);
 
                             break;
@@ -227,10 +222,10 @@ namespace HassClient.Performance.Tests.Mocks
             public string Type { get; set; } = "result";
 
             [JsonPropertyName("success")]
-            public Boolean Success { get; set; } = true;
+            public bool Success { get; set; } = true;
 
             [JsonPropertyName("result")]
-            public Object Result { get; set; } = "some result";
+            public object Result { get; set; } = "some result";
         }
     }
 }

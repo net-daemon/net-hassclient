@@ -1,30 +1,32 @@
-using System;
-using System.Threading.Tasks;
-using HassClient;
-using System.Text.Json;
 using HassClient.Performance.Tests.Mocks;
+using System;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
-using System.Collections.Generic;
 
 namespace HassClient.Integration.Tests
 {
-    public class TestWSClient : IClassFixture<HomeAssistantMockFixture>
+    public class TestWSClient : IDisposable
     {
-        HomeAssistantMockFixture mockFixture;
+        private readonly HomeAssistantMock mock;
         private readonly ITestOutputHelper output;
-        public TestWSClient(HomeAssistantMockFixture fixture, ITestOutputHelper output)
+        public TestWSClient(ITestOutputHelper output)
         {
-            mockFixture = fixture;
+            mock = new HomeAssistantMock();
             this.output = output;
         }
+
+
+        public void Dispose() => mock.Stop();
 
         [Fact]
         public async void TestBasicLoginOK()
         {
-            using WSClient wscli = new WSClient();
-            var result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
-            var message = await wscli.ReadMessageAsync();
+            using var wscli = new WSClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
+            HassMessage message = await wscli.ReadMessageAsync();
 
             Assert.True(message.Type == "auth_required");
 
@@ -39,9 +41,9 @@ namespace HassClient.Integration.Tests
         [Fact]
         public async void TestBasicLoginNotOK()
         {
-            using WSClient wscli = new WSClient();
-            var result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
-            var message = await wscli.ReadMessageAsync();
+            using var wscli = new WSClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
+            HassMessage message = await wscli.ReadMessageAsync();
 
             Assert.True(message.Type == "auth_required");
             wscli.SendMessage(new AuthMessage { AccessToken = "WRONG PASSWORD" });
@@ -51,12 +53,27 @@ namespace HassClient.Integration.Tests
             await wscli.CloseAsync();
 
         }
+
+        [Fact]
+        public async void TestServerFailedConnect()
+        {
+            var loggerFactoryMock = new LoggerFactoryMock();
+            using var wscli = new WSClient(loggerFactoryMock);
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket_not_exist"));
+            Assert.False(result);
+            Assert.True(loggerFactoryMock.LoggedError);
+            Assert.True(loggerFactoryMock.LoggedDebug);
+            Assert.False(loggerFactoryMock.LoggedTrace);
+            await wscli.CloseAsync();
+
+        }
+
         [Fact]
         public async void TestServerDisconnect()
         {
-            using WSClient wscli = new WSClient();
-            var result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
-            var message = await wscli.ReadMessageAsync();
+            using var wscli = new WSClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
+            HassMessage message = await wscli.ReadMessageAsync();
 
 
             wscli.SendMessage(new MessageBase { Type = "fake_disconnect_test" });
@@ -67,8 +84,8 @@ namespace HassClient.Integration.Tests
         [Fact]
         public async void TestGetStatesMessage()
         {
-            using WSClient wscli = new WSClient();
-            var result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
+            using var wscli = new WSClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
             // Just read the auth_required message
             await wscli.ReadMessageAsync();
 
@@ -76,7 +93,7 @@ namespace HassClient.Integration.Tests
             wscli.SendMessage(new GetStatesMessage { });
 
             // Read response result, see result_states.json file for this result
-            var message = await wscli.ReadMessageAsync();
+            HassMessage message = await wscli.ReadMessageAsync();
             var wsResult = message?.Result as List<StateMessage>;
 
             Assert.True(wsResult?[8].EntityId == "binary_sensor.vardagsrum_pir");
@@ -89,8 +106,8 @@ namespace HassClient.Integration.Tests
         [Fact]
         public async void TestListenEvent()
         {
-            using WSClient wscli = new WSClient();
-            var result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
+            using var wscli = new WSClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
             // Just read the auth_required message
             await wscli.ReadMessageAsync();
 
@@ -98,7 +115,7 @@ namespace HassClient.Integration.Tests
             wscli.SendMessage(new SubscribeEventMessage { });
 
             // Read response result
-            var message = await wscli.ReadMessageAsync();
+            HassMessage message = await wscli.ReadMessageAsync();
             Assert.True(message.Type == "result");
             Assert.True(message.Success == true);
             Assert.True(message.Id == 1);
@@ -116,9 +133,9 @@ namespace HassClient.Integration.Tests
             Assert.True(((JsonElement)stateMessage.OldState?.Attributes?["friendly_name"]).GetString() == "Rörelsedetektor TV-rum");
 
             // Test the date and time conversions that it matches UTC time
-            var lastChanged = stateMessage?.OldState?.LastChanged;
+            DateTime? lastChanged = stateMessage?.OldState?.LastChanged;
             // Convert utc date to local so we can compare, this test will be ok on any timezone
-            var target = new DateTime(2019, 2, 17, 11, 41, 08, DateTimeKind.Utc).ToLocalTime();
+            DateTime target = new DateTime(2019, 2, 17, 11, 41, 08, DateTimeKind.Utc).ToLocalTime();
 
             Assert.True(lastChanged?.Year == target.Year);
             Assert.True(lastChanged?.Month == target.Month);
@@ -138,8 +155,8 @@ namespace HassClient.Integration.Tests
         [Fact]
         public async void TestReconnectFromNormalDisconnect()
         {
-            using WSClient wscli = new WSClient();
-            var result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
+            using var wscli = new WSClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
             // Just read the auth_required message
             await wscli.ReadMessageAsync();
             await wscli.CloseAsync();
@@ -147,22 +164,10 @@ namespace HassClient.Integration.Tests
             await Task.Delay(1000);
             result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"));
             // Just read the auth_required message
-            var message = await wscli.ReadMessageAsync();
+            HassMessage message = await wscli.ReadMessageAsync();
             Assert.True(message.Type == "auth_required");
             await wscli.CloseAsync();
         }
 
-    }
-    public class HomeAssistantMockFixture : IDisposable
-    {
-        HomeAssistantMock mock;
-        public HomeAssistantMockFixture()
-        {
-            mock = new HomeAssistantMock();
-        }
-        public void Dispose()
-        {
-            mock.Stop();
-        }
     }
 }
