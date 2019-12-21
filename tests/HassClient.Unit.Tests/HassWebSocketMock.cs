@@ -19,12 +19,20 @@ namespace HassClient.Unit.Tests
 
     public class HassWebSocketFactoryMock : IClientWebSocketFactory
     {
+        HassWebSocketMock _ws = null;
+
+        public HassWebSocketMock WebSocketClient => _ws;
+
         private List<MockMessageType> _mockMessages;
         public HassWebSocketFactoryMock(List<MockMessageType> mockMessages)
         {
             _mockMessages = mockMessages;
         }
-        public IClientWebSocket New() => new HassWebSocketMock(_mockMessages);
+        public IClientWebSocket New()
+        {
+            _ws = new HassWebSocketMock(_mockMessages);
+            return _ws;
+        }
     }
 
     public class HassWebSocketMock : IClientWebSocket
@@ -41,6 +49,8 @@ namespace HassClient.Unit.Tests
 
         private int _currentMsgIndex = 0;
 
+        public bool CloseIsRun { get; set; } = false;
+
         public HassWebSocketMock(List<MockMessageType> mockMessages)
         {
             _mockMessages = mockMessages;
@@ -53,6 +63,7 @@ namespace HassClient.Unit.Tests
         public Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken) => throw new NotImplementedException();
         public async Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken)
         {
+            CloseIsRun = true;
             CloseStatus = WebSocketCloseStatus.NormalClosure;
             State = WebSocketState.Closed;
             await Task.Delay(2);
