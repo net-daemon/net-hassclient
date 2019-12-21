@@ -39,6 +39,22 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
+        public async void TestNotExpectedMessageReturnFalse()
+        {
+            // Prepare the mock with predefined message sequence
+            var mock = new HassWebSocketFactoryMock(new List<MockMessageType>()
+            {
+                MockMessageType.AuthRequired,
+                MockMessageType.ResultOk    // That message should not come here
+            });
+
+            // Simulate an ok connect by using the "ws://localhost:8192/api/websocket" address
+            var hc = new HassClient(wsFactory: mock);
+            Assert.False(await hc.ConnectAsync(new Uri("ws://localhost:8192/api/websocket"), "TOKEN", false, false));
+
+        }
+
+        [Fact]
         public async void TestConnectAllreadyConnectedFailure()
         {
             // Prepare the mock with predefined message sequence
