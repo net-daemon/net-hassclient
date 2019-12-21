@@ -5,6 +5,10 @@ using System.Threading.Tasks;
 
 namespace HassClient
 {
+    public interface IClientWebSocketFactory
+    {
+        IClientWebSocket New();
+    }
     /// <summary>
     /// Interface so we can test without the socket layer
     /// </summary>
@@ -23,6 +27,11 @@ namespace HassClient
 
         Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken);
         ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken);
+    }
+
+    public class ClientWebSocketFactory : IClientWebSocketFactory
+    {
+        public IClientWebSocket New() => new HassWebSocket();
     }
     public class HassWebSocket : IClientWebSocket
     {

@@ -43,7 +43,7 @@ namespace HassClient
     /// to connect, send and receive json messages
     /// This class is threadsafe
     /// </summary>
-    internal class HassClient : IHassClient, IDisposable
+    public class HassClient : IHassClient, IDisposable
     {
         /// <summary>
         /// The max time we will wait for the socket to gracefully close
@@ -78,6 +78,8 @@ namespace HassClient
         /// </summary>
         private IClientWebSocket? _ws = null;
 
+        private IClientWebSocketFactory? _wsFactory = null;
+
         /// <summary>
         /// Used to cancel all asyncronus work
         /// </summary>
@@ -111,10 +113,13 @@ namespace HassClient
         public ConcurrentDictionary<string, StateMessage> States { get; } = new ConcurrentDictionary<string, StateMessage>(Environment.ProcessorCount * 2, _DEFAULT_CHANNEL_SIZE);
 
         private readonly ILogger? _logger = null;
-        public HassClient(ILoggerFactory? factory = null)
+        public HassClient(ILoggerFactory? logFactory = null, IClientWebSocketFactory? wsFactory = null)
         {
-            factory ??= _getDefaultLoggerFactory;
-            _logger = factory.CreateLogger<HassClient>();
+            logFactory ??= _getDefaultLoggerFactory;
+            wsFactory ??= new ClientWebSocketFactory(); ;
+
+            _logger = logFactory.CreateLogger<HassClient>();
+            _wsFactory = wsFactory;
         }
 
         /// <summary>
@@ -176,6 +181,9 @@ namespace HassClient
         public async Task<bool> ConnectAsync(Uri url, string token,
             bool fetchStatesOnConnect = true, bool subscribeEvents = true)
         {
+            if (url == null)
+                throw new ArgumentNullException(nameof(url), "Expected url to be provided");
+
             // Check if we already have a websocket running
             if (_ws != null)
             {
@@ -184,7 +192,7 @@ namespace HassClient
 
             try
             {
-                var ws = new HassWebSocket();
+                var ws = _wsFactory?.New()!;
                 await ws.ConnectAsync(url, _cancelSource.Token);
 
                 if (ws.State == WebSocketState.Open)
