@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 
 [assembly: InternalsVisibleTo("HassClientIntegrationTests")]
 [assembly: InternalsVisibleTo("HassClient.Performance.Tests")]
+[assembly: InternalsVisibleTo("HassClient.Unit.Tests")]
 
 namespace HassClient
 {
@@ -48,7 +49,7 @@ namespace HassClient
         /// <summary>
         /// The max time we will wait for the socket to gracefully close
         /// </summary>
-        private static readonly int _MAX_WAITTIME_SOCKET_CLOSE = 5000; // 5 seconds
+        private static readonly int _MAX_WAITTIME_SOCKET_CLOSE = 15000; // 5 seconds
 
         /// <summary>
         /// Default size for channel
@@ -59,6 +60,12 @@ namespace HassClient
         /// Default read buffer size for websockets
         /// </summary>
         private static readonly int _DEFAULT_RECIEIVE_BUFFER_SIZE = 1024 * 4;
+
+
+        /// <summary>
+        /// The default timeout for websockets 
+        /// </summary>
+        private static readonly int _DEFAULT_TIMEOUT = 5000; // 5 seconds
 
         /// <summary>
         /// Indicates if client is valid
@@ -113,6 +120,12 @@ namespace HassClient
         public ConcurrentDictionary<string, StateMessage> States { get; } = new ConcurrentDictionary<string, StateMessage>(Environment.ProcessorCount * 2, _DEFAULT_CHANNEL_SIZE);
 
         private readonly ILogger? _logger = null;
+
+        /// <summary>
+        /// Internal property for tests to access the timeout during unit testing
+        /// </summary>
+        internal int SocketTimeout { get; set; } = _DEFAULT_TIMEOUT;
+
         public HassClient(ILoggerFactory? logFactory = null, IClientWebSocketFactory? wsFactory = null)
         {
             logFactory ??= _getDefaultLoggerFactory;
@@ -193,7 +206,13 @@ namespace HassClient
             try
             {
                 var ws = _wsFactory?.New()!;
-                await ws.ConnectAsync(url, _cancelSource.Token);
+                using var timerTokenSource = new CancellationTokenSource(SocketTimeout);
+                // Make a combined token source with timer and the general cancel token source
+                // The operations will cancel from ether one
+                using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+                    timerTokenSource.Token, _cancelSource.Token);
+
+                await ws.ConnectAsync(url, connectTokenSource.Token);
 
                 if (ws.State == WebSocketState.Open)
                 {
@@ -201,41 +220,20 @@ namespace HassClient
                     _ws = ws;
                     initStates();
                     // Get Response message
-                    var result = await _messageChannel.Reader.ReadAsync(_cancelSource.Token);
-                    if (result.Type != "auth_required")
-                    {
-                        await DoNormalClosureOfWebSocket();
-                        return false;
-                    }
-                    sendMessage(new AuthMessage { AccessToken = token });
-                    result = await _messageChannel.Reader.ReadAsync(_cancelSource.Token);
+                    HassMessage result = await handleConnectAndAuthenticate(token, connectTokenSource);
+
                     switch (result.Type)
                     {
                         case "auth_ok":
                             // Initialize the states
                             if (fetchStatesOnConnect)
                             {
-                                sendMessage(new GetStatesMessage { });
-                                result = await _messageChannel.Reader.ReadAsync(_cancelSource.Token);
-                                var wsResult = result?.Result as List<StateMessage>;
-                                if (wsResult != null)
-                                    foreach (var state in wsResult)
-                                    {
-                                        States[state.EntityId] = state;
-                                    }
+                                await getStates(connectTokenSource);
 
                             }
                             if (subscribeEvents)
                             {
-                                sendMessage(new SubscribeEventMessage { });
-                                result = await _messageChannel.Reader.ReadAsync(_cancelSource.Token);
-                                if (result.Type != "result" && result.Success != true)
-                                {
-                                    _logger.LogError($"Unexpected response from subscribe events ({result.Type}, {result.Success})");
-                                    await DoNormalClosureOfWebSocket();
-                                    return false;
-                                }
-
+                                await subscribeToEvents(connectTokenSource);
 
                             }
 
@@ -243,6 +241,7 @@ namespace HassClient
                             return true;
 
                         case "auth_invalid":
+                            _logger.LogError($"Failed to athenticate ({result.Message})");
                             await DoNormalClosureOfWebSocket();
                             return false;
 
@@ -264,6 +263,41 @@ namespace HassClient
 
             return false;
 
+        }
+
+        private async Task subscribeToEvents(CancellationTokenSource connectTokenSource)
+        {
+            sendMessage(new SubscribeEventMessage { });
+            var result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
+            if (result.Type != "result" && result.Success != true)
+            {
+                _logger.LogError($"Unexpected response from subscribe events ({result.Type}, {result.Success})");
+
+            }
+        }
+
+        private async Task getStates(CancellationTokenSource connectTokenSource)
+        {
+            sendMessage(new GetStatesMessage { });
+            var result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
+            var wsResult = result?.Result as List<StateMessage>;
+            if (wsResult != null)
+                foreach (var state in wsResult)
+                {
+                    States[state.EntityId] = state;
+                }
+        }
+
+        private async Task<HassMessage> handleConnectAndAuthenticate(string token, CancellationTokenSource connectTokenSource)
+        {
+            var result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
+            if (result.Type == "auth_required")
+            {
+                sendMessage(new AuthMessage { AccessToken = token });
+                result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
+            }
+
+            return result;
         }
 
         private void initStates()
@@ -300,17 +334,18 @@ namespace HassClient
         {
             _logger.LogTrace($"Do normal close of websocket");
 
+            var timeout = new CancellationTokenSource(HassClient._MAX_WAITTIME_SOCKET_CLOSE);
+
             if (_ws != null &&
                 (_ws.State == WebSocketState.CloseReceived ||
                 _ws.State == WebSocketState.Open))
             {
-                var timeout = new CancellationTokenSource(HassClient._MAX_WAITTIME_SOCKET_CLOSE);
+
                 try
                 {
                     // Send close message (some bug n CloseAsync makes we have to do it this way)
                     await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
                     // Wait for readpump finishing when receiving the close message
-                    _readMessagePumpTask?.Wait(timeout.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -318,6 +353,7 @@ namespace HassClient
                     _logger.LogTrace($"Close operations took more than 5 seconds.. closing hard!");
                 }
             }
+            _readMessagePumpTask?.Wait(timeout.Token);
         }
         /// <summary>
         /// Closes the websocket

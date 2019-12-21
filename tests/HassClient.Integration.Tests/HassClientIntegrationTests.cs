@@ -97,6 +97,7 @@ namespace HassClient.Integration.Tests
             var eventMsg = await wscli.ReadEventAsync();
 
             Assert.Equal("state_changed", eventMsg.EventType);
+            await wscli.CloseAsync();
         }
 
         [Fact]

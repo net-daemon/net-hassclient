@@ -15,6 +15,7 @@ namespace HassClient.Unit.Tests
         AuthFail,
         ResultOk,
         NewEvent,
+        States,
     }
 
     public class HassWebSocketFactoryMock : IClientWebSocketFactory
@@ -42,12 +43,12 @@ namespace HassClient.Unit.Tests
         private static byte[] msgAuthRequiredMessage => File.ReadAllBytes(Path.Combine(mockTestdataPath, "auth_required.json"));
         private static byte[] msgAuthOk => File.ReadAllBytes(Path.Combine(mockTestdataPath, "auth_ok.json"));
         private static byte[] msgAuthFail => File.ReadAllBytes(Path.Combine(mockTestdataPath, "auth_notok.json"));
-
         private static byte[] msgResultSuccess => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_msg.json"));
         private static byte[] msgNewEvent => File.ReadAllBytes(Path.Combine(mockTestdataPath, "event.json"));
-
+        private static byte[] msgStates => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_states.json"));
 
         private int _currentMsgIndex = 0;
+        private int _currentReadPosition = 0;
 
         public bool CloseIsRun { get; set; } = false;
 
@@ -75,11 +76,26 @@ namespace HassClient.Unit.Tests
         }
         public Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken) => throw new NotImplementedException();
 
-        private ValueTask<ValueWebSocketReceiveResult> recres(byte[] msg, ref Memory<byte> buffer, bool lastMessage = true)
+        private ValueTask<ValueWebSocketReceiveResult> recres(byte[] msg, ref Memory<byte> buffer)
         {
-            msg.CopyTo(buffer);
-            return new ValueTask<ValueWebSocketReceiveResult>(new ValueWebSocketReceiveResult(
-                         msg.Length, WebSocketMessageType.Text, lastMessage));
+            if ((msg.Length - _currentReadPosition) > buffer.Length)
+            {
+                msg.AsMemory<byte>(_currentReadPosition, buffer.Length).CopyTo(buffer);
+                _currentReadPosition += buffer.Length;
+                return new ValueTask<ValueWebSocketReceiveResult>(new ValueWebSocketReceiveResult(
+                         buffer.Length, WebSocketMessageType.Text, false));
+            }
+            else
+            {
+                var len = msg.Length - _currentReadPosition;
+                msg.AsMemory<byte>(_currentReadPosition, len).CopyTo(buffer);
+
+                _currentReadPosition = 0;
+                _currentMsgIndex++; // Full message, add next index
+                return new ValueTask<ValueWebSocketReceiveResult>(new ValueWebSocketReceiveResult(
+                             len, WebSocketMessageType.Text, true));
+            }
+
         }
         public ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken)
         {
@@ -89,7 +105,7 @@ namespace HassClient.Unit.Tests
                 throw new OperationCanceledException(cancellationToken);
             }
 
-            var msgToSend = _mockMessages[_currentMsgIndex++];
+            var msgToSend = _mockMessages[_currentMsgIndex];
 
             switch (msgToSend)
             {
@@ -107,6 +123,9 @@ namespace HassClient.Unit.Tests
 
                 case MockMessageType.NewEvent:
                     return recres(msgNewEvent, ref buffer);
+
+                case MockMessageType.States:
+                    return recres(msgStates, ref buffer);
 
             }
 

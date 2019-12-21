@@ -128,5 +128,37 @@ namespace HassClient.Unit.Tests
 
         }
 
+        [Fact]
+        public async void TestConnectTimeout()
+        {
+            // Prepare the mock with no messages sent back so we trigger the timeout
+            var mock = new HassWebSocketFactoryMock(new List<MockMessageType>());
+
+            // Simulate an ok connect by using the "ws://localhost:8192/api/websocket" address
+            var hc = new HassClient(wsFactory: mock);
+            hc.SocketTimeout = 20; // set it to 20 ms timeout
+            Assert.False(await hc.ConnectAsync(new Uri("ws://localhost:8192/api/websocket"), "TOKEN", false, false));
+
+        }
+
+        [Fact]
+        public async void TestGetStates()
+        {
+            // Prepare the mock with predefined message sequence
+            var mock = new HassWebSocketFactoryMock(new List<MockMessageType>()
+            {
+                MockMessageType.AuthRequired,
+                MockMessageType.AuthOk,
+                MockMessageType.States
+            });
+
+            // Simulate an ok connect by using the "ws://localhost:8192/api/websocket" address
+            var hc = new HassClient(wsFactory: mock);
+            hc.SocketTimeout = 2000000; // set it to 20 ms timeout
+            Assert.True(await hc.ConnectAsync(new Uri("ws://localhost:8192/api/websocket"), "TOKEN", true, false));
+            Assert.True(hc.States.Count == 19);
+
+        }
+
     }
 }
