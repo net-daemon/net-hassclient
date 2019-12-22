@@ -1,8 +1,9 @@
+using Microsoft.Extensions.Logging;
+using Moq;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Xunit;
-
 namespace HassClient.Unit.Tests
 {
     public class HassClientTests
@@ -32,10 +33,14 @@ namespace HassClient.Unit.Tests
                 MockMessageType.AuthFail
             });
 
+            var loggMock = new LoggerMock();
+
             // Simulate an ok connect by using the "ws://localhost:8192/api/websocket" address
-            var hc = new HassClient(wsFactory: mock);
+            var hc = new HassClient(loggMock.LoggerFactory, mock);
             Assert.False(await hc.ConnectAsync(new Uri("ws://localhost:8192/api/websocket"), "TOKEN", false, false));
 
+            // Make sure we logged the error.
+            loggMock.AssertLogged(LogLevel.Error, Times.AtLeastOnce());
         }
 
         [Fact]

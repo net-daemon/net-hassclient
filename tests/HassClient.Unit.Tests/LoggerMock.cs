@@ -1,30 +1,41 @@
 ﻿using Microsoft.Extensions.Logging;
+using Moq;
 using System;
 
 namespace HassClient.Unit.Tests
 {
-    class LoggerMock : ILogger
+    class LoggerMock
     {
-        public bool LoggedError { get; internal set; } = false;
-        public bool LoggedTrace { get; internal set; } = false;
+        private readonly Mock<ILoggerFactory> _mockLoggerFactory = new Mock<ILoggerFactory>();
+        private readonly Mock<ILogger> _mockLogger = new Mock<ILogger>();
 
-        public IDisposable BeginScope<TState>(TState state) => throw new NotImplementedException();
-        public bool IsEnabled(LogLevel logLevel) => true;
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        public ILoggerFactory LoggerFactory => _mockLoggerFactory.Object;
+        public Mock<ILoggerFactory> MockLoggerFactory => _mockLoggerFactory;
+
+        public ILogger Logger => _mockLogger.Object;
+        public Mock<ILogger> MockLogger => _mockLogger;
+
+
+        public LoggerMock()
         {
-            if (logLevel == LogLevel.Trace)
-                LoggedTrace = true;
-            if (logLevel == LogLevel.Error)
-                LoggedError = true;
+            // Setup the mock
+            _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
         }
-    }
-    class LoggerFactoryMock : ILoggerFactory
-    {
-        public bool LoggedError { get; internal set; }
-        public bool LoggedTrace { get; internal set; }
 
-        public void AddProvider(ILoggerProvider provider) => throw new NotImplementedException();
-        public ILogger CreateLogger(string categoryName) => new LoggerMock();
-        public void Dispose() => throw new NotImplementedException();
+        /// <summary>
+        /// Assert if the log has been used at times
+        /// </summary>
+        /// <param name="level">The loglevel being checked</param>
+        /// <param name="times">The Times it has been logged</param>
+        public void AssertLogged(LogLevel level, Times times)
+        {
+            _mockLogger.Verify(
+               x => x.Log(
+                       level,
+                       It.IsAny<EventId>(),
+                       It.Is<It.IsAnyType>((v, t) => true),
+                       It.IsAny<Exception>(),
+                       It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)), times);
+        }
     }
 }

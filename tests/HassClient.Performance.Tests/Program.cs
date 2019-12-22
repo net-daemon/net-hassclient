@@ -6,7 +6,52 @@ namespace HassClient.Performance.Tests
 {
     internal class Program
     {
-        public static async Task Main()
+        public static async Task Main(string[] args)
+        {
+            Task connectToHomeAssistantTask = null;
+
+            //System.CommandLine.
+
+            //if (string.IsNullOrEmpty(input))
+            //    printUsage();
+
+            //switch (args[0])
+            //{
+            //    case "-p":
+            //        await DoPerformanceTest();
+            //        break;
+            //    case "-c":
+            //        connectToHomeAssistantTask = ConnectToHomeAssistant();
+            //        break;
+            //}
+            Console.ReadLine();
+        }
+
+        private static Task ConnectToHomeAssistant()
+        {
+            var host = "localhost";
+            var port = 8123;
+            var token = "no token";
+
+            return Task.Delay(1000);
+
+        }
+
+        private static void printUsage()
+        {
+            string usage = @"
+Please use following commands:
+    -p      Runs the internal performance test
+    -c      Connects to home assistant with the provided ip address, port and key
+            Example:
+            -c ip:192.168.1.10 port:8123 token:myhasstoken
+";
+
+            Console.WriteLine(usage);
+
+        }
+
+        private static async Task DoPerformanceTest()
         {
             using var mock = new HomeAssistantMockHandler();
             int NR_OF_REQUESTS = 200000;

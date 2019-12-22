@@ -34,9 +34,6 @@ namespace HassClient
 
         ConcurrentDictionary<string, StateMessage> States { get; }
 
-        //bool SendMessage(MessageBase message);
-
-        //Task<HassMessage> ReadMessageAsync();
     }
 
     /// <summary>
