@@ -119,10 +119,18 @@ namespace HassClient
         public string AccessToken { get; set; } = "";
     }
 
+
+
     public class CommandMessage : MessageBase
     {
         [JsonPropertyName("id")]
         public int Id { get; set; } = 0;
+    }
+
+    public class PingMessage : CommandMessage
+    {
+        public PingMessage() => Type = "ping";
+
     }
 
     public class SubscribeEventMessage : CommandMessage

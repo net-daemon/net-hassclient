@@ -59,6 +59,7 @@ namespace HassClient.Performance.Tests.Mocks
         private readonly string mockTestdataPath = Path.Combine(AppContext.BaseDirectory, "Mocks", "testdata");
         // Home Assistant will always prettyprint responses so so do the mock
         private readonly byte[] authOkMessage = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Mocks", "testdata", "auth_ok.json"));
+        private readonly byte[] pongMessage = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Mocks", "testdata", "pong.json"));
         private readonly JsonSerializerOptions serializeOptions = new JsonSerializerOptions
         {
             WriteIndented = true
@@ -135,6 +136,10 @@ namespace HassClient.Performance.Tests.Mocks
                                 await webSocket.SendAsync(new ArraySegment<byte>(authNotOkMessage, 0, authNotOkMessage.Length), WebSocketMessageType.Text, true, CancellationToken.None);
                                 // Hass will normally close session here but for the sake of testing it wont
                             }
+                            break;
+                        case "ping":
+                            // Hardcoded to be correct for performance tests
+                            await webSocket.SendAsync(new ArraySegment<byte>(pongMessage, 0, pongMessage.Length), WebSocketMessageType.Text, true, CancellationToken.None);
                             break;
                         case "subscribe_events":
                             SendCommandMessage subscribeEventMessage = JsonSerializer.Deserialize<SendCommandMessage>(new ReadOnlySpan<byte>(buffer, 0, result.Count));

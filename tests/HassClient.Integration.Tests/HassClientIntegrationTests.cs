@@ -54,6 +54,18 @@ namespace HassClient.Integration.Tests
         }
 
         [Fact]
+        public async void TestPingPong()
+        {
+            using var wscli = new HassClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false, false);
+            Assert.True(result);
+
+            var pongReceived = await wscli.PingAsync(1000);
+            Assert.True(pongReceived);
+            await wscli.CloseAsync();
+        }
+
+        [Fact]
         public async void TestSubscribeEvents()
         {
             using var wscli = new HassClient();

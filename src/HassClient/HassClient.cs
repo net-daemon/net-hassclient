@@ -265,6 +265,41 @@ namespace HassClient
 
         }
 
+        /// <summary>
+        /// Pings Home Assistant to check if connection is alive, hass returns a pong message
+        /// </summary>
+        /// <param name="timeout"></param>
+        /// <returns></returns>
+        public async Task<bool> PingAsync(int timeout)
+        {
+            using var timerTokenSource = new CancellationTokenSource(SocketTimeout);
+            // Make a combined token source with timer and the general cancel token source
+            // The operations will cancel from ether one
+            using var pingTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+                timerTokenSource.Token, _cancelSource.Token);
+
+            try
+            {
+                sendMessage(new PingMessage());
+                var result = await _messageChannel.Reader.ReadAsync(pingTokenSource.Token);
+                if (result.Type == "pong")
+                {
+                    return true;
+                }
+
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Fail to ping Home Assistant");
+                _logger.LogDebug(e, $"Fail to ping Home Assistant");
+            }
+            return false;
+        }
+
         private async Task subscribeToEvents(CancellationTokenSource connectTokenSource)
         {
             sendMessage(new SubscribeEventMessage { });
@@ -441,7 +476,7 @@ namespace HassClient
                 {
                     Memory<byte> memory = pipe.Writer.GetMemory(HassClient._DEFAULT_RECIEIVE_BUFFER_SIZE);
 
-                    ValueWebSocketReceiveResult result = await _ws.ReceiveAsync(memory, _cancelSource.Token);
+                    ValueWebSocketReceiveResult result = await _ws.ReceiveAsync(memory, _cancelSource.Token).ConfigureAwait(false);
 
                     if (result.MessageType == WebSocketMessageType.Close || result.Count == 0)
                     {
@@ -454,12 +489,12 @@ namespace HassClient
 
                     if (result.EndOfMessage)
                     {
-                        await pipe.Writer.FlushAsync();
-                        await pipe.Writer.CompleteAsync();
+                        await pipe.Writer.FlushAsync().ConfigureAwait(false);
+                        await pipe.Writer.CompleteAsync().ConfigureAwait(false);
                         try
                         {
-                            HassMessage m = await JsonSerializer.DeserializeAsync<HassMessage>(pipe.Reader.AsStream());
-                            await pipe.Reader.CompleteAsync();
+                            HassMessage m = await JsonSerializer.DeserializeAsync<HassMessage>(pipe.Reader.AsStream()).ConfigureAwait(false);
+                            await pipe.Reader.CompleteAsync().ConfigureAwait(false);
                             switch (m.Type)
                             {
                                 case "event":
@@ -469,6 +504,7 @@ namespace HassClient
                                 case "auth_required":
                                 case "auth_ok":
                                 case "auth_invalid":
+                                case "pong":
                                 case "result":
                                     _messageChannel.Writer.TryWrite(m);
                                     break;

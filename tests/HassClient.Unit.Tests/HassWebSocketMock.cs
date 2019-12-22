@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace HassClient.Unit.Tests
@@ -16,6 +17,7 @@ namespace HassClient.Unit.Tests
         ResultOk,
         NewEvent,
         States,
+        Pong,
     }
 
     public class HassWebSocketFactoryMock : IClientWebSocketFactory
@@ -31,7 +33,9 @@ namespace HassClient.Unit.Tests
         }
         public IClientWebSocket New()
         {
-            _ws = new HassWebSocketMock(_mockMessages);
+            _ws = new HassWebSocketMock();
+            foreach (var msg in _mockMessages)
+                _ws.ResponseMessages.Writer.TryWrite(msg);
             return _ws;
         }
     }
@@ -46,18 +50,17 @@ namespace HassClient.Unit.Tests
         private static byte[] msgResultSuccess => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_msg.json"));
         private static byte[] msgNewEvent => File.ReadAllBytes(Path.Combine(mockTestdataPath, "event.json"));
         private static byte[] msgStates => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_states.json"));
+        private static byte[] msgPong => File.ReadAllBytes(Path.Combine(mockTestdataPath, "pong.json"));
 
         private int _currentMsgIndex = 0;
         private int _currentReadPosition = 0;
 
         public bool CloseIsRun { get; set; } = false;
 
-        public HassWebSocketMock(List<MockMessageType> mockMessages)
-        {
-            _mockMessages = mockMessages;
-        }
-
         public WebSocketState State { get; set; }
+
+        private readonly Channel<MockMessageType> _responseMessages = Channel.CreateBounded<MockMessageType>(10);
+        public Channel<MockMessageType> ResponseMessages => _responseMessages;
 
         public WebSocketCloseStatus? CloseStatus { get; set; }
 
@@ -76,14 +79,16 @@ namespace HassClient.Unit.Tests
         }
         public Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken) => throw new NotImplementedException();
 
-        private ValueTask<ValueWebSocketReceiveResult> recres(byte[] msg, ref Memory<byte> buffer)
+        private async ValueTask<ValueWebSocketReceiveResult> recres(byte[] msg, Memory<byte> buffer, MockMessageType msgType)
         {
             if ((msg.Length - _currentReadPosition) > buffer.Length)
             {
                 msg.AsMemory<byte>(_currentReadPosition, buffer.Length).CopyTo(buffer);
                 _currentReadPosition += buffer.Length;
-                return new ValueTask<ValueWebSocketReceiveResult>(new ValueWebSocketReceiveResult(
-                         buffer.Length, WebSocketMessageType.Text, false));
+                // Re-enter the message type in channel cause it is a continuous message
+                _responseMessages.Writer.TryWrite(msgType);
+                return new ValueWebSocketReceiveResult(
+                         buffer.Length, WebSocketMessageType.Text, false);
             }
             else
             {
@@ -92,40 +97,38 @@ namespace HassClient.Unit.Tests
 
                 _currentReadPosition = 0;
                 _currentMsgIndex++; // Full message, add next index
-                return new ValueTask<ValueWebSocketReceiveResult>(new ValueWebSocketReceiveResult(
-                             len, WebSocketMessageType.Text, true));
+                return new ValueWebSocketReceiveResult(
+                             len, WebSocketMessageType.Text, true);
             }
 
         }
-        public ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+        public async ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken)
         {
-            if (_currentMsgIndex >= _mockMessages.Count)
-            {
-                Task.Delay(1000, cancellationToken);
-                throw new OperationCanceledException(cancellationToken);
-            }
+            var msgToSend = await _responseMessages.Reader.ReadAsync(cancellationToken);
 
-            var msgToSend = _mockMessages[_currentMsgIndex];
 
             switch (msgToSend)
             {
                 case MockMessageType.AuthRequired:
-                    return recres(msgAuthRequiredMessage, ref buffer);
+                    return await recres(msgAuthRequiredMessage, buffer, msgToSend);
 
                 case MockMessageType.AuthOk:
-                    return recres(msgAuthOk, ref buffer);
+                    return await recres(msgAuthOk, buffer, msgToSend);
 
                 case MockMessageType.AuthFail:
-                    return recres(msgAuthFail, ref buffer);
+                    return await recres(msgAuthFail, buffer, msgToSend);
 
                 case MockMessageType.ResultOk:
-                    return recres(msgResultSuccess, ref buffer);
+                    return await recres(msgResultSuccess, buffer, msgToSend);
 
                 case MockMessageType.NewEvent:
-                    return recres(msgNewEvent, ref buffer);
+                    return await recres(msgNewEvent, buffer, msgToSend);
 
                 case MockMessageType.States:
-                    return recres(msgStates, ref buffer);
+                    return await recres(msgStates, buffer, msgToSend);
+
+                case MockMessageType.Pong:
+                    return await recres(msgPong, buffer, msgToSend);
 
             }
 

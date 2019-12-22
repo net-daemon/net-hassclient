@@ -110,7 +110,7 @@ namespace HassClient.Unit.Tests
             Assert.True(stateMessage.OldState?.EntityId == "binary_sensor.vardagsrum_pir");
             Assert.True(((JsonElement)stateMessage.OldState?.Attributes?["battery_level"]).GetInt32() == 100);
             Assert.True(((JsonElement)stateMessage.OldState?.Attributes?["on"]).GetBoolean() == true);
-            Assert.True(((JsonElement)stateMessage.OldState?.Attributes?["friendly_name"]).GetString() == "Rörelsedetektor TV-rum");
+            Assert.True(((JsonElement)stateMessage.OldState?.Attributes?["friendly_name"]).GetString() == "RÃ¶relsedetektor TV-rum");
 
             // Test the date and time conversions that it matches UTC time
             DateTime? lastChanged = stateMessage?.OldState?.LastChanged;
@@ -170,10 +170,26 @@ namespace HassClient.Unit.Tests
 
             // Simulate an ok connect by using the "ws://localhost:8192/api/websocket" address
             var hc = new HassClient(wsFactory: mock);
-            hc.SocketTimeout = 2000000; // set it to 20 ms timeout
             Assert.True(await hc.ConnectAsync(new Uri("ws://localhost:8192/api/websocket"), "TOKEN", true, false));
             Assert.True(hc.States.Count == 19);
 
+        }
+
+        [Fact]
+        public async void TestPingAndPong()
+        {
+            // Prepare the mock with predefined message sequence
+            var mock = new HassWebSocketFactoryMock(new List<MockMessageType>()
+            {
+                MockMessageType.AuthRequired,
+                MockMessageType.AuthOk,
+            });
+
+            var hc = new HassClient(wsFactory: mock);
+            Assert.True(await hc.ConnectAsync(new Uri("ws://localhost:8192/api/websocket"), "TOKEN", false, false));
+
+            mock.WebSocketClient.ResponseMessages.Writer.TryWrite(MockMessageType.Pong);
+            Assert.True(await hc.PingAsync(1000));
         }
 
     }
