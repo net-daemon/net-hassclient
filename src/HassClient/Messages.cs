@@ -137,8 +137,8 @@ namespace HassClient
     {
         public SubscribeEventMessage() => Type = "subscribe_events";
 
-        //[JsonPropertyName("event_type")]
-        //public string? EventType { get; set; }
+        [JsonPropertyName("event_type")]
+        public string? EventType { get; set; } = null;
     }
 
     public class GetStatesMessage : CommandMessage, IMessageHasId

@@ -74,7 +74,8 @@ namespace HassClient
         /// </summary>
         private readonly JsonSerializerOptions defaultSerializerOptions = new JsonSerializerOptions
         {
-            WriteIndented = false
+            WriteIndented = false,
+            IgnoreNullValues = true
         };
 
         /// <summary>
@@ -471,64 +472,8 @@ namespace HassClient
             {
                 try
                 {
-                    Memory<byte> memory = pipe.Writer.GetMemory(HassClient._DEFAULT_RECIEIVE_BUFFER_SIZE);
 
-                    ValueWebSocketReceiveResult result = await _ws.ReceiveAsync(memory, _cancelSource.Token);
-
-                    if (result.MessageType == WebSocketMessageType.Close || result.Count == 0)
-                    {
-                        await CloseAsync();
-                        // Remote disconnected just leave the readpump
-                        return;
-                    }
-                    pipe.Writer.Advance(result.Count);
-                    totalCount += result.Count;
-
-                    if (result.EndOfMessage)
-                    {
-                        await pipe.Writer.FlushAsync();
-                        await pipe.Writer.CompleteAsync();
-
-                        try
-                        {
-
-
-                            HassMessage m = await JsonSerializer.DeserializeAsync<HassMessage>(pipe.Reader.AsStream());
-                            await pipe.Reader.CompleteAsync().ConfigureAwait(false);
-                            switch (m.Type)
-                            {
-                                case "event":
-                                    if (m.Event != null)
-                                        _eventChannel.Writer.TryWrite(m.Event);
-                                    break;
-                                case "auth_required":
-                                case "auth_ok":
-                                case "auth_invalid":
-                                case "pong":
-                                case "result":
-                                    _messageChannel.Writer.TryWrite(m);
-                                    break;
-                                default:
-                                    _logger.LogDebug($"Unexpected eventtype {m.Type}, discarding message!");
-                                    break;
-                            }
-
-                            pipe = new Pipe();
-                            totalCount = 0;
-
-                        }
-                        catch (System.Exception e)
-                        {
-                            // Todo: Log the seralizer error here later but continue receive
-                            // messages from the server. Then we can survive the server
-                            // Sending bad json messages
-                            _logger?.LogDebug(e, "Error deserialize json response");
-                            // Make sure we put a small delay incase we have severe error so the loop
-                            // doesnt kill the server
-                            await Task.Delay(20);
-                        }
-
-                    }
+                    await ProcessNextMessage();
                 }
                 catch (System.OperationCanceledException)
                 {
@@ -542,6 +487,87 @@ namespace HassClient
 
             }
             _logger?.LogTrace($"Exit ReadMessagePump");
+        }
+
+        private async Task ProcessNextMessage()
+        {
+            var pipe = new Pipe();
+
+            await Task.WhenAll(
+                Task.Run(ReadFromClientSocket),
+                Task.Run(WriteMessagesToChannel)
+                );
+
+            async Task ReadFromClientSocket()
+            {
+                if (_ws == null)
+                    return;
+
+                while (!_cancelSource.Token.IsCancellationRequested && !_ws.CloseStatus.HasValue)
+                {
+
+                    Memory<byte> memory = pipe.Writer.GetMemory(HassClient._DEFAULT_RECIEIVE_BUFFER_SIZE);
+
+                    ValueWebSocketReceiveResult result = await _ws.ReceiveAsync(memory, _cancelSource.Token);
+
+                    if (result.MessageType == WebSocketMessageType.Close || result.Count == 0)
+                    {
+                        await CloseAsync();
+                        // Remote disconnected just leave the readpump
+                        return;
+                    }
+                    // Advance writer to the read ne of bytes
+                    pipe.Writer.Advance(result.Count);
+
+                    await pipe.Writer.FlushAsync();
+
+                    if (result.EndOfMessage)
+                    {
+                        // We have successfully read the whole message, make available to reader
+                        await pipe.Writer.CompleteAsync();
+                        return;
+                    }
+                }
+            }
+            async Task WriteMessagesToChannel()
+            {
+                try
+                {
+
+
+                    HassMessage m = await JsonSerializer.DeserializeAsync<HassMessage>(pipe.Reader.AsStream());
+                    await pipe.Reader.CompleteAsync().ConfigureAwait(false);
+                    switch (m.Type)
+                    {
+                        case "event":
+                            if (m.Event != null)
+                                _eventChannel.Writer.TryWrite(m.Event);
+                            break;
+                        case "auth_required":
+                        case "auth_ok":
+                        case "auth_invalid":
+                        case "pong":
+                        case "result":
+                            _messageChannel.Writer.TryWrite(m);
+                            break;
+                        default:
+                            _logger.LogDebug($"Unexpected eventtype {m.Type}, discarding message!");
+                            break;
+                    }
+                    return;
+
+                }
+                catch (System.Exception e)
+                {
+                    // Todo: Log the seralizer error here later but continue receive
+                    // messages from the server. Then we can survive the server
+                    // Sending bad json messages
+                    _logger?.LogDebug(e, "Error deserialize json response");
+                    // Make sure we put a small delay incase we have severe error so the loop
+                    // doesnt kill the server
+                    await Task.Delay(20);
+                }
+            }
         }
         private async void WriteMessagePump()
         {
@@ -578,4 +604,47 @@ namespace HassClient
 
     }
 
+    //internal class WebsocketPipe : IDisposable
+    //{
+    //    private Pipe _pipe = new Pipe();
+    //    private PipeReader _reader;
+    //    private PipeWriter _writer;
+    //    IClientWebSocket _ws;
+
+    //    public WebsocketPipe(IClientWebSocket socket)
+    //    {
+    //        _reader = _pipe.Reader;
+    //        _writer = _pipe.Writer;
+    //        _ws = socket;
+    //    }
+
+    //    #region IDisposable Support
+    //    private bool disposedValue = false; // To detect redundant calls
+
+    //    protected virtual void Dispose(bool disposing)
+    //    {
+    //        if (!disposedValue)
+    //        {
+    //            if (disposing)
+    //            {
+    //                // TODO: dispose managed state (managed objects).
+    //            }
+
+    //            // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+    //            // TODO: set large fields to null.
+
+    //            disposedValue = true;
+    //        }
+    //    }
+
+    //    // This code added to correctly implement the disposable pattern.
+    //    public void Dispose()
+    //    {
+    //        // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+    //        Dispose(true);
+    //    }
+    //    #endregion
+
+
+    //}
 }

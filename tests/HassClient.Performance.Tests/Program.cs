@@ -96,6 +96,13 @@ namespace HassClient.Performance.Tests
                     Arity = ArgumentArity.ExactlyOne,
                 }
             });
+            cmd.AddOption(new Option(new[] { "--events", "-e" }, "Get events!")
+            {
+                Argument = new Argument<bool>()
+                {
+                    Arity = ArgumentArity.ExactlyOne,
+                }
+            });
             cmd.AddOption(new Option(new[] { "--token", "-t" }, "Access token")
             {
                 Argument = new Argument<string>()
@@ -103,13 +110,13 @@ namespace HassClient.Performance.Tests
                     Arity = ArgumentArity.ExactlyOne,
                 }
             });
-            cmd.Handler = CommandHandler.Create<string, int, string>((ip, port, token) =>
+            cmd.Handler = CommandHandler.Create<string, int, bool, string>((ip, port, events, token) =>
             {
-                _homeAssistantTask = Task.Run(() => ConnectToHomeAssistant(ip, port, token));
+                _homeAssistantTask = Task.Run(() => ConnectToHomeAssistant(ip, port, events, token));
             });
             return cmd;
         }
-        private async static Task ConnectToHomeAssistant(string ip, int port, string token)
+        private async static Task ConnectToHomeAssistant(string ip, int port, bool events, string token)
         {
             var url = new Uri($"ws://{ip}:{port}/api/websocket");
             Console.WriteLine($"Connecting to {url}...");
@@ -123,7 +130,7 @@ namespace HassClient.Performance.Tests
             });
 
             client = new HassClient(logFactory: factory);
-            var connected = await client.ConnectAsync(url, token, true, false);
+            var connected = await client.ConnectAsync(url, token, true, events);
             if (!connected)
             {
                 Console.WriteLine("Failed to connect to Home assistant.. bailing...");
@@ -143,8 +150,14 @@ namespace HassClient.Performance.Tests
                 try
                 {
                     var eventMsg = await client.ReadEventAsync();
-                    Console.WriteLine($"Eventtype: {eventMsg.EventType}");
 
+                    //Console.WriteLine($"Eventtype: {eventMsg.EventType}");
+                    if (eventMsg.EventType == "state_changed")
+                    {
+                        var stateMessage = eventMsg?.Data as StateChangedEventMessage;
+
+                        Console.WriteLine($"{stateMessage.EntityId}: {stateMessage.OldState.State}->{stateMessage.NewState.State}");
+                    }
 
                 }
                 catch (OperationCanceledException)
