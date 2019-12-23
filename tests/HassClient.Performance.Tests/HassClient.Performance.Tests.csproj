@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="System.CommandLine.Experimental" Version="0.3.0-alpha.19577.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\HassClient.Integration.Tests\HassClientIntegrationTests.csproj" />
     <ProjectReference Include="..\..\src\HassClient\HassClient.csproj" />
   </ItemGroup>
@@ -30,10 +34,6 @@
     <None Update="Mocks\testdata\service_event.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="System.Commandline" Version="1.0.0.4" />
   </ItemGroup>
 
   <PropertyGroup>

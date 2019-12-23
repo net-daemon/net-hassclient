@@ -46,7 +46,7 @@ namespace HassClient
         /// <summary>
         /// The max time we will wait for the socket to gracefully close
         /// </summary>
-        private static readonly int _MAX_WAITTIME_SOCKET_CLOSE = 15000; // 5 seconds
+        private static readonly int _MAX_WAITTIME_SOCKET_CLOSE = 5000; // 5 seconds
 
         /// <summary>
         /// Default size for channel
@@ -62,7 +62,7 @@ namespace HassClient
         /// <summary>
         /// The default timeout for websockets 
         /// </summary>
-        private static readonly int _DEFAULT_TIMEOUT = 5000; // 5 seconds
+        private static readonly int _DEFAULT_TIMEOUT = 50000; // 5 seconds
 
         /// <summary>
         /// Indicates if client is valid
@@ -139,7 +139,7 @@ namespace HassClient
                                                                                {
                                                                                    builder
                                                                                        .ClearProviders()
-                                                                                       .AddFilter("HassClient.WSClient", LogLevel.Information)
+                                                                                       .AddFilter("HassClient.HassClient", LogLevel.Information)
                                                                                        .AddConsole();
                                                                                });
 
@@ -153,7 +153,7 @@ namespace HassClient
         /// <summary>
         /// Message id sent in command messages
         /// </summary>
-        private int _messageId = 0;
+        private int _messageId = 1;
 
         /// <summary>
         /// Thread safe dicitionary that holds information about all command and command id:s
@@ -473,7 +473,7 @@ namespace HassClient
                 {
                     Memory<byte> memory = pipe.Writer.GetMemory(HassClient._DEFAULT_RECIEIVE_BUFFER_SIZE);
 
-                    ValueWebSocketReceiveResult result = await _ws.ReceiveAsync(memory, _cancelSource.Token).ConfigureAwait(false);
+                    ValueWebSocketReceiveResult result = await _ws.ReceiveAsync(memory, _cancelSource.Token);
 
                     if (result.MessageType == WebSocketMessageType.Close || result.Count == 0)
                     {
@@ -486,11 +486,14 @@ namespace HassClient
 
                     if (result.EndOfMessage)
                     {
-                        await pipe.Writer.FlushAsync().ConfigureAwait(false);
-                        await pipe.Writer.CompleteAsync().ConfigureAwait(false);
+                        await pipe.Writer.FlushAsync();
+                        await pipe.Writer.CompleteAsync();
+
                         try
                         {
-                            HassMessage m = await JsonSerializer.DeserializeAsync<HassMessage>(pipe.Reader.AsStream()).ConfigureAwait(false);
+
+
+                            HassMessage m = await JsonSerializer.DeserializeAsync<HassMessage>(pipe.Reader.AsStream());
                             await pipe.Reader.CompleteAsync().ConfigureAwait(false);
                             switch (m.Type)
                             {
@@ -531,6 +534,10 @@ namespace HassClient
                 {
                     // Canceled the thread just leave
                     break;
+                }
+                catch (Exception e)
+                {
+                    _logger?.LogError(e, "Major failure in readpump, exit...");
                 }
 
             }
