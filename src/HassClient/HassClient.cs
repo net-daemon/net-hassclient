@@ -62,7 +62,7 @@ namespace HassClient
         /// <summary>
         /// The default timeout for websockets 
         /// </summary>
-        private static readonly int _DEFAULT_TIMEOUT = 50000; // 5 seconds
+        private static readonly int _DEFAULT_TIMEOUT = 5000; // 5 seconds
 
         /// <summary>
         /// Indicates if client is valid
@@ -262,6 +262,77 @@ namespace HassClient
             return false;
 
         }
+
+        private async ValueTask<HassMessage> sendCommandAndWaitForResponse(CommandMessage message)
+        {
+            using var timerTokenSource = new CancellationTokenSource(SocketTimeout);
+            // Make a combined token source with timer and the general cancel token source
+            // The operations will cancel from ether one
+            using var sendCommandTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+                timerTokenSource.Token, _cancelSource.Token);
+
+            try
+            {
+                sendMessage(message);
+                while (true)
+                {
+                    var result = await _messageChannel.Reader.ReadAsync(sendCommandTokenSource.Token);
+                    if (result.Id == message.Id)
+                    {
+                        return result;
+                    }
+                    else
+                    {
+                        // Not the response, push message back
+                        _messageChannel.Writer.TryWrite(result);
+                        // Delay for a short period to let the message arrive we are searching for
+                        await Task.Delay(10);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogError($"Fail to send command {message.Type} and receive correct command within timeout. ");
+                throw;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Fail to send command {message.Type}. ");
+                _logger.LogDebug(e, $"Fail to send command.");
+                throw e;
+            }
+
+        }
+
+        public async Task<bool> CallService(string domain, string service, object serviceData)
+        {
+            try
+            {
+                var result = await sendCommandAndWaitForResponse(new CallServiceMessage()
+                {
+                    Domain = domain,
+                    Service = service,
+                    ServiceData = serviceData
+                });
+                return result.Success ?? false;
+
+
+            }
+            catch (OperationCanceledException)
+            {
+                if (_cancelSource.IsCancellationRequested)
+                    throw;
+                else
+                    return false; // Just timeout not canceled 
+            }
+            catch
+            {
+                // We already logged in sendCommand 
+                return false;
+            }
+
+        }
+
 
         /// <summary>
         /// Pings Home Assistant to check if connection is alive, hass returns a pong message
@@ -489,6 +560,14 @@ namespace HassClient
             _logger?.LogTrace($"Exit ReadMessagePump");
         }
 
+        /// <summary>
+        /// Process next message from Home Assistant
+        /// </summary>
+        /// <remarks>
+        /// Uses Pipes to allocate memory where the websocket writes to and 
+        /// Write the read message to a channel.
+        /// </remarks>
+        /// <returns></returns>
         private async Task ProcessNextMessage()
         {
             var pipe = new Pipe();
@@ -498,6 +577,7 @@ namespace HassClient
                 Task.Run(WriteMessagesToChannel)
                 );
 
+            // Task that reads the next message from websocket
             async Task ReadFromClientSocket()
             {
                 if (_ws == null)
@@ -529,6 +609,7 @@ namespace HassClient
                     }
                 }
             }
+            // Task that deserializes the message and write the finnished message to a channel
             async Task WriteMessagesToChannel()
             {
                 try
@@ -546,6 +627,7 @@ namespace HassClient
                         case "auth_required":
                         case "auth_ok":
                         case "auth_invalid":
+                        case "call_service":
                         case "pong":
                         case "result":
                             _messageChannel.Writer.TryWrite(m);
@@ -604,47 +686,4 @@ namespace HassClient
 
     }
 
-    //internal class WebsocketPipe : IDisposable
-    //{
-    //    private Pipe _pipe = new Pipe();
-    //    private PipeReader _reader;
-    //    private PipeWriter _writer;
-    //    IClientWebSocket _ws;
-
-    //    public WebsocketPipe(IClientWebSocket socket)
-    //    {
-    //        _reader = _pipe.Reader;
-    //        _writer = _pipe.Writer;
-    //        _ws = socket;
-    //    }
-
-    //    #region IDisposable Support
-    //    private bool disposedValue = false; // To detect redundant calls
-
-    //    protected virtual void Dispose(bool disposing)
-    //    {
-    //        if (!disposedValue)
-    //        {
-    //            if (disposing)
-    //            {
-    //                // TODO: dispose managed state (managed objects).
-    //            }
-
-    //            // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-    //            // TODO: set large fields to null.
-
-    //            disposedValue = true;
-    //        }
-    //    }
-
-    //    // This code added to correctly implement the disposable pattern.
-    //    public void Dispose()
-    //    {
-    //        // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-    //        Dispose(true);
-    //    }
-    //    #endregion
-
-
-    //}
 }

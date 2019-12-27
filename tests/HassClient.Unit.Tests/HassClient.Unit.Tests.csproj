@@ -50,6 +50,9 @@
     <None Update="Mocks\testdata\result_states.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Mocks\testdata\service_call_ok.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Mocks\testdata\service_event.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

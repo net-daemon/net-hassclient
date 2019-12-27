@@ -148,6 +148,21 @@ namespace HassClient
 
     }
 
+    public class CallServiceMessage : CommandMessage, IMessageHasId
+    {
+        public CallServiceMessage() => Type = "call_service";
+
+        [JsonPropertyName("domain")]
+        public string Domain { get; set; } = "";
+
+        [JsonPropertyName("service")]
+        public string Service { get; set; } = "";
+
+        [JsonPropertyName("service_data")]
+        public object? ServiceData { get; set; } = null;
+    }
+
+
     #region -- Json Extensions
 
     public static partial class JsonExtensions

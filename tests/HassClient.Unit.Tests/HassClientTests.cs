@@ -24,7 +24,7 @@ namespace HassClient.Unit.Tests
 
         }
         [Fact]
-        public async void TestFailConnect()
+        public async void TestFailAuth()
         {
             // Prepare the mock with predefined message sequence
             var mock = new HassWebSocketFactoryMock(new List<MockMessageType>()
@@ -89,6 +89,23 @@ namespace HassClient.Unit.Tests
             // Simulate an ok connect by using the "ws://localhost:8192/api/websocket" address
             var hc = new HassClient(wsFactory: mock);
             await Assert.ThrowsAsync<ArgumentNullException>(async () => await hc.ConnectAsync(null, "lss", false, false));
+        }
+
+        [Fact]
+        public async void TestConnectFail()
+        {
+            var mock = new HassWebSocketFactoryMock(new List<MockMessageType>()
+            {
+                MockMessageType.AuthRequired,
+                MockMessageType.AuthFail
+            });
+
+            var loggMock = new LoggerMock();
+            // Simulate an ok connect by using the "ws://localhost:8192/api/websocket" address
+            var hc = new HassClient(loggMock.LoggerFactory, mock);
+            Assert.False(await hc.ConnectAsync(new Uri("ws://noconnect:9999"), "lss", false, false));
+
+            loggMock.AssertLogged(LogLevel.Debug, Times.AtLeastOnce());
         }
 
         [Fact]
@@ -195,6 +212,47 @@ namespace HassClient.Unit.Tests
 
             mock.WebSocketClient.ResponseMessages.Writer.TryWrite(MockMessageType.Pong);
             Assert.True(await hc.PingAsync(1000));
+        }
+
+        [Fact]
+        public async void TestCallServiceOk()
+        {
+            // Prepare the mock with predefined message sequence
+            var mock = new HassWebSocketFactoryMock(new List<MockMessageType>()
+            {
+                MockMessageType.AuthRequired,
+                MockMessageType.AuthOk,
+            });
+            var hc = new HassClient(wsFactory: mock);
+            Assert.True(await hc.ConnectAsync(new Uri("ws://localhost:8192/api/websocket"), "TOKEN", false, false));
+
+            mock.WebSocketClient.ResponseMessages.Writer.TryWrite(MockMessageType.ServiceCallOk);
+
+            var serviceData = new Dictionary<string, object>()
+            {
+                { "entity_id", "100" }
+            };
+            Assert.True(await hc.CallService("light", "turn_on", serviceData));
+
+        }
+
+        [Fact]
+        public async void TestSerialize()
+        {
+            var msg = new CallServiceMessage()
+            {
+                Id = 1,
+                Domain = "light",
+                Service = "turn_on",
+                ServiceData = new
+                {
+                    enity_id = 100,
+                    array = new string[] { "10", "11" }
+                }
+            };
+
+
+            var s = JsonSerializer.Serialize<CallServiceMessage>(msg);
         }
 
     }

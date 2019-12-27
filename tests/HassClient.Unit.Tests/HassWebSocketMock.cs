@@ -18,6 +18,7 @@ namespace HassClient.Unit.Tests
         NewEvent,
         States,
         Pong,
+        ServiceCallOk,
     }
 
     public class HassWebSocketFactoryMock : IClientWebSocketFactory
@@ -30,12 +31,15 @@ namespace HassClient.Unit.Tests
         public HassWebSocketFactoryMock(List<MockMessageType> mockMessages)
         {
             _mockMessages = mockMessages;
+
         }
         public IClientWebSocket New()
         {
+
             _ws = new HassWebSocketMock();
             foreach (var msg in _mockMessages)
                 _ws.ResponseMessages.Writer.TryWrite(msg);
+
             return _ws;
         }
     }
@@ -51,6 +55,8 @@ namespace HassClient.Unit.Tests
         private static byte[] msgNewEvent => File.ReadAllBytes(Path.Combine(mockTestdataPath, "event.json"));
         private static byte[] msgStates => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_states.json"));
         private static byte[] msgPong => File.ReadAllBytes(Path.Combine(mockTestdataPath, "pong.json"));
+        private static byte[] msgServiceCallOk => File.ReadAllBytes(Path.Combine(mockTestdataPath, "service_call_ok.json"));
+
 
         private int _currentMsgIndex = 0;
         private int _currentReadPosition = 0;
@@ -74,7 +80,16 @@ namespace HassClient.Unit.Tests
         }
         public async Task ConnectAsync(Uri uri, CancellationToken cancel)
         {
-            State = WebSocketState.Open;
+            if (uri.AbsoluteUri == "ws://noconnect:9999/")
+            {
+                State = WebSocketState.Aborted;
+            }
+            else
+            {
+                State = WebSocketState.Open;
+            }
+            // Fake different connectionstatus
+
             await Task.Delay(2);
         }
         public Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken) => throw new NotImplementedException();
@@ -129,6 +144,9 @@ namespace HassClient.Unit.Tests
 
                 case MockMessageType.Pong:
                     return await recres(msgPong, buffer, msgToSend);
+
+                case MockMessageType.ServiceCallOk:
+                    return await recres(msgServiceCallOk, buffer, msgToSend);
 
             }
 

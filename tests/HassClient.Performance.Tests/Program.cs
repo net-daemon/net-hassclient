@@ -19,55 +19,7 @@ namespace HassClient.Performance.Tests
             var cmd = new RootCommand();
             cmd.AddCommand(connectHass());
             var result = cmd.InvokeAsync(args).Result;
-            //// Create a root command with some options
-            //var rootCommand = new RootCommand
-            //{
-            //    new Option(
-            //        "--int-option",
-            //        "An option whose argument is parsed as an int")
-            //    {
-            //        Argument = new Argument<int>(defaultValue: () => 42)
-            //    },
-            //    new Option(
-            //        "--bool-option",
-            //        "An option whose argument is parsed as a bool")
-            //    {
-            //        Argument = new Argument<bool>()
-            //    },
-            //    new Option(
-            //        "-d",
-            //        "Not parsed as anything")
 
-            //};
-            //rootCommand.Description = "My sample app";
-
-            //rootCommand.Handler = CommandHandler.Create<int, bool, int>((intOption, boolOption, someOption) =>
-            //{
-            //    Console.WriteLine($"The value for --int-option is: {intOption}");
-            //    Console.WriteLine($"The value for --bool-option is: {boolOption}");
-            //    Console.WriteLine($"The value for --bool-option is: {someOption}");
-            //});
-
-            // Parse the incoming args and invoke the handler
-
-            //var result = rootCommand.InvokeAsync(args).Result;
-
-            Task connectToHomeAssistantTask = null;
-
-            //System.CommandLine.
-
-            //if (string.IsNullOrEmpty(input))
-            //    printUsage();
-
-            //switch (args[0])
-            //{
-            //    case "-p":
-            //        await DoPerformanceTest();
-            //        break;
-            //    case "-c":
-            //        connectToHomeAssistantTask = ConnectToHomeAssistant();
-            //        break;
-            //}
             Console.ReadLine();
 
             if (client != null)
@@ -144,6 +96,8 @@ namespace HassClient.Performance.Tests
             {
                 Console.WriteLine($"Number of states: {client.States.Count}");
             }
+
+            //await client.CallServiceData("light", "turn_on", new { entity_id = "light.tomas_rum" });
 
             while (true)
             {
