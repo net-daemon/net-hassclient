@@ -162,7 +162,7 @@ namespace HassClient
         /// </summary>
         /// <typeparam name="int">The message id sen in command message</typeparam>
         /// <typeparam name="string">The message type</typeparam>
-        public static ConcurrentDictionary<int, string> CommandsSent { get; set; } = new ConcurrentDictionary<int, string>(32, 200);
+        public ConcurrentDictionary<int, string> CommandsSent { get; set; } = new ConcurrentDictionary<int, string>(32, 200);
 
         /// <summary>
         /// Sends a message through the websocket
@@ -284,7 +284,10 @@ namespace HassClient
                     else
                     {
                         // Not the response, push message back
-                        _messageChannel.Writer.TryWrite(result);
+                        var res = _messageChannel.Writer.TryWrite(result);
+
+                        if (!res)
+                            throw new Exception("What the fuuuuuck!");
                         // Delay for a short period to let the message arrive we are searching for
                         await Task.Delay(10);
                     }
@@ -302,6 +305,18 @@ namespace HassClient
                 throw e;
             }
 
+        }
+
+        public async Task<ConfigMessage> GetConfig()
+        {
+            HassMessage hassResult = await sendCommandAndWaitForResponse(new GetConfigMessage());
+
+            var resultMessage = hassResult.Result ?? throw new NullReferenceException("Result cant be null!");
+            var result = resultMessage as ConfigMessage;
+            if (result != null)
+                return result as ConfigMessage;
+            else
+                throw new Exception($"The result not expected! {resultMessage}");
         }
 
         public async Task<bool> CallService(string domain, string service, object serviceData)
@@ -406,6 +421,8 @@ namespace HassClient
 
         private void initStates()
         {
+            _messageId = 1;
+
             _isValid = true;
             _isClosing = false;
 
@@ -628,9 +645,13 @@ namespace HassClient
                         case "auth_ok":
                         case "auth_invalid":
                         case "call_service":
+                        case "get_config":
                         case "pong":
-                        case "result":
                             _messageChannel.Writer.TryWrite(m);
+                            break;
+                        case "result":
+
+                            _messageChannel.Writer.TryWrite(getResultMessage(m));
                             break;
                         default:
                             _logger.LogDebug($"Unexpected eventtype {m.Type}, discarding message!");
@@ -651,6 +672,41 @@ namespace HassClient
                 }
             }
         }
+
+        /// <summary>
+        /// Get the correct result message from HassMessage
+        /// </summary>
+        private HassMessage getResultMessage(HassMessage m)
+        {
+            if (m.Id > 0)
+            {
+                // It is an command response, get command
+                if (CommandsSent.Remove(m.Id, out string? command))
+                {
+                    switch (command)
+                    {
+                        case "get_states":
+                            m.Result = m.ResultElement?.ToObject<List<StateMessage>>();
+                            break;
+
+                        case "get_config":
+                            m.Result = m.ResultElement?.ToObject<ConfigMessage>();
+                            break;
+                        case "subscribe_events":
+                            break; // Do nothing
+                        default:
+                            throw new Exception("Unexpected command!");
+                    }
+                }
+                else
+                {
+                    return m;
+                }
+            }
+
+            return m;
+        }
+
         private async void WriteMessagePump()
         {
             _logger?.LogTrace($"Start WriteMessagePump");

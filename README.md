@@ -1,1 +1,2 @@
-# A client written i .net core 3.1 for Home Assistant
+# .NET Home Assistant client
+Todo: write more here.

@@ -19,6 +19,7 @@ namespace HassClient.Unit.Tests
         States,
         Pong,
         ServiceCallOk,
+        Config,
     }
 
     public class HassWebSocketFactoryMock : IClientWebSocketFactory
@@ -56,6 +57,7 @@ namespace HassClient.Unit.Tests
         private static byte[] msgStates => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_states.json"));
         private static byte[] msgPong => File.ReadAllBytes(Path.Combine(mockTestdataPath, "pong.json"));
         private static byte[] msgServiceCallOk => File.ReadAllBytes(Path.Combine(mockTestdataPath, "service_call_ok.json"));
+        private static byte[] msgConfig => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_config.json"));
 
 
         private int _currentMsgIndex = 0;
@@ -147,6 +149,9 @@ namespace HassClient.Unit.Tests
 
                 case MockMessageType.ServiceCallOk:
                     return await recres(msgServiceCallOk, buffer, msgToSend);
+
+                case MockMessageType.Config:
+                    return await recres(msgConfig, buffer, msgToSend);
 
             }
 

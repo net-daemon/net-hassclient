@@ -17,7 +17,7 @@ namespace HassClient
         [JsonPropertyName("type")]
         public string Type { get; set; } = "";
     }
-    [JsonConverter(typeof(HassMessageConverter))]
+
     public class HassMessage : MessageBase
     {
         [JsonPropertyName("id")]
@@ -110,6 +110,54 @@ namespace HassClient
         public DateTime LastUpdated { get; set; } = DateTime.MinValue;
     }
 
+    public class ConfigMessage
+    {
+        [JsonPropertyName("latitude")]
+        public float? Latitude { get; set; } = null;
+
+        [JsonPropertyName("longitude")]
+        public float? Longitude { get; set; } = null;
+
+        [JsonPropertyName("elevation")]
+        public int? Elevation { get; set; } = null;
+
+        [JsonPropertyName("unit_system")]
+        public UnitSystem? UnitSystem { get; set; } = null;
+
+        [JsonPropertyName("location_name")]
+        public string? LocationName { get; set; } = null;
+
+        [JsonPropertyName("time_zone")]
+        public string? TimeZone { get; set; } = null;
+
+        [JsonPropertyName("components")]
+        public List<string>? Components { get; set; } = null;
+
+        [JsonPropertyName("config_dir")]
+        public string? ConfigDir { get; set; } = null;
+
+        [JsonPropertyName("whitelist_external_dirs")]
+        public List<string>? WhitelistExternalDirs { get; set; } = null;
+
+        [JsonPropertyName("version")]
+        public string? Version { get; set; } = null;
+    }
+
+    public class UnitSystem
+    {
+        [JsonPropertyName("length")]
+        public string? Length { get; set; } = null;
+
+        [JsonPropertyName("mass")]
+        public string? Mass { get; set; } = null;
+
+        [JsonPropertyName("temperature")]
+        public string? Temperature { get; set; } = null;
+
+        [JsonPropertyName("volume")]
+        public string? Volume { get; set; } = null;
+    }
+
 
     public class AuthMessage : MessageBase
     {
@@ -162,6 +210,11 @@ namespace HassClient
         public object? ServiceData { get; set; } = null;
     }
 
+    public class GetConfigMessage : CommandMessage, IMessageHasId
+    {
+        public GetConfigMessage() => Type = "get_config";
+    }
+
 
     #region -- Json Extensions
 
@@ -187,43 +240,47 @@ namespace HassClient
 
     }
 
-    /// <summary>
-    /// Converter that intercepts EventMessages and serializes the correct data structure
-    /// </summary>
-    public class HassMessageConverter : JsonConverter<HassMessage>
-    {
-        public override HassMessage Read(
-            ref Utf8JsonReader reader,
-            Type typeToConvert,
-            JsonSerializerOptions options)
-        {
+    ///// <summary>
+    ///// Converter that intercepts EventMessages and serializes the correct data structure
+    ///// </summary>
+    //public class HassMessageConverter : JsonConverter<HassMessage>
+    //{
+    //    public override HassMessage Read(
+    //        ref Utf8JsonReader reader,
+    //        Type typeToConvert,
+    //        JsonSerializerOptions options)
+    //    {
 
 
-            HassMessageSerializer m = JsonSerializer.Deserialize<HassMessageSerializer>(ref reader, options);
+    //        HassMessageSerializer m = JsonSerializer.Deserialize<HassMessageSerializer>(ref reader, options);
 
-            if (m.Id > 0)
-            {
-                // It is an command response, get command
-                if (HassClient.CommandsSent.Remove(m.Id, out string? command))
-                {
-                    switch (command)
-                    {
-                        case "get_states":
-                            m.Result = m.ResultElement?.ToObject<List<StateMessage>>();
-                            break;
-                    }
-                }
-            }
+    //        if (m.Id > 0)
+    //        {
+    //            // It is an command response, get command
+    //            if (HassClient.CommandsSent.Remove(m.Id, out string? command))
+    //            {
+    //                switch (command)
+    //                {
+    //                    case "get_states":
+    //                        m.Result = m.ResultElement?.ToObject<List<StateMessage>>();
+    //                        break;
 
-            return m as HassMessage;
-        }
+    //                    case "get_config":
+    //                        m.Result = m.ResultElement?.ToObject<ConfigMessage>();
+    //                        break;
+    //                }
+    //            }
+    //        }
 
-        public override void Write(
-            Utf8JsonWriter writer,
-            HassMessage value,
-            JsonSerializerOptions options) =>
-                throw new InvalidOperationException("Serialization not supported for the class EventMessage.");
-    }
+    //        return m as HassMessage;
+    //    }
+
+    //    public override void Write(
+    //        Utf8JsonWriter writer,
+    //        HassMessage value,
+    //        JsonSerializerOptions options) =>
+    //            throw new InvalidOperationException("Serialization not supported for the class EventMessage.");
+    //}
 
     /// <summary>
     /// Converter that intercepts EventMessages and serializes the correct data structure

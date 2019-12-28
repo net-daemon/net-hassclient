@@ -198,6 +198,35 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
+        public async void TestGetConfig()
+        {
+            // Prepare the mock with predefined message sequence
+            var mock = new HassWebSocketFactoryMock(new List<MockMessageType>()
+            {
+                MockMessageType.AuthRequired,
+                MockMessageType.AuthOk
+            });
+
+            // Simulate an ok connect by using the "ws://localhost:8192/api/websocket" address
+            var hc = new HassClient(wsFactory: mock);
+            Assert.True(await hc.ConnectAsync(new Uri("ws://localhost:8192/api/websocket"), "TOKEN", false, false));
+            hc.SocketTimeout = 500000;
+
+            var confTask = hc.GetConfig();
+
+            mock.WebSocketClient.ResponseMessages.Writer.TryWrite(MockMessageType.Config);
+
+            var conf = confTask.Result;
+            Assert.NotNull(conf);
+            Assert.Equal("°C", conf?.UnitSystem?.Temperature);
+            Assert.Contains<string>("binary_sensor.deconz", conf?.Components);
+            Assert.Equal(62.2398549F, conf.Latitude);
+            Assert.Contains<string>("/config/www", conf?.WhitelistExternalDirs);
+            Assert.Equal("0.87.0", conf?.Version);
+
+        }
+
+        [Fact]
         public async void TestPingAndPong()
         {
             // Prepare the mock with predefined message sequence
@@ -236,24 +265,24 @@ namespace HassClient.Unit.Tests
 
         }
 
-        [Fact]
-        public async void TestSerialize()
-        {
-            var msg = new CallServiceMessage()
-            {
-                Id = 1,
-                Domain = "light",
-                Service = "turn_on",
-                ServiceData = new
-                {
-                    enity_id = 100,
-                    array = new string[] { "10", "11" }
-                }
-            };
+        //[Fact]
+        //public async void TestSerialize()
+        //{
+        //    var msg = new CallServiceMessage()
+        //    {
+        //        Id = 1,
+        //        Domain = "light",
+        //        Service = "turn_on",
+        //        ServiceData = new
+        //        {
+        //            enity_id = 100,
+        //            array = new string[] { "10", "11" }
+        //        }
+        //    };
 
 
-            var s = JsonSerializer.Serialize<CallServiceMessage>(msg);
-        }
+        //    var s = JsonSerializer.Serialize<CallServiceMessage>(msg);
+        //}
 
     }
 }
