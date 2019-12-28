@@ -4,21 +4,18 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace HassClient
+namespace JoySoftware.HomeAssistant.Client
 {
 
-    public interface IMessageHasId
+    public class HassMessageBase
     {
-        int Id { get; set; }
-    }
-    public class MessageBase
-    {
-
         [JsonPropertyName("type")]
         public string Type { get; set; } = "";
     }
 
-    public class HassMessage : MessageBase
+    #region -- Receiving messages --
+
+    public class HassMessage : HassMessageBase
     {
         [JsonPropertyName("id")]
         public int Id { get; set; } = 0;
@@ -31,8 +28,8 @@ namespace HassClient
 
 
         [JsonPropertyName("event")]
-        [JsonConverter(typeof(EventMessageConverter))]
-        public EventMessage? Event { get; set; }
+        [JsonConverter(typeof(HassEventConverter))]
+        public HassEvent? Event { get; set; }
 
 
         [JsonPropertyName("result")]
@@ -41,22 +38,7 @@ namespace HassClient
         public object? Result { get; set; }
 
     }
-
-    public class ResultData
-    {
-
-    }
-
-    /// <summary>
-    /// Hacky way to be able to serailize the Hassmessage using a converter and
-    /// still able to use standard deseialization
-    /// </summary>
-    internal class HassMessageSerializer : HassMessage
-    {
-
-    }
-
-    public class EventMessage
+    public class HassEvent
     {
         [JsonPropertyName("event_type")]
         public string EventType { get; set; } = "";
@@ -70,29 +52,40 @@ namespace HassClient
         [JsonPropertyName("data")]
         public JsonElement? DataElement { get; set; } = null;
 
-        public EventData? Data { get; set; } = null;
+        public HassEventData? Data { get; set; } = null;
 
     }
 
-    public class EventData
+    public class HassEventData
     {
 
     }
 
+    public class HassServiceEventData : HassEventData
+    {
 
-    public class StateChangedEventMessage : EventData
+        [JsonPropertyName("domain")]
+        public string Domain { get; set; } = "";
+
+        [JsonPropertyName("service")]
+        public string Service { get; set; } = "";
+
+        [JsonPropertyName("service_data")]
+        public JsonElement? ServiceData { get; set; } = null;
+    }
+    public class HassStateChangedEventData : HassEventData
     {
         [JsonPropertyName("entity_id")]
         public string EntityId { get; set; } = "";
 
         [JsonPropertyName("old_state")]
-        public StateMessage? OldState { get; set; } = null;
+        public HassState? OldState { get; set; } = null;
 
         [JsonPropertyName("new_state")]
-        public StateMessage? NewState { get; set; } = null;
+        public HassState? NewState { get; set; } = null;
     }
 
-    public class StateMessage
+    public class HassState
     {
         [JsonPropertyName("entity_id")]
         public string EntityId { get; set; } = "";
@@ -110,7 +103,7 @@ namespace HassClient
         public DateTime LastUpdated { get; set; } = DateTime.MinValue;
     }
 
-    public class ConfigMessage
+    public class HassConfig
     {
         [JsonPropertyName("latitude")]
         public float? Latitude { get; set; } = null;
@@ -122,7 +115,7 @@ namespace HassClient
         public int? Elevation { get; set; } = null;
 
         [JsonPropertyName("unit_system")]
-        public UnitSystem? UnitSystem { get; set; } = null;
+        public HassUnitSystem? UnitSystem { get; set; } = null;
 
         [JsonPropertyName("location_name")]
         public string? LocationName { get; set; } = null;
@@ -143,7 +136,7 @@ namespace HassClient
         public string? Version { get; set; } = null;
     }
 
-    public class UnitSystem
+    public class HassUnitSystem
     {
         [JsonPropertyName("length")]
         public string? Length { get; set; } = null;
@@ -158,10 +151,13 @@ namespace HassClient
         public string? Volume { get; set; } = null;
     }
 
+    #endregion
 
-    public class AuthMessage : MessageBase
+    #region -- Sending messages --
+
+    public class HassAuthMessage : HassMessageBase
     {
-        public AuthMessage() => Type = "auth";
+        public HassAuthMessage() => Type = "auth";
 
         [JsonPropertyName("access_token")]
         public string AccessToken { get; set; } = "";
@@ -169,36 +165,34 @@ namespace HassClient
 
 
 
-    public class CommandMessage : MessageBase
+    public class CommandMessage : HassMessageBase
     {
         [JsonPropertyName("id")]
         public int Id { get; set; } = 0;
     }
 
-    public class PingMessage : CommandMessage
+    public class HassPingCommand : CommandMessage
     {
-        public PingMessage() => Type = "ping";
+        public HassPingCommand() => Type = "ping";
 
     }
 
-    public class SubscribeEventMessage : CommandMessage
+    public class SubscribeEventCommand : CommandMessage
     {
-        public SubscribeEventMessage() => Type = "subscribe_events";
+        public SubscribeEventCommand() => Type = "subscribe_events";
 
         [JsonPropertyName("event_type")]
         public string? EventType { get; set; } = null;
     }
 
-    public class GetStatesMessage : CommandMessage, IMessageHasId
+    public class GetStatesCommand : CommandMessage
     {
-        public GetStatesMessage() => Type = "get_states";
-
-
+        public GetStatesCommand() => Type = "get_states";
     }
 
-    public class CallServiceMessage : CommandMessage, IMessageHasId
+    public class CallServiceCommand : CommandMessage
     {
-        public CallServiceMessage() => Type = "call_service";
+        public CallServiceCommand() => Type = "call_service";
 
         [JsonPropertyName("domain")]
         public string Domain { get; set; } = "";
@@ -210,11 +204,12 @@ namespace HassClient
         public object? ServiceData { get; set; } = null;
     }
 
-    public class GetConfigMessage : CommandMessage, IMessageHasId
+    public class GetConfigCommand : CommandMessage
     {
-        public GetConfigMessage() => Type = "get_config";
+        public GetConfigCommand() => Type = "get_config";
     }
 
+    #endregion
 
     #region -- Json Extensions
 
@@ -227,79 +222,26 @@ namespace HassClient
             {
                 element.WriteTo(writer);
             }
-
             return JsonSerializer.Deserialize<T>(bufferWriter.WrittenSpan, options);
         }
-
-        //public static T ToObject<T>(this JsonDocument document, JsonSerializerOptions? options = null)
-        //{
-        //    if (document == null)
-        //        throw new ArgumentNullException(nameof(document));
-        //    return document.RootElement.ToObject<T>(options);
-        //}
-
     }
 
-    ///// <summary>
-    ///// Converter that intercepts EventMessages and serializes the correct data structure
-    ///// </summary>
-    //public class HassMessageConverter : JsonConverter<HassMessage>
-    //{
-    //    public override HassMessage Read(
-    //        ref Utf8JsonReader reader,
-    //        Type typeToConvert,
-    //        JsonSerializerOptions options)
-    //    {
-
-
-    //        HassMessageSerializer m = JsonSerializer.Deserialize<HassMessageSerializer>(ref reader, options);
-
-    //        if (m.Id > 0)
-    //        {
-    //            // It is an command response, get command
-    //            if (HassClient.CommandsSent.Remove(m.Id, out string? command))
-    //            {
-    //                switch (command)
-    //                {
-    //                    case "get_states":
-    //                        m.Result = m.ResultElement?.ToObject<List<StateMessage>>();
-    //                        break;
-
-    //                    case "get_config":
-    //                        m.Result = m.ResultElement?.ToObject<ConfigMessage>();
-    //                        break;
-    //                }
-    //            }
-    //        }
-
-    //        return m as HassMessage;
-    //    }
-
-    //    public override void Write(
-    //        Utf8JsonWriter writer,
-    //        HassMessage value,
-    //        JsonSerializerOptions options) =>
-    //            throw new InvalidOperationException("Serialization not supported for the class EventMessage.");
-    //}
-
-    /// <summary>
-    /// Converter that intercepts EventMessages and serializes the correct data structure
-    /// </summary>
-    public class EventMessageConverter : JsonConverter<EventMessage>
+    public class HassEventConverter : JsonConverter<HassEvent>
     {
-        public override EventMessage Read(
+        public override HassEvent Read(
             ref Utf8JsonReader reader,
             Type typeToConvert,
             JsonSerializerOptions options)
         {
-
-
-            EventMessage m = JsonSerializer.Deserialize<EventMessage>(ref reader, options);
+            HassEvent m = JsonSerializer.Deserialize<HassEvent>(ref reader, options);
 
             switch (m.EventType)
             {
                 case "state_changed":
-                    m.Data = m.DataElement?.ToObject<StateChangedEventMessage>();
+                    m.Data = m.DataElement?.ToObject<HassStateChangedEventData>();
+                    break;
+                case "call_service":
+                    m.Data = m.DataElement?.ToObject<HassServiceEventData>();
                     break;
             }
 
@@ -308,12 +250,10 @@ namespace HassClient
 
         public override void Write(
             Utf8JsonWriter writer,
-            EventMessage value,
+            HassEvent value,
             JsonSerializerOptions options) =>
                 throw new InvalidOperationException("Serialization not supported for the class EventMessage.");
     }
-
-
 
     #endregion
 

@@ -10,7 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-namespace HassClient.Performance.Tests.Mocks
+namespace JoySoftware.HomeAssistant.Client.Performance.Tests.Mocks
 {
     /// <summary>
     /// The Home Assistant Mock class implements a fake Home Assistant server by

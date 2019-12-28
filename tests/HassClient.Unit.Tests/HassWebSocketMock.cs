@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace HassClient.Unit.Tests
+namespace JoySoftware.HomeAssistant.Client.Unit.Tests
 
 {
     public enum MockMessageType
@@ -20,26 +20,25 @@ namespace HassClient.Unit.Tests
         Pong,
         ServiceCallOk,
         Config,
+        ServiceEvent,
     }
 
     public class HassWebSocketFactoryMock : IClientWebSocketFactory
     {
-        HassWebSocketMock _ws = null;
+        private HassWebSocketMock _ws = null;
 
         public HassWebSocketMock WebSocketClient => _ws;
 
-        private List<MockMessageType> _mockMessages;
-        public HassWebSocketFactoryMock(List<MockMessageType> mockMessages)
-        {
-            _mockMessages = mockMessages;
-
-        }
+        private readonly List<MockMessageType> _mockMessages;
+        public HassWebSocketFactoryMock(List<MockMessageType> mockMessages) => _mockMessages = mockMessages;
         public IClientWebSocket New()
         {
 
             _ws = new HassWebSocketMock();
-            foreach (var msg in _mockMessages)
+            foreach (MockMessageType msg in _mockMessages)
+            {
                 _ws.ResponseMessages.Writer.TryWrite(msg);
+            }
 
             return _ws;
         }
@@ -57,6 +56,8 @@ namespace HassClient.Unit.Tests
         private static byte[] msgStates => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_states.json"));
         private static byte[] msgPong => File.ReadAllBytes(Path.Combine(mockTestdataPath, "pong.json"));
         private static byte[] msgServiceCallOk => File.ReadAllBytes(Path.Combine(mockTestdataPath, "service_call_ok.json"));
+        private static byte[] msgServiceEvent => File.ReadAllBytes(Path.Combine(mockTestdataPath, "service_event.json"));
+
         private static byte[] msgConfig => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_config.json"));
 
 
@@ -96,7 +97,7 @@ namespace HassClient.Unit.Tests
         }
         public Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken) => throw new NotImplementedException();
 
-        private async ValueTask<ValueWebSocketReceiveResult> recres(byte[] msg, Memory<byte> buffer, MockMessageType msgType)
+        private ValueWebSocketReceiveResult HandleResult(byte[] msg, Memory<byte> buffer, MockMessageType msgType)
         {
             if ((msg.Length - _currentReadPosition) > buffer.Length)
             {
@@ -109,7 +110,7 @@ namespace HassClient.Unit.Tests
             }
             else
             {
-                var len = msg.Length - _currentReadPosition;
+                int len = msg.Length - _currentReadPosition;
                 msg.AsMemory<byte>(_currentReadPosition, len).CopyTo(buffer);
 
                 _currentReadPosition = 0;
@@ -121,37 +122,41 @@ namespace HassClient.Unit.Tests
         }
         public async ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken)
         {
-            var msgToSend = await _responseMessages.Reader.ReadAsync(cancellationToken);
+            MockMessageType msgToSend = await _responseMessages.Reader.ReadAsync(cancellationToken);
 
 
             switch (msgToSend)
             {
                 case MockMessageType.AuthRequired:
-                    return await recres(msgAuthRequiredMessage, buffer, msgToSend);
+                    return HandleResult(msgAuthRequiredMessage, buffer, msgToSend);
 
                 case MockMessageType.AuthOk:
-                    return await recres(msgAuthOk, buffer, msgToSend);
+                    return HandleResult(msgAuthOk, buffer, msgToSend);
 
                 case MockMessageType.AuthFail:
-                    return await recres(msgAuthFail, buffer, msgToSend);
+                    return HandleResult(msgAuthFail, buffer, msgToSend);
 
                 case MockMessageType.ResultOk:
-                    return await recres(msgResultSuccess, buffer, msgToSend);
+                    return HandleResult(msgResultSuccess, buffer, msgToSend);
 
                 case MockMessageType.NewEvent:
-                    return await recres(msgNewEvent, buffer, msgToSend);
+                    return HandleResult(msgNewEvent, buffer, msgToSend);
 
                 case MockMessageType.States:
-                    return await recres(msgStates, buffer, msgToSend);
+                    return HandleResult(msgStates, buffer, msgToSend);
 
                 case MockMessageType.Pong:
-                    return await recres(msgPong, buffer, msgToSend);
+                    return HandleResult(msgPong, buffer, msgToSend);
 
                 case MockMessageType.ServiceCallOk:
-                    return await recres(msgServiceCallOk, buffer, msgToSend);
+                    return HandleResult(msgServiceCallOk, buffer, msgToSend);
 
                 case MockMessageType.Config:
-                    return await recres(msgConfig, buffer, msgToSend);
+                    return HandleResult(msgConfig, buffer, msgToSend);
+
+                case MockMessageType.ServiceEvent:
+                    return HandleResult(msgServiceEvent, buffer, msgToSend);
+
 
             }
 
@@ -163,14 +168,10 @@ namespace HassClient.Unit.Tests
 
             await Task.Delay(2);
         }
-        public async ValueTask SendAsync(ReadOnlyMemory<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken)
-        {
-            await Task.Delay(2);
-        }
+        public async ValueTask SendAsync(ReadOnlyMemory<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken) => await Task.Delay(2);
 
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls
-        private List<MockMessageType> _mockMessages;
 
         protected virtual void Dispose(bool disposing)
         {

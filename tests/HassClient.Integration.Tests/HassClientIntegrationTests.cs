@@ -1,10 +1,10 @@
-using HassClient.Performance.Tests.Mocks;
+using JoySoftware.HomeAssistant.Client.Performance.Tests.Mocks;
 using System;
 using System.Text.Json;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace HassClient.Integration.Tests
+namespace JoySoftware.HomeAssistant.Client.Integration.Tests
 {
     public class TestWSClient : IDisposable
     {
@@ -17,7 +17,6 @@ namespace HassClient.Integration.Tests
         }
 
 
-        public void Dispose() => mock.Stop();
 
 
         [Fact]
@@ -60,7 +59,7 @@ namespace HassClient.Integration.Tests
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false, false);
             Assert.True(result);
 
-            var pongReceived = await wscli.PingAsync(1000);
+            bool pongReceived = await wscli.PingAsync(1000);
             Assert.True(pongReceived);
             await wscli.CloseAsync();
         }
@@ -72,9 +71,9 @@ namespace HassClient.Integration.Tests
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false, true);
             Assert.True(result);
 
-            var eventMsg = await wscli.ReadEventAsync();
+            HassEvent eventMsg = await wscli.ReadEventAsync();
 
-            var stateMessage = eventMsg?.Data as StateChangedEventMessage;
+            var stateMessage = eventMsg?.Data as HassStateChangedEventData;
 
             Assert.True(stateMessage.EntityId == "binary_sensor.vardagsrum_pir");
 
@@ -106,7 +105,7 @@ namespace HassClient.Integration.Tests
             Assert.True(result);
             Assert.True(wscli.States.Count == 19);
             Assert.True(wscli.States["binary_sensor.vardagsrum_pir"].State == "on");
-            var eventMsg = await wscli.ReadEventAsync();
+            HassEvent eventMsg = await wscli.ReadEventAsync();
 
             Assert.Equal("state_changed", eventMsg.EventType);
             await wscli.CloseAsync();
@@ -125,6 +124,36 @@ namespace HassClient.Integration.Tests
             await wscli.CloseAsync();
 
         }
+
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    mock.Stop();
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                // TODO: set large fields to null.
+
+                disposedValue = true;
+            }
+        }
+
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+            // TODO: uncomment the following line if the finalizer is overridden above.
+            // GC.SuppressFinalize(this);
+        }
+        #endregion
 
     }
 }

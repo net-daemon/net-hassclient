@@ -2,5 +2,11 @@
   "id": 2,
   "type": "result",
   "success": true,
-  "result": null
+  "result": {
+    "context": {
+      "id": "55cf75a4dbf94680804ef022aa0c67b4",
+      "parent_id": null,
+      "user_id": "63b2952cb986474d84be46480c8aaad3"
+    }
+  }
 }

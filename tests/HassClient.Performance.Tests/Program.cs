@@ -1,24 +1,22 @@
-﻿using HassClient.Performance.Tests.Mocks;
+﻿using JoySoftware.HomeAssistant.Client.Performance.Tests.Mocks;
 using Microsoft.Extensions.Logging;
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Threading.Tasks;
 
-namespace HassClient.Performance.Tests
+namespace JoySoftware.HomeAssistant.Client.Performance.Tests
 {
     internal class Program
     {
-
-
-        static Task _homeAssistantTask = null;
-        static HassClient client = null;
+        private static Task _homeAssistantTask = null;
+        private static HassClient client = null;
 
         public static async Task Main(string[] args)
         {
             var cmd = new RootCommand();
             cmd.AddCommand(connectHass());
-            var result = cmd.InvokeAsync(args).Result;
+            int result = cmd.InvokeAsync(args).Result;
 
             Console.ReadLine();
 
@@ -68,12 +66,12 @@ namespace HassClient.Performance.Tests
             });
             return cmd;
         }
-        private async static Task ConnectToHomeAssistant(string ip, int port, bool events, string token)
+        private static async Task ConnectToHomeAssistant(string ip, int port, bool events, string token)
         {
             var url = new Uri($"ws://{ip}:{port}/api/websocket");
             Console.WriteLine($"Connecting to {url}...");
 
-            var factory = LoggerFactory.Create(builder =>
+            ILoggerFactory factory = LoggerFactory.Create(builder =>
             {
                 builder
                     .ClearProviders()
@@ -82,7 +80,7 @@ namespace HassClient.Performance.Tests
             });
 
             client = new HassClient(logFactory: factory);
-            var connected = await client.ConnectAsync(url, token, true, events);
+            bool connected = await client.ConnectAsync(url, token, true, events);
             if (!connected)
             {
                 Console.WriteLine("Failed to connect to Home assistant.. bailing...");
@@ -97,20 +95,26 @@ namespace HassClient.Performance.Tests
                 Console.WriteLine($"Number of states: {client.States.Count}");
             }
 
-            //await client.CallServiceData("light", "turn_on", new { entity_id = "light.tomas_rum" });
+            //var test = await client.CallService("light", "toggle", new { entity_id = "light.tomas_rum" });
 
             while (true)
             {
                 try
                 {
-                    var eventMsg = await client.ReadEventAsync();
+                    HassEvent eventMsg = await client.ReadEventAsync();
 
                     //Console.WriteLine($"Eventtype: {eventMsg.EventType}");
                     if (eventMsg.EventType == "state_changed")
                     {
-                        var stateMessage = eventMsg?.Data as StateChangedEventMessage;
+                        var stateMessage = eventMsg?.Data as HassStateChangedEventData;
 
                         Console.WriteLine($"{stateMessage.EntityId}: {stateMessage.OldState.State}->{stateMessage.NewState.State}");
+                    }
+                    else if (eventMsg.EventType == "call_service")
+                    {
+                        var serviceMessage = eventMsg?.Data as HassServiceEventData;
+                        Console.WriteLine($"{serviceMessage.Service}: {serviceMessage.ServiceData}");
+
                     }
 
                 }
@@ -244,6 +248,35 @@ Please use following commands:
     {
         private readonly HomeAssistantMock mock;
         public HomeAssistantMockHandler() => mock = new HomeAssistantMock();
-        public void Dispose() => mock.Stop();
+
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    mock.Stop();
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                // TODO: set large fields to null.
+
+                disposedValue = true;
+            }
+        }
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+            // TODO: uncomment the following line if the finalizer is overridden above.
+            // GC.SuppressFinalize(this);
+        }
+        #endregion
+
     }
 }

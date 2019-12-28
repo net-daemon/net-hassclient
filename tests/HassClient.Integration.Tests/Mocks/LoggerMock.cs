@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 
-class LoggerMock : ILogger
+internal class LoggerMock : ILogger
 {
     public bool LoggedError { get; internal set; } = false;
     public bool LoggedTrace { get; internal set; } = false;
@@ -12,16 +12,25 @@ class LoggerMock : ILogger
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
     {
         if (logLevel == LogLevel.Trace)
+        {
             LoggedTrace = true;
+        }
+
         if (logLevel == LogLevel.Debug)
+        {
             LoggedDebug = true;
+        }
+
         if (logLevel == LogLevel.Error)
+        {
             LoggedError = true;
+        }
     }
 }
-class LoggerFactoryMock : ILoggerFactory
+
+internal class LoggerFactoryMock : ILoggerFactory
 {
-    LoggerMock _logger = null;
+    private LoggerMock _logger = null;
 
     public bool LoggedError => _logger.LoggedError;
     public bool LoggedTrace => _logger.LoggedTrace;

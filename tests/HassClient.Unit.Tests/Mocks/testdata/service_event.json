@@ -1,13 +1,13 @@
 {
-    "id": 17,
+    "id": 2,
     "type": "event",
     "event": {
         "event_type": "call_service",
         "data": {
             "domain": "light",
-            "service": "turn_on",
+            "service": "toggle",
             "service_data": {
-                "entity_id": "light.tomas_rum_fonster"
+                "entity_id": "light.tomas_rum"
             }
         },
         "origin": "LOCAL",

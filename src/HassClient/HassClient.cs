@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 [assembly: InternalsVisibleTo("HassClient.Performance.Tests")]
 [assembly: InternalsVisibleTo("HassClient.Unit.Tests")]
 
-namespace HassClient
+namespace JoySoftware.HomeAssistant.Client
 {
 
     /// <summary>
@@ -32,7 +32,7 @@ namespace HassClient
 
         Task CloseAsync();
 
-        ConcurrentDictionary<string, StateMessage> States { get; }
+        ConcurrentDictionary<string, HassState> States { get; }
 
     }
 
@@ -65,11 +65,6 @@ namespace HassClient
         private static readonly int _DEFAULT_TIMEOUT = 5000; // 5 seconds
 
         /// <summary>
-        /// Indicates if client is valid
-        /// </summary>
-        private bool _isValid = false;
-
-        /// <summary>
         /// Default Json serialization options, Hass expects intended
         /// </summary>
         private readonly JsonSerializerOptions defaultSerializerOptions = new JsonSerializerOptions
@@ -83,7 +78,7 @@ namespace HassClient
         /// </summary>
         private IClientWebSocket? _ws = null;
 
-        private IClientWebSocketFactory? _wsFactory = null;
+        private readonly IClientWebSocketFactory? _wsFactory = null;
 
         /// <summary>
         /// Used to cancel all asyncronus work
@@ -103,7 +98,7 @@ namespace HassClient
         /// <summary>
         /// Channel used as a async thread safe way to wite messages to the websocket
         /// </summary>
-        private readonly Channel<MessageBase> _writeChannel = Channel.CreateBounded<MessageBase>(_DEFAULT_CHANNEL_SIZE);
+        private readonly Channel<HassMessageBase> _writeChannel = Channel.CreateBounded<HassMessageBase>(_DEFAULT_CHANNEL_SIZE);
 
         /// <summary>
         /// Channel used as a async thread safe way to read resultmessages from the websocket
@@ -113,9 +108,9 @@ namespace HassClient
         /// <summary>
         /// Channel used as a async thread safe way to read messages from the websocket
         /// </summary>
-        private Channel<EventMessage> _eventChannel = Channel.CreateBounded<EventMessage>(_DEFAULT_CHANNEL_SIZE);
+        private Channel<HassEvent> _eventChannel = Channel.CreateBounded<HassEvent>(_DEFAULT_CHANNEL_SIZE);
 
-        public ConcurrentDictionary<string, StateMessage> States { get; } = new ConcurrentDictionary<string, StateMessage>(Environment.ProcessorCount * 2, _DEFAULT_CHANNEL_SIZE);
+        public ConcurrentDictionary<string, HassState> States { get; } = new ConcurrentDictionary<string, HassState>(Environment.ProcessorCount * 2, _DEFAULT_CHANNEL_SIZE);
 
         private readonly ILogger? _logger = null;
 
@@ -149,7 +144,7 @@ namespace HassClient
         /// </summary>
         /// <returns>Returns a message</returns>
         /// <exception>OperationCanceledException if the operation is canceled.</exception>
-        public async Task<EventMessage> ReadEventAsync() => await _eventChannel.Reader.ReadAsync(_cancelSource.Token);
+        public async Task<HassEvent> ReadEventAsync() => await _eventChannel.Reader.ReadAsync(_cancelSource.Token);
 
         /// <summary>
         /// Message id sent in command messages
@@ -169,7 +164,7 @@ namespace HassClient
         /// </summary>
         /// <param name="message"></param>
         /// <returns>Returns true if succeeded sending message</returns>
-        private bool sendMessage(MessageBase message)
+        private bool sendMessage(HassMessageBase message)
         {
             _logger.LogTrace($"Sends message {message.Type}");
             if (message is CommandMessage commandMessage)
@@ -193,7 +188,9 @@ namespace HassClient
             bool fetchStatesOnConnect = true, bool subscribeEvents = true)
         {
             if (url == null)
+            {
                 throw new ArgumentNullException(nameof(url), "Expected url to be provided");
+            }
 
             // Check if we already have a websocket running
             if (_ws != null)
@@ -203,7 +200,7 @@ namespace HassClient
 
             try
             {
-                var ws = _wsFactory?.New()!;
+                IClientWebSocket ws = _wsFactory?.New()!;
                 using var timerTokenSource = new CancellationTokenSource(SocketTimeout);
                 // Make a combined token source with timer and the general cancel token source
                 // The operations will cancel from ether one
@@ -226,7 +223,7 @@ namespace HassClient
                             // Initialize the states
                             if (fetchStatesOnConnect)
                             {
-                                await getStates(connectTokenSource);
+                                await GetStates(connectTokenSource);
 
                             }
                             if (subscribeEvents)
@@ -276,7 +273,7 @@ namespace HassClient
                 sendMessage(message);
                 while (true)
                 {
-                    var result = await _messageChannel.Reader.ReadAsync(sendCommandTokenSource.Token);
+                    HassMessage result = await _messageChannel.Reader.ReadAsync(sendCommandTokenSource.Token);
                     if (result.Id == message.Id)
                     {
                         return result;
@@ -284,10 +281,12 @@ namespace HassClient
                     else
                     {
                         // Not the response, push message back
-                        var res = _messageChannel.Writer.TryWrite(result);
+                        bool res = _messageChannel.Writer.TryWrite(result);
 
                         if (!res)
+                        {
                             throw new Exception("What the fuuuuuck!");
+                        }
                         // Delay for a short period to let the message arrive we are searching for
                         await Task.Delay(10);
                     }
@@ -307,23 +306,27 @@ namespace HassClient
 
         }
 
-        public async Task<ConfigMessage> GetConfig()
+        public async Task<HassConfig> GetConfig()
         {
-            HassMessage hassResult = await sendCommandAndWaitForResponse(new GetConfigMessage());
+            HassMessage hassResult = await sendCommandAndWaitForResponse(new GetConfigCommand());
 
-            var resultMessage = hassResult.Result ?? throw new NullReferenceException("Result cant be null!");
-            var result = resultMessage as ConfigMessage;
+            object resultMessage = hassResult.Result ?? throw new NullReferenceException("Result cant be null!");
+            var result = resultMessage as HassConfig;
             if (result != null)
-                return result as ConfigMessage;
+            {
+                return result as HassConfig;
+            }
             else
+            {
                 throw new Exception($"The result not expected! {resultMessage}");
+            }
         }
 
         public async Task<bool> CallService(string domain, string service, object serviceData)
         {
             try
             {
-                var result = await sendCommandAndWaitForResponse(new CallServiceMessage()
+                HassMessage result = await sendCommandAndWaitForResponse(new CallServiceCommand()
                 {
                     Domain = domain,
                     Service = service,
@@ -336,9 +339,13 @@ namespace HassClient
             catch (OperationCanceledException)
             {
                 if (_cancelSource.IsCancellationRequested)
+                {
                     throw;
+                }
                 else
+                {
                     return false; // Just timeout not canceled 
+                }
             }
             catch
             {
@@ -364,8 +371,8 @@ namespace HassClient
 
             try
             {
-                sendMessage(new PingMessage());
-                var result = await _messageChannel.Reader.ReadAsync(pingTokenSource.Token);
+                sendMessage(new HassPingCommand());
+                HassMessage result = await _messageChannel.Reader.ReadAsync(pingTokenSource.Token);
                 if (result.Type == "pong")
                 {
                     return true;
@@ -386,8 +393,8 @@ namespace HassClient
 
         private async Task subscribeToEvents(CancellationTokenSource connectTokenSource)
         {
-            sendMessage(new SubscribeEventMessage { });
-            var result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
+            sendMessage(new SubscribeEventCommand { });
+            HassMessage result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
             if (result.Type != "result" && result.Success != true)
             {
                 _logger.LogError($"Unexpected response from subscribe events ({result.Type}, {result.Success})");
@@ -395,24 +402,26 @@ namespace HassClient
             }
         }
 
-        private async Task getStates(CancellationTokenSource connectTokenSource)
+        private async Task GetStates(CancellationTokenSource connectTokenSource)
         {
-            sendMessage(new GetStatesMessage { });
-            var result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
-            var wsResult = result?.Result as List<StateMessage>;
+            sendMessage(new GetStatesCommand { });
+            HassMessage result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
+            var wsResult = result?.Result as List<HassState>;
             if (wsResult != null)
-                foreach (var state in wsResult)
+            {
+                foreach (HassState state in wsResult)
                 {
                     States[state.EntityId] = state;
                 }
+            }
         }
 
         private async Task<HassMessage> handleConnectAndAuthenticate(string token, CancellationTokenSource connectTokenSource)
         {
-            var result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
+            HassMessage result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
             if (result.Type == "auth_required")
             {
-                sendMessage(new AuthMessage { AccessToken = token });
+                sendMessage(new HassAuthMessage { AccessToken = token });
                 result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
             }
 
@@ -423,12 +432,11 @@ namespace HassClient
         {
             _messageId = 1;
 
-            _isValid = true;
             _isClosing = false;
 
             // Make sure we have new channels so we are not have old messages
             _messageChannel = Channel.CreateBounded<HassMessage>(HassClient._DEFAULT_CHANNEL_SIZE);
-            _eventChannel = Channel.CreateBounded<EventMessage>(HassClient._DEFAULT_CHANNEL_SIZE);
+            _eventChannel = Channel.CreateBounded<HassEvent>(HassClient._DEFAULT_CHANNEL_SIZE);
 
             _cancelSource = new CancellationTokenSource();
             _readMessagePumpTask = Task.Run(ReadMessagePump);
@@ -506,7 +514,6 @@ namespace HassClient
             _ws?.Dispose();
             _ws = null;
 
-            _isValid = false;
             _isClosing = false;
             _cancelSource = new CancellationTokenSource();
 
@@ -553,7 +560,6 @@ namespace HassClient
             }
 
             var pipe = new Pipe();
-            int totalCount = 0;
 
             // While not canceled and websocket is not closed
             while (!_cancelSource.IsCancellationRequested && !_ws.CloseStatus.HasValue)
@@ -598,7 +604,9 @@ namespace HassClient
             async Task ReadFromClientSocket()
             {
                 if (_ws == null)
+                {
                     return;
+                }
 
                 while (!_cancelSource.Token.IsCancellationRequested && !_ws.CloseStatus.HasValue)
                 {
@@ -639,7 +647,10 @@ namespace HassClient
                     {
                         case "event":
                             if (m.Event != null)
+                            {
                                 _eventChannel.Writer.TryWrite(m.Event);
+                            }
+
                             break;
                         case "auth_required":
                         case "auth_ok":
@@ -686,16 +697,19 @@ namespace HassClient
                     switch (command)
                     {
                         case "get_states":
-                            m.Result = m.ResultElement?.ToObject<List<StateMessage>>();
+                            m.Result = m.ResultElement?.ToObject<List<HassState>>();
                             break;
 
                         case "get_config":
-                            m.Result = m.ResultElement?.ToObject<ConfigMessage>();
+                            m.Result = m.ResultElement?.ToObject<HassConfig>();
                             break;
                         case "subscribe_events":
                             break; // Do nothing
+                        case "call_service":
+                            break; // Do nothing
                         default:
-                            throw new Exception("Unexpected command!");
+                            _logger.LogError($"The result message {command} is not supported");
+                            break;
                     }
                 }
                 else
@@ -719,7 +733,7 @@ namespace HassClient
             {
                 try
                 {
-                    MessageBase nextMessage = await _writeChannel.Reader.ReadAsync(_cancelSource.Token);
+                    HassMessageBase nextMessage = await _writeChannel.Reader.ReadAsync(_cancelSource.Token);
                     byte[] result = JsonSerializer.SerializeToUtf8Bytes(nextMessage, nextMessage.GetType(), defaultSerializerOptions);
 
                     await _ws.SendAsync(result, WebSocketMessageType.Text, true, _cancelSource.Token);

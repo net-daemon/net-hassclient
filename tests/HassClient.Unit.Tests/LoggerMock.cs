@@ -2,9 +2,9 @@
 using Moq;
 using System;
 
-namespace HassClient.Unit.Tests
+namespace JoySoftware.HomeAssistant.Client.Unit.Tests
 {
-    class LoggerMock
+    internal class LoggerMock
     {
         private readonly Mock<ILoggerFactory> _mockLoggerFactory = new Mock<ILoggerFactory>();
         private readonly Mock<ILogger> _mockLogger = new Mock<ILogger>();

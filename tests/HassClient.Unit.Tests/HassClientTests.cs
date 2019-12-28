@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Xunit;
-namespace HassClient.Unit.Tests
+namespace JoySoftware.HomeAssistant.Client.Unit.Tests
 {
     public class HassClientTests
     {
@@ -122,10 +122,10 @@ namespace HassClient.Unit.Tests
             var hc = new HassClient(wsFactory: mock);
             Assert.True(await hc.ConnectAsync(new Uri("ws://localhost:8192/api/websocket"), "TOKEN", false, true));
 
-            var eventMsg = await hc.ReadEventAsync();
+            HassEvent eventMsg = await hc.ReadEventAsync();
             Assert.NotNull(eventMsg);
 
-            var stateMessage = eventMsg?.Data as StateChangedEventMessage;
+            var stateMessage = eventMsg?.Data as HassStateChangedEventData;
 
             Assert.True(stateMessage.EntityId == "binary_sensor.vardagsrum_pir");
 
@@ -173,8 +173,10 @@ namespace HassClient.Unit.Tests
             var mock = new HassWebSocketFactoryMock(new List<MockMessageType>());
 
             // Simulate an ok connect by using the "ws://localhost:8192/api/websocket" address
-            var hc = new HassClient(wsFactory: mock);
-            hc.SocketTimeout = 20; // set it to 20 ms timeout
+            var hc = new HassClient(wsFactory: mock)
+            {
+                SocketTimeout = 20 // set it to 20 ms timeout
+            };
             Assert.False(await hc.ConnectAsync(new Uri("ws://localhost:8192/api/websocket"), "TOKEN", false, false));
 
         }
@@ -212,11 +214,11 @@ namespace HassClient.Unit.Tests
             Assert.True(await hc.ConnectAsync(new Uri("ws://localhost:8192/api/websocket"), "TOKEN", false, false));
             hc.SocketTimeout = 500000;
 
-            var confTask = hc.GetConfig();
+            System.Threading.Tasks.Task<HassConfig> confTask = hc.GetConfig();
 
             mock.WebSocketClient.ResponseMessages.Writer.TryWrite(MockMessageType.Config);
 
-            var conf = confTask.Result;
+            HassConfig conf = confTask.Result;
             Assert.NotNull(conf);
             Assert.Equal("°C", conf?.UnitSystem?.Temperature);
             Assert.Contains<string>("binary_sensor.deconz", conf?.Components);
@@ -252,37 +254,23 @@ namespace HassClient.Unit.Tests
                 MockMessageType.AuthRequired,
                 MockMessageType.AuthOk,
             });
+
+            // Just do normal connect
             var hc = new HassClient(wsFactory: mock);
             Assert.True(await hc.ConnectAsync(new Uri("ws://localhost:8192/api/websocket"), "TOKEN", false, false));
 
+            // Add a fake service call message result 
             mock.WebSocketClient.ResponseMessages.Writer.TryWrite(MockMessageType.ServiceCallOk);
 
-            var serviceData = new Dictionary<string, object>()
-            {
-                { "entity_id", "100" }
-            };
-            Assert.True(await hc.CallService("light", "turn_on", serviceData));
+            Assert.True(await hc.CallService("light", "turn_on", new { entity_id = "light.tomas_rum" }));
 
+            System.Threading.Tasks.Task<HassEvent> eventTask = hc.ReadEventAsync();
+            mock.WebSocketClient.ResponseMessages.Writer.TryWrite(MockMessageType.ServiceEvent);
+
+            var serviceEvent = eventTask.Result?.Data as HassServiceEventData;
+            JsonElement? c = serviceEvent?.ServiceData?.GetProperty("entity_id");
+            Assert.Equal("light.tomas_rum", c.Value.GetString());
+            Assert.NotNull(serviceEvent);
         }
-
-        //[Fact]
-        //public async void TestSerialize()
-        //{
-        //    var msg = new CallServiceMessage()
-        //    {
-        //        Id = 1,
-        //        Domain = "light",
-        //        Service = "turn_on",
-        //        ServiceData = new
-        //        {
-        //            enity_id = 100,
-        //            array = new string[] { "10", "11" }
-        //        }
-        //    };
-
-
-        //    var s = JsonSerializer.Serialize<CallServiceMessage>(msg);
-        //}
-
     }
 }
