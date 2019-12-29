@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace JoySoftware.HomeAssistant.Client
 {
+    /// <summary>
+    /// Factory for Client Websocket. Implement to use for mockups
+    /// </summary>
     public interface IClientWebSocketFactory
     {
         IClientWebSocket New();
@@ -12,6 +15,7 @@ namespace JoySoftware.HomeAssistant.Client
     /// <summary>
     /// Interface so we can test without the socket layer
     /// </summary>
+    /// <remarks>Defaul implements the System.Net.WebSockets.ClientWebSocket.</remarks>
     public interface IClientWebSocket : IDisposable
     {
         WebSocketState State { get; }

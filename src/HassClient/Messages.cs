@@ -26,11 +26,9 @@ namespace JoySoftware.HomeAssistant.Client
         [JsonPropertyName("success")]
         public bool? Success { get; set; }
 
-
         [JsonPropertyName("event")]
         [JsonConverter(typeof(HassEventConverter))]
         public HassEvent? Event { get; set; }
-
 
         [JsonPropertyName("result")]
         public JsonElement? ResultElement { get; set; } = null;
@@ -53,13 +51,9 @@ namespace JoySoftware.HomeAssistant.Client
         public JsonElement? DataElement { get; set; } = null;
 
         public HassEventData? Data { get; set; } = null;
-
     }
 
-    public class HassEventData
-    {
-
-    }
+    public class HassEventData { }
 
     public class HassServiceEventData : HassEventData
     {

@@ -272,5 +272,6 @@ namespace JoySoftware.HomeAssistant.Client.Unit.Tests
             Assert.Equal("light.tomas_rum", c.Value.GetString());
             Assert.NotNull(serviceEvent);
         }
+
     }
 }

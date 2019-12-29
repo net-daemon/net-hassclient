@@ -24,15 +24,75 @@ namespace JoySoftware.HomeAssistant.Client
     public interface IHassClient
     {
         /// <summary>
-        /// Connects to the Home Assistant websocket
+        /// The current states of the entities. 
         /// </summary>
-        /// <param name="url">The url to the websocket. Typically host:8192/api/websocket</param>
-        /// <returns>Returns true if connected</returns>
-        Task<bool> ConnectAsync(Uri url, string token, bool fetchStatesOnConnect, bool subscribeEvents);
-
-        Task CloseAsync();
-
+        /// <remarks>Can be fully loaded when connecting by setting getStatesOnConnect=true</remarks>
         ConcurrentDictionary<string, HassState> States { get; }
+
+        /// <summary>
+        /// Connect to Home Assistant
+        /// </summary>
+        /// <param name="host">The host or ip address of Home Assistant</param>
+        /// <param name="port">The port of Home Assistant, typically 8123 or 80</param>
+        /// <param name="ssl">Set to true if Home Assistant using ssl (recommended secure setup for Home Assistant)</param>
+        /// <param name="token">Authtoken from Home Assistant for access</param>
+        /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
+        /// <param name="subscribeEvents">Subscribes to all eventchanges, this is the default behaviour</param>
+        /// <returns>Returns true if successfully connected</returns>
+        Task<bool> ConnectAsync(string host, short port, bool ssl, string token, bool getStatesOnConnect, bool subscribeEvents);
+
+        /// <summary>
+        /// Connect to Home Assistant
+        /// </summary>
+        /// <param name="url">The uri of the websocket, typically ws://ip:8123/api/websocket</param>
+        /// <param name="token">Authtoken from Home Assistant for access</param>
+        /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
+        /// <param name="subscribeEvents">Subscribes to all eventchanges, this is the default behaviour</param>
+        /// <returns>Returns true if successfully connected</returns>
+        Task<bool> ConnectAsync(Uri url, string token, bool getStatesOnConnect, bool subscribeEvents);
+
+        /// <summary>
+        /// Gets the configuration of the connected Home Assistant instance
+        /// </summary>
+        Task<HassConfig> GetConfig();
+
+        /// <summary>
+        /// Returns next incoming event and completes async operation
+        /// </summary>
+        /// <remarks>Set subscribeEvents=true on ConnectAsync to use.</remarks>
+        /// <exception>OperationCanceledException if the operation is canceled.</exception>
+        /// <returns>Returns next event</returns>
+        Task<HassEvent> ReadEventAsync();
+
+        /// <summary>
+        /// Calls a service to home assistant
+        /// </summary>
+        /// <param name="domain">The domain for the servie, example "light"</param>
+        /// <param name="service">The service to call, example "turn_on"</param>
+        /// <param name="serviceData">The service data, use anonumous types, se example</param>
+        /// <example>
+        /// Folowing example turn on light 
+        /// <code>
+        /// var client = new HassClient();
+        /// await client.ConnectAsync("192.168.1.2", 8123, false);
+        /// await client.CallService("light", "turn_on", new {entity_id="light.myawesomelight"});
+        /// await client.CloseAsync();
+        /// </code>
+        /// </example>
+        /// <returns>True if successfully called service</returns>
+        Task<bool> CallService(string domain, string service, object serviceData);
+
+        /// <summary>
+        /// Pings Home Assistant to check if connection is alive
+        /// </summary>
+        /// <param name="timeout">The timeout to wait for Home Assistant to return pong message</param>
+        /// <returns>True if connection is alive.</returns>
+        Task<bool> PingAsync(int timeout);
+
+        /// <summary>
+        /// Gracefully closes the connection to Home Assistant
+        /// </summary>
+        Task CloseAsync();
 
     }
 
@@ -110,22 +170,56 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         private Channel<HassEvent> _eventChannel = Channel.CreateBounded<HassEvent>(_DEFAULT_CHANNEL_SIZE);
 
-        public ConcurrentDictionary<string, HassState> States { get; } = new ConcurrentDictionary<string, HassState>(Environment.ProcessorCount * 2, _DEFAULT_CHANNEL_SIZE);
-
+        /// <summary>
+        /// The logger to use
+        /// </summary>
         private readonly ILogger? _logger = null;
+
+        /// <summary>
+        /// Message id sent in command messages
+        /// </summary>
+        /// <remarks>Message id need to be increased everytime it sends an command</remarks>
+        private int _messageId = 1;
+
+        /// <summary>
+        /// Thread safe dicitionary that holds information about all command and command id:s
+        /// Is used to correclty deserialize the result messages from commands.
+        /// </summary>
+        /// <typeparam name="int">The message id sen in command message</typeparam>
+        /// <typeparam name="string">The message type</typeparam>
+        private ConcurrentDictionary<int, string> _commandsSent = new ConcurrentDictionary<int, string>(32, 200);        /// <summary>
+
+        /// <summary>
+        /// The current states of the entities.
+        /// </summary>
+        public ConcurrentDictionary<string, HassState> States { get; } = new ConcurrentDictionary<string, HassState>(Environment.ProcessorCount * 2, _DEFAULT_CHANNEL_SIZE);
 
         /// <summary>
         /// Internal property for tests to access the timeout during unit testing
         /// </summary>
         internal int SocketTimeout { get; set; } = _DEFAULT_TIMEOUT;
 
-        public HassClient(ILoggerFactory? logFactory = null, IClientWebSocketFactory? wsFactory = null)
+        /// <summary>
+        /// Instance a new HassClient
+        /// </summary>
+        /// <param name="logFactory">The LogFactory to use for logging, null uses default values from config.</param>
+        /// <param name="wsFactory">The factory to use for websockets, mainly for testing purposes</param>
+        internal HassClient(ILoggerFactory? logFactory = null, IClientWebSocketFactory? wsFactory = null)
         {
             logFactory ??= _getDefaultLoggerFactory;
             wsFactory ??= new ClientWebSocketFactory(); ;
 
             _logger = logFactory.CreateLogger<HassClient>();
             _wsFactory = wsFactory;
+        }
+
+        /// <summary>
+        /// Instance a new HassClient
+        /// </summary>
+        public HassClient()
+        {
+            _logger = _getDefaultLoggerFactory.CreateLogger<HassClient>();
+            _wsFactory = new ClientWebSocketFactory();
         }
 
         /// <summary>
@@ -140,30 +234,18 @@ namespace JoySoftware.HomeAssistant.Client
                                                                                });
 
         /// <summary>
-        /// Wait and read next message from websocket
+        /// Returns next incoming event and completes async operation
         /// </summary>
-        /// <returns>Returns a message</returns>
+        /// <remarks>Set subscribeEvents=true on ConnectAsync to use.</remarks>
         /// <exception>OperationCanceledException if the operation is canceled.</exception>
+        /// <returns>Returns next event</returns>
         public async Task<HassEvent> ReadEventAsync() => await _eventChannel.Reader.ReadAsync(_cancelSource.Token);
 
         /// <summary>
-        /// Message id sent in command messages
+        /// Send message and correctly handle message id counter
         /// </summary>
-        private int _messageId = 1;
-
-        /// <summary>
-        /// Thread safe dicitionary that holds information about all command and command id:s
-        /// Is used to correclty deserialize the result messages from commands.
-        /// </summary>
-        /// <typeparam name="int">The message id sen in command message</typeparam>
-        /// <typeparam name="string">The message type</typeparam>
-        public ConcurrentDictionary<int, string> CommandsSent { get; set; } = new ConcurrentDictionary<int, string>(32, 200);
-
-        /// <summary>
-        /// Sends a message through the websocket
-        /// </summary>
-        /// <param name="message"></param>
-        /// <returns>Returns true if succeeded sending message</returns>
+        /// <param name="message">The message to send</param>
+        /// <returns>True if successful</returns>
         private bool sendMessage(HassMessageBase message)
         {
             _logger.LogTrace($"Sends message {message.Type}");
@@ -171,21 +253,34 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 commandMessage.Id = ++_messageId;
                 //We save the type of command so we can deserialize the correct message later
-                CommandsSent[_messageId] = commandMessage.Type;
+                _commandsSent[_messageId] = commandMessage.Type;
             }
             return _writeChannel.Writer.TryWrite(message);
         }
 
         /// <summary>
-        /// Connect to websocket
+        /// Connect to Home Assistant
+        /// </summary>
+        /// <param name="host">The host or ip address of Home Assistant</param>
+        /// <param name="port">The port of Home Assistant, typically 8123 or 80</param>
+        /// <param name="ssl">Set to true if Home Assistant using ssl (recommended secure setup for Home Assistant)</param>
+        /// <param name="token">Authtoken from Home Assistant for access</param>
+        /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
+        /// <param name="subscribeEvents">Subscribes to all eventchanges, this is the default behaviour</param>
+        /// <returns>Returns true if successfully connected</returns>
+        public Task<bool> ConnectAsync(string host, short port, bool ssl, string token, bool getStatesOnConnect, bool subscribeEvents) =>
+            ConnectAsync(new Uri($"{(ssl ? "ws" : "wss")}://{host}:{port}/api/websocket"), token, getStatesOnConnect, subscribeEvents);
+
+        /// <summary>
+        /// Connect to Home Assistant
         /// </summary>
         /// <param name="url">The uri of the websocket</param>
         /// <param name="token">Authtoken from Home Assistant for access</param>
-        /// <param name="fetchStatesOnConnect">Reads all states initially, this is the default behaviour</param>
-        /// <param name="subscribeEvents">Subscribes to all eventchanges, this is the default behaviour</param>
+        /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
+        /// <param name="subscribeToEvents">Subscribes to all eventchanges, this is the default behaviour</param>
         /// <returns>Returns true if successfully connected</returns>
         public async Task<bool> ConnectAsync(Uri url, string token,
-            bool fetchStatesOnConnect = true, bool subscribeEvents = true)
+            bool getStatesOnConnect = true, bool subscribeToEvents = true)
         {
             if (url == null)
             {
@@ -211,24 +306,23 @@ namespace JoySoftware.HomeAssistant.Client
 
                 if (ws.State == WebSocketState.Open)
                 {
-                    // TODO: Set a timeout 
-                    _ws = ws;
-                    initStates();
-                    // Get Response message
+                    // Initialize the correct states when successfully connecting to the websocket
+                    initStatesOnConnect(ws);
+
+                    // Do the authenticate and get the auhtorization response
                     HassMessage result = await handleConnectAndAuthenticate(token, connectTokenSource);
 
                     switch (result.Type)
                     {
                         case "auth_ok":
-                            // Initialize the states
-                            if (fetchStatesOnConnect)
+                            if (getStatesOnConnect)
                             {
                                 await GetStates(connectTokenSource);
 
                             }
-                            if (subscribeEvents)
+                            if (subscribeToEvents)
                             {
-                                await subscribeToEvents(connectTokenSource);
+                                await this.SubscribeToEvents(connectTokenSource);
 
                             }
 
@@ -243,7 +337,6 @@ namespace JoySoftware.HomeAssistant.Client
                         default:
                             _logger.LogError($"Unexpected response ({result.Type})");
                             return false;
-
                     }
 
                 }
@@ -257,7 +350,6 @@ namespace JoySoftware.HomeAssistant.Client
             }
 
             return false;
-
         }
 
         private async ValueTask<HassMessage> sendCommandAndWaitForResponse(CommandMessage message)
@@ -306,6 +398,9 @@ namespace JoySoftware.HomeAssistant.Client
 
         }
 
+        /// <summary>
+        /// Gets the configuration of the connected Home Assistant instance
+        /// </summary>
         public async Task<HassConfig> GetConfig()
         {
             HassMessage hassResult = await sendCommandAndWaitForResponse(new GetConfigCommand());
@@ -322,6 +417,22 @@ namespace JoySoftware.HomeAssistant.Client
             }
         }
 
+        /// <summary>
+        /// Calls a service to home assistant
+        /// </summary>
+        /// <param name="domain">The domain for the servie, example "light"</param>
+        /// <param name="service">The service to call, example "turn_on"</param>
+        /// <param name="serviceData">The service data, use anonumous types, se example</param>
+        /// <example>
+        /// Folowing example turn on light 
+        /// <code>
+        /// var client = new HassClient();
+        /// await client.ConnectAsync("192.168.1.2", 8123, false);
+        /// await client.CallService("light", "turn_on", new {entity_id="light.myawesomelight"});
+        /// await client.CloseAsync();
+        /// </code>
+        /// </example>
+        /// <returns>True if successfully called service</returns>
         public async Task<bool> CallService(string domain, string service, object serviceData)
         {
             try
@@ -357,10 +468,10 @@ namespace JoySoftware.HomeAssistant.Client
 
 
         /// <summary>
-        /// Pings Home Assistant to check if connection is alive, hass returns a pong message
+        /// Pings Home Assistant to check if connection is alive
         /// </summary>
-        /// <param name="timeout"></param>
-        /// <returns></returns>
+        /// <param name="timeout">The timeout to wait for Home Assistant to return pong message</param>
+        /// <returns>True if connection is alive.</returns>
         public async Task<bool> PingAsync(int timeout)
         {
             using var timerTokenSource = new CancellationTokenSource(SocketTimeout);
@@ -391,7 +502,7 @@ namespace JoySoftware.HomeAssistant.Client
             return false;
         }
 
-        private async Task subscribeToEvents(CancellationTokenSource connectTokenSource)
+        private async Task SubscribeToEvents(CancellationTokenSource connectTokenSource)
         {
             sendMessage(new SubscribeEventCommand { });
             HassMessage result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
@@ -428,8 +539,9 @@ namespace JoySoftware.HomeAssistant.Client
             return result;
         }
 
-        private void initStates()
+        private void initStatesOnConnect(IClientWebSocket ws)
         {
+            _ws = ws;
             _messageId = 1;
 
             _isClosing = false;
@@ -692,7 +804,7 @@ namespace JoySoftware.HomeAssistant.Client
             if (m.Id > 0)
             {
                 // It is an command response, get command
-                if (CommandsSent.Remove(m.Id, out string? command))
+                if (_commandsSent.Remove(m.Id, out string? command))
                 {
                     switch (command)
                     {
