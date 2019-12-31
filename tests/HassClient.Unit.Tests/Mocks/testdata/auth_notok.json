@@ -1,4 +1,4 @@
 {
-    "type": "auth_invalid",
-    "message": "Invalid password"
+  "type": "auth_invalid",
+  "message": "Invalid password"
 }

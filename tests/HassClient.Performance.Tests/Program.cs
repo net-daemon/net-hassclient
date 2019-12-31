@@ -1,4 +1,4 @@
-﻿using JoySoftware.HomeAssistant.Client.Performance.Tests.Mocks;
+﻿using HassClientIntegrationTests.Mocks;
 using Microsoft.Extensions.Logging;
 using System;
 using System.CommandLine;
@@ -80,7 +80,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             });
 
             client = new HassClient(logFactory: factory);
-            bool connected = await client.ConnectAsync(url, token, true, events);
+            bool connected = await client.ConnectAsync(url, token, true);
             if (!connected)
             {
                 Console.WriteLine("Failed to connect to Home assistant.. bailing...");
@@ -93,6 +93,12 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             if (client.States != null)
             {
                 Console.WriteLine($"Number of states: {client.States.Count}");
+            }
+
+            if (events)
+            {
+                // Subscribe to all events
+                await client.SubscribeToEvents();
             }
 
             //var test = await client.CallService("light", "toggle", new { entity_id = "light.tomas_rum" });
@@ -157,22 +163,22 @@ Please use following commands:
             using var mock = new HomeAssistantMockHandler();
             int NR_OF_REQUESTS = 200000;
             var wscli = new HassClient();
-            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false, false);
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
 
             var wscli2 = new HassClient();
-            bool result2 = await wscli2.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false, false);
+            bool result2 = await wscli2.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
 
             var wscli3 = new HassClient();
-            bool result3 = await wscli3.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false, false);
+            bool result3 = await wscli3.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
 
             var wscli4 = new HassClient();
-            bool result4 = await wscli4.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false, false);
+            bool result4 = await wscli4.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
 
             var wscli5 = new HassClient();
-            bool result5 = await wscli5.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false, false);
+            bool result5 = await wscli5.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
 
             var wscli6 = new HassClient();
-            bool result6 = await wscli6.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false, false);
+            bool result6 = await wscli6.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
 
             var stopWatch = System.Diagnostics.Stopwatch.StartNew();
             var first = Task.Run(async () =>

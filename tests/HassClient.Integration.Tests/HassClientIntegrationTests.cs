@@ -1,147 +1,16 @@
-using JoySoftware.HomeAssistant.Client.Performance.Tests.Mocks;
+using HassClientIntegrationTests.Mocks;
+using JoySoftware.HomeAssistant.Client;
 using System;
 using System.Text.Json;
 using Xunit;
-using Xunit.Abstractions;
 
-namespace JoySoftware.HomeAssistant.Client.Integration.Tests
+namespace HassClientIntegrationTests
 {
     public class TestWSClient : IDisposable
     {
-        private readonly HomeAssistantMock mock;
-        private readonly ITestOutputHelper output;
-        public TestWSClient(ITestOutputHelper output)
+        public TestWSClient()
         {
-            mock = new HomeAssistantMock();
-            this.output = output;
-        }
-
-
-
-
-        [Fact]
-        public async void TestBasicLoginOK()
-        {
-            using var wscli = new HassClient();
-            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false, false);
-            Assert.True(result);
-            Assert.True(wscli.States.Count == 0);
-
-            await wscli.CloseAsync();
-        }
-
-        [Fact]
-        public async void TestBasicLoginFail()
-        {
-            using var wscli = new HassClient();
-            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "WRONG PASSWORD", false, false);
-            Assert.False(result);
-            Assert.True(wscli.States.Count == 0);
-
-            await wscli.CloseAsync();
-        }
-
-        [Fact]
-        public async void TestFetchStates()
-        {
-            using var wscli = new HassClient();
-            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", true, false);
-            Assert.True(result);
-            Assert.True(wscli.States.Count == 19);
-            Assert.True(wscli.States["binary_sensor.vardagsrum_pir"].State == "on");
-            await wscli.CloseAsync();
-        }
-
-        [Fact]
-        public async void TestPingPong()
-        {
-            using var wscli = new HassClient();
-            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false, false);
-            Assert.True(result);
-
-            bool pongReceived = await wscli.PingAsync(1000);
-            Assert.True(pongReceived);
-            await wscli.CloseAsync();
-        }
-
-        [Fact]
-        public async void TestSubscribeEvents()
-        {
-            using var wscli = new HassClient();
-            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false, true);
-            Assert.True(result);
-
-            HassEvent eventMsg = await wscli.ReadEventAsync();
-
-            var stateMessage = eventMsg?.Data as HassStateChangedEventData;
-
-            Assert.True(stateMessage.EntityId == "binary_sensor.vardagsrum_pir");
-
-            Assert.True(stateMessage.OldState?.EntityId == "binary_sensor.vardagsrum_pir");
-            Assert.True(((JsonElement)stateMessage.OldState?.Attributes?["battery_level"]).GetInt32() == 100);
-            Assert.True(((JsonElement)stateMessage.OldState?.Attributes?["on"]).GetBoolean() == true);
-            Assert.True(((JsonElement)stateMessage.OldState?.Attributes?["friendly_name"]).GetString() == "Rörelsedetektor TV-rum");
-
-            // Test the date and time conversions that it matches UTC time
-            DateTime? lastChanged = stateMessage?.OldState?.LastChanged;
-            // Convert utc date to local so we can compare, this test will be ok on any timezone
-            DateTime target = new DateTime(2019, 2, 17, 11, 41, 08, DateTimeKind.Utc).ToLocalTime();
-
-            Assert.True(lastChanged?.Year == target.Year);
-            Assert.True(lastChanged?.Month == target.Month);
-            Assert.True(lastChanged?.Day == target.Day);
-            Assert.True(lastChanged?.Hour == target.Hour);
-            Assert.True(lastChanged?.Minute == target.Minute);
-            Assert.True(lastChanged?.Second == target.Second);
-
-            await wscli.CloseAsync();
-        }
-
-        [Fact]
-        public async void TestNormalConnectAllOptionsTrue()
-        {
-            using var wscli = new HassClient();
-            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", true, true);
-            Assert.True(result);
-            Assert.True(wscli.States.Count == 19);
-            Assert.True(wscli.States["binary_sensor.vardagsrum_pir"].State == "on");
-            HassEvent eventMsg = await wscli.ReadEventAsync();
-
-            Assert.Equal("state_changed", eventMsg.EventType);
-            await wscli.CloseAsync();
-        }
-
-        [Fact]
-        public async void TestServerFailedConnect()
-        {
-            var loggerFactoryMock = new LoggerFactoryMock();
-            using var wscli = new HassClient(loggerFactoryMock);
-            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket_not_exist"), "ABCDEFGHIJKLMNOPQ");
-            Assert.False(result);
-            Assert.True(loggerFactoryMock.LoggedError);
-            Assert.True(loggerFactoryMock.LoggedDebug);
-            Assert.False(loggerFactoryMock.LoggedTrace);
-            await wscli.CloseAsync();
-
-        }
-
-        #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    mock.Stop();
-                }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
-
-                disposedValue = true;
-            }
+            _mock = new HomeAssistantMock();
         }
 
 
@@ -153,7 +22,151 @@ namespace JoySoftware.HomeAssistant.Client.Integration.Tests
             // TODO: uncomment the following line if the finalizer is overridden above.
             // GC.SuppressFinalize(this);
         }
-        #endregion
 
+        private readonly HomeAssistantMock _mock;
+        private bool disposedValue; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    _mock.Stop();
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                // TODO: set large fields to null.
+
+                disposedValue = true;
+            }
+        }
+
+        [Fact]
+        public async void TestBasicLoginFail()
+        {
+            using var wscli = new HassClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "WRONG PASSWORD",
+                false);
+            Assert.False(result);
+            Assert.True(wscli.States.Count == 0);
+
+            await wscli.CloseAsync();
+        }
+
+
+        [Fact]
+        public async void TestBasicLoginOK()
+        {
+            using var wscli = new HassClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+                false);
+            Assert.True(result);
+            Assert.True(wscli.States.Count == 0);
+
+            await wscli.CloseAsync();
+        }
+
+        [Fact]
+        public async void TestClose()
+        {
+            using var wscli = new HassClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+                false);
+            Assert.True(result);
+            Assert.True(wscli.States.Count == 0);
+            // Wait for event that never comes
+            var eventTask = wscli.ReadEventAsync();
+            // Do close
+            await wscli.CloseAsync();
+            Assert.Throws<AggregateException>(() => eventTask.Result);
+        }
+
+        [Fact]
+        public async void TestFetchStates()
+        {
+            using var wscli = new HassClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+                true);
+            Assert.True(result);
+            Assert.True(wscli.States.Count == 19);
+            Assert.True(wscli.States["binary_sensor.vardagsrum_pir"].State == "on");
+            await wscli.CloseAsync();
+        }
+
+        [Fact]
+        public async void TestPingPong()
+        {
+            using var wscli = new HassClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+                false);
+            Assert.True(result);
+
+            bool pongReceived = await wscli.PingAsync(1000);
+            Assert.True(pongReceived);
+            await wscli.CloseAsync();
+        }
+
+        [Fact]
+        public async void TestServerFailedConnect()
+        {
+            var loggerFactoryMock = new LoggerFactoryMock();
+            using var wscli = new HassClient(loggerFactoryMock);
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket_not_exist"),
+                "ABCDEFGHIJKLMNOPQ");
+            Assert.False(result);
+            Assert.True(loggerFactoryMock.LoggedError);
+            Assert.True(loggerFactoryMock.LoggedDebug);
+            Assert.False(loggerFactoryMock.LoggedTrace);
+            await wscli.CloseAsync();
+        }
+
+        [Fact]
+        public async void TestSubscribeEvents()
+        {
+            using var wscli = new HassClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+                false);
+            Assert.True(result);
+
+            Assert.True(await wscli.SubscribeToEvents());
+            HassEvent eventMsg = await wscli.ReadEventAsync();
+
+            var stateMessage = eventMsg?.Data as HassStateChangedEventData;
+
+            Assert.True(stateMessage != null && stateMessage.EntityId == "binary_sensor.vardagsrum_pir");
+
+            Assert.True(stateMessage.OldState?.EntityId == "binary_sensor.vardagsrum_pir");
+            Assert.True(stateMessage.OldState?.Attributes != null &&
+                        ((JsonElement)stateMessage.OldState?.Attributes?["battery_level"]).GetInt32()! == 100);
+            Assert.True(((JsonElement)stateMessage.OldState?.Attributes?["on"]).GetBoolean()!);
+            Assert.True(((JsonElement)stateMessage.OldState?.Attributes?["friendly_name"]).GetString()! ==
+                        "Rörelsedetektor TV-rum");
+
+            // Test the date and time conversions that it matches UTC time
+            DateTime? lastChanged = stateMessage.OldState?.LastChanged;
+            // Convert utc date to local so we can compare, this test will be ok on any timezone
+            DateTime targetChanged = new DateTime(2019, 2, 17, 11, 41, 08, DateTimeKind.Utc).ToLocalTime();
+
+            // Test the date and time conversions that it matches UTC time
+            DateTime? lastUpdated = stateMessage.OldState?.LastUpdated;
+            // Convert utc date to local so we can compare, this test will be ok on any timezone
+            DateTime targetUpdated = new DateTime(2019, 2, 17, 11, 42, 08, DateTimeKind.Utc).ToLocalTime();
+
+            Assert.True(lastChanged.Value.Year == targetChanged.Year);
+            Assert.True(lastChanged.Value.Month == targetChanged.Month);
+            Assert.True(lastChanged.Value.Day == targetChanged.Day);
+            Assert.True(lastChanged.Value.Hour == targetChanged.Hour);
+            Assert.True(lastChanged.Value.Minute == targetChanged.Minute);
+            Assert.True(lastChanged.Value.Second == targetChanged.Second);
+
+            Assert.True(lastUpdated.Value.Year == targetUpdated.Year);
+            Assert.True(lastUpdated.Value.Month == targetUpdated.Month);
+            Assert.True(lastUpdated.Value.Day == targetUpdated.Day);
+            Assert.True(lastUpdated.Value.Hour == targetUpdated.Hour);
+            Assert.True(lastUpdated.Value.Minute == targetUpdated.Minute);
+            Assert.True(lastUpdated.Value.Second == targetUpdated.Second);
+            await wscli.CloseAsync();
+        }
     }
 }

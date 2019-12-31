@@ -1,48 +1,55 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 
-internal class LoggerMock : ILogger
+namespace HassClientIntegrationTests.Mocks
 {
-    public bool LoggedError { get; internal set; } = false;
-    public bool LoggedTrace { get; internal set; } = false;
-    public bool LoggedDebug { get; internal set; } = false;
-
-    public IDisposable BeginScope<TState>(TState state) => throw new NotImplementedException();
-    public bool IsEnabled(LogLevel logLevel) => true;
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+    internal class LoggerMock : ILogger
     {
-        if (logLevel == LogLevel.Trace)
-        {
-            LoggedTrace = true;
-        }
+        public bool LoggedError { get; internal set; }
+        public bool LoggedTrace { get; internal set; }
+        public bool LoggedDebug { get; internal set; }
 
-        if (logLevel == LogLevel.Debug)
-        {
-            LoggedDebug = true;
-        }
+        public IDisposable BeginScope<TState>(TState state) => throw new NotImplementedException();
+        public bool IsEnabled(LogLevel logLevel) => true;
 
-        if (logLevel == LogLevel.Error)
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,
+            Func<TState, Exception, string> formatter)
         {
-            LoggedError = true;
+            if (logLevel == LogLevel.Trace)
+            {
+                LoggedTrace = true;
+            }
+
+            if (logLevel == LogLevel.Debug)
+            {
+                LoggedDebug = true;
+            }
+
+            if (logLevel == LogLevel.Error)
+            {
+                LoggedError = true;
+            }
         }
     }
-}
 
-internal class LoggerFactoryMock : ILoggerFactory
-{
-    private LoggerMock _logger = null;
-
-    public bool LoggedError => _logger.LoggedError;
-    public bool LoggedTrace => _logger.LoggedTrace;
-
-    public bool LoggedDebug => _logger.LoggedDebug;
-
-
-    public void AddProvider(ILoggerProvider provider) => throw new NotImplementedException();
-    public ILogger CreateLogger(string categoryName)
+    internal class LoggerFactoryMock : ILoggerFactory
     {
-        _logger = new LoggerMock();
-        return _logger;
+        private LoggerMock _logger;
+
+        public bool LoggedError => _logger.LoggedError;
+        public bool LoggedTrace => _logger.LoggedTrace;
+
+        public bool LoggedDebug => _logger.LoggedDebug;
+
+
+        public void AddProvider(ILoggerProvider provider) => throw new NotImplementedException();
+
+        public ILogger CreateLogger(string categoryName)
+        {
+            _logger = new LoggerMock();
+            return _logger;
+        }
+
+        public void Dispose() => throw new NotImplementedException();
     }
-    public void Dispose() => throw new NotImplementedException();
 }

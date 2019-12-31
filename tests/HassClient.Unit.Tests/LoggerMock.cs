@@ -2,40 +2,36 @@
 using Moq;
 using System;
 
-namespace JoySoftware.HomeAssistant.Client.Unit.Tests
+namespace HassClient.Unit.Tests
 {
     internal class LoggerMock
     {
-        private readonly Mock<ILoggerFactory> _mockLoggerFactory = new Mock<ILoggerFactory>();
-        private readonly Mock<ILogger> _mockLogger = new Mock<ILogger>();
-
-        public ILoggerFactory LoggerFactory => _mockLoggerFactory.Object;
-        public Mock<ILoggerFactory> MockLoggerFactory => _mockLoggerFactory;
-
-        public ILogger Logger => _mockLogger.Object;
-        public Mock<ILogger> MockLogger => _mockLogger;
-
-
         public LoggerMock()
         {
             // Setup the mock
-            _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
+            MockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(MockLogger.Object);
         }
 
+        public ILoggerFactory LoggerFactory => MockLoggerFactory.Object;
+        public Mock<ILoggerFactory> MockLoggerFactory { get; } = new Mock<ILoggerFactory>();
+
+        public ILogger Logger => MockLogger.Object;
+        public Mock<ILogger> MockLogger { get; } = new Mock<ILogger>();
+
         /// <summary>
-        /// Assert if the log has been used at times
+        ///     Assert if the log has been used at times
         /// </summary>
         /// <param name="level">The loglevel being checked</param>
         /// <param name="times">The Times it has been logged</param>
         public void AssertLogged(LogLevel level, Times times)
         {
-            _mockLogger.Verify(
-               x => x.Log(
-                       level,
-                       It.IsAny<EventId>(),
-                       It.Is<It.IsAnyType>((v, t) => true),
-                       It.IsAny<Exception>(),
-                       It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)), times);
+            MockLogger.Verify(
+                x => x.Log(
+                    level,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => true),
+                    It.IsAny<Exception>(),
+                    It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)), times);
         }
     }
 }

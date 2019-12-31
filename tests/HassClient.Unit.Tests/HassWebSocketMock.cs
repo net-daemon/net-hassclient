@@ -1,4 +1,5 @@
-﻿using System;
+﻿using JoySoftware.HomeAssistant.Client;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
@@ -6,7 +7,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace JoySoftware.HomeAssistant.Client.Unit.Tests
+namespace HassClient.Unit.Tests
 
 {
     public enum MockMessageType
@@ -21,26 +22,26 @@ namespace JoySoftware.HomeAssistant.Client.Unit.Tests
         ServiceCallOk,
         Config,
         ServiceEvent,
+        ResultNotOk,
+        ResultNotExpected
     }
 
     public class HassWebSocketFactoryMock : IClientWebSocketFactory
     {
-        private HassWebSocketMock _ws = null;
-
-        public HassWebSocketMock WebSocketClient => _ws;
-
         private readonly List<MockMessageType> _mockMessages;
         public HassWebSocketFactoryMock(List<MockMessageType> mockMessages) => _mockMessages = mockMessages;
+
+        public HassWebSocketMock WebSocketClient { get; private set; }
+
         public IClientWebSocket New()
         {
-
-            _ws = new HassWebSocketMock();
+            WebSocketClient = new HassWebSocketMock();
             foreach (MockMessageType msg in _mockMessages)
             {
-                _ws.ResponseMessages.Writer.TryWrite(msg);
+                WebSocketClient.ResponseMessages.Writer.TryWrite(msg);
             }
 
-            return _ws;
+            return WebSocketClient;
         }
     }
 
@@ -48,39 +49,57 @@ namespace JoySoftware.HomeAssistant.Client.Unit.Tests
     {
         private static readonly string mockTestdataPath = Path.Combine(AppContext.BaseDirectory, "Mocks", "testdata");
 
-        private static byte[] msgAuthRequiredMessage => File.ReadAllBytes(Path.Combine(mockTestdataPath, "auth_required.json"));
+        private int _currentReadPosition;
+
+        private static byte[] msgAuthRequiredMessage =>
+            File.ReadAllBytes(Path.Combine(mockTestdataPath, "auth_required.json"));
+
         private static byte[] msgAuthOk => File.ReadAllBytes(Path.Combine(mockTestdataPath, "auth_ok.json"));
         private static byte[] msgAuthFail => File.ReadAllBytes(Path.Combine(mockTestdataPath, "auth_notok.json"));
         private static byte[] msgResultSuccess => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_msg.json"));
+        private static byte[] msgResultNotExpected => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_msg_not_expected.json"));
+
+        private static byte[] msgResultFail =>
+            File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_msg_success_false.json"));
+
         private static byte[] msgNewEvent => File.ReadAllBytes(Path.Combine(mockTestdataPath, "event.json"));
         private static byte[] msgStates => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_states.json"));
         private static byte[] msgPong => File.ReadAllBytes(Path.Combine(mockTestdataPath, "pong.json"));
-        private static byte[] msgServiceCallOk => File.ReadAllBytes(Path.Combine(mockTestdataPath, "service_call_ok.json"));
-        private static byte[] msgServiceEvent => File.ReadAllBytes(Path.Combine(mockTestdataPath, "service_event.json"));
+
+        private static byte[] msgServiceCallOk =>
+            File.ReadAllBytes(Path.Combine(mockTestdataPath, "service_call_ok.json"));
+
+        private static byte[] msgServiceEvent =>
+            File.ReadAllBytes(Path.Combine(mockTestdataPath, "service_event.json"));
 
         private static byte[] msgConfig => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_config.json"));
 
-
-        private int _currentMsgIndex = 0;
-        private int _currentReadPosition = 0;
-
-        public bool CloseIsRun { get; set; } = false;
+        public bool CloseIsRun { get; set; }
+        public Channel<MockMessageType> ResponseMessages { get; } = Channel.CreateBounded<MockMessageType>(10);
 
         public WebSocketState State { get; set; }
 
-        private readonly Channel<MockMessageType> _responseMessages = Channel.CreateBounded<MockMessageType>(10);
-        public Channel<MockMessageType> ResponseMessages => _responseMessages;
-
         public WebSocketCloseStatus? CloseStatus { get; set; }
 
-        public Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken) => throw new NotImplementedException();
-        public async Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken)
+        public async Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription,
+            CancellationToken cancellationToken)
         {
             CloseIsRun = true;
-            CloseStatus = WebSocketCloseStatus.NormalClosure;
+            CloseStatus = closeStatus;
             State = WebSocketState.Closed;
-            await Task.Delay(2);
+
+            await Task.Delay(2, cancellationToken).ConfigureAwait(false);
         }
+        public async Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription,
+            CancellationToken cancellationToken)
+        {
+            CloseIsRun = true;
+            CloseStatus = closeStatus;
+            State = WebSocketState.Closed;
+
+            await Task.Delay(2, cancellationToken).ConfigureAwait(false);
+        }
+
         public async Task ConnectAsync(Uri uri, CancellationToken cancel)
         {
             if (uri.AbsoluteUri == "ws://noconnect:9999/")
@@ -95,34 +114,15 @@ namespace JoySoftware.HomeAssistant.Client.Unit.Tests
 
             await Task.Delay(2);
         }
-        public Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken) => throw new NotImplementedException();
 
-        private ValueWebSocketReceiveResult HandleResult(byte[] msg, Memory<byte> buffer, MockMessageType msgType)
+        public Task<WebSocketReceiveResult>
+            ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
+        public async ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer,
+            CancellationToken cancellationToken)
         {
-            if ((msg.Length - _currentReadPosition) > buffer.Length)
-            {
-                msg.AsMemory<byte>(_currentReadPosition, buffer.Length).CopyTo(buffer);
-                _currentReadPosition += buffer.Length;
-                // Re-enter the message type in channel cause it is a continuous message
-                _responseMessages.Writer.TryWrite(msgType);
-                return new ValueWebSocketReceiveResult(
-                         buffer.Length, WebSocketMessageType.Text, false);
-            }
-            else
-            {
-                int len = msg.Length - _currentReadPosition;
-                msg.AsMemory<byte>(_currentReadPosition, len).CopyTo(buffer);
-
-                _currentReadPosition = 0;
-                _currentMsgIndex++; // Full message, add next index
-                return new ValueWebSocketReceiveResult(
-                             len, WebSocketMessageType.Text, true);
-            }
-
-        }
-        public async ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken)
-        {
-            MockMessageType msgToSend = await _responseMessages.Reader.ReadAsync(cancellationToken);
+            MockMessageType msgToSend = await ResponseMessages.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
 
 
             switch (msgToSend)
@@ -138,6 +138,12 @@ namespace JoySoftware.HomeAssistant.Client.Unit.Tests
 
                 case MockMessageType.ResultOk:
                     return HandleResult(msgResultSuccess, buffer, msgToSend);
+
+                case MockMessageType.ResultNotOk:
+                    return HandleResult(msgResultFail, buffer, msgToSend);
+
+                case MockMessageType.ResultNotExpected:
+                    return HandleResult(msgResultNotExpected, buffer, msgToSend);
 
                 case MockMessageType.NewEvent:
                     return HandleResult(msgNewEvent, buffer, msgToSend);
@@ -156,22 +162,43 @@ namespace JoySoftware.HomeAssistant.Client.Unit.Tests
 
                 case MockMessageType.ServiceEvent:
                     return HandleResult(msgServiceEvent, buffer, msgToSend);
-
-
             }
 
             throw new Exception("Expected known mock message type!");
-
         }
-        public async Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken)
-        {
 
+        public async Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage,
+            CancellationToken cancellationToken)
+        {
             await Task.Delay(2);
         }
-        public async ValueTask SendAsync(ReadOnlyMemory<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken) => await Task.Delay(2);
+
+        public async ValueTask SendAsync(ReadOnlyMemory<byte> buffer, WebSocketMessageType messageType,
+            bool endOfMessage, CancellationToken cancellationToken) => await Task.Delay(2);
+
+        private ValueWebSocketReceiveResult HandleResult(byte[] msg, Memory<byte> buffer, MockMessageType msgType)
+        {
+            if ((msg.Length - _currentReadPosition) > buffer.Length)
+            {
+                msg.AsMemory(_currentReadPosition, buffer.Length).CopyTo(buffer);
+                _currentReadPosition += buffer.Length;
+                // Re-enter the message type in channel cause it is a continuous message
+                ResponseMessages.Writer.TryWrite(msgType);
+                return new ValueWebSocketReceiveResult(
+                    buffer.Length, WebSocketMessageType.Text, false);
+            }
+
+            int len = msg.Length - _currentReadPosition;
+            msg.AsMemory(_currentReadPosition, len).CopyTo(buffer);
+
+            _currentReadPosition = 0;
+            return new ValueWebSocketReceiveResult(
+                len, WebSocketMessageType.Text, true);
+        }
 
         #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
+
+        private bool disposedValue; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
         {
@@ -204,6 +231,7 @@ namespace JoySoftware.HomeAssistant.Client.Unit.Tests
             // TODO: uncomment the following line if the finalizer is overridden above.
             // GC.SuppressFinalize(this);
         }
+
         #endregion
     }
 }
