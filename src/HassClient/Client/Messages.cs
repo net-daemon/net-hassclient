@@ -6,143 +6,111 @@ using System.Text.Json.Serialization;
 
 namespace JoySoftware.HomeAssistant.Client
 {
-
     public class HassMessageBase
     {
-        [JsonPropertyName("type")]
-        public string Type { get; set; } = "";
+        [JsonPropertyName("type")] public string Type { get; set; } = "";
     }
 
     #region -- Receiving messages --
 
     public class HassMessage : HassMessageBase
     {
-        [JsonPropertyName("id")]
-        public int Id { get; set; } = 0;
+        [JsonPropertyName("id")] public int Id { get; set; } = 0;
 
-        [JsonPropertyName("message")]
-        public string? Message { get; set; }
+        [JsonPropertyName("message")] public string? Message { get; set; }
 
-        [JsonPropertyName("success")]
-        public bool? Success { get; set; }
+        [JsonPropertyName("success")] public bool? Success { get; set; }
 
         [JsonPropertyName("event")]
         [JsonConverter(typeof(HassEventConverter))]
         public HassEvent? Event { get; set; }
 
-        [JsonPropertyName("result")]
-        public JsonElement? ResultElement { get; set; } = null;
+        [JsonPropertyName("result")] public JsonElement? ResultElement { get; set; } = null;
 
         public object? Result { get; set; }
-
     }
+
     public class HassEvent
     {
-        [JsonPropertyName("event_type")]
-        public string EventType { get; set; } = "";
+        [JsonPropertyName("event_type")] public string EventType { get; set; } = "";
 
-        [JsonPropertyName("origin")]
-        public string Origin { get; set; } = "";
+        [JsonPropertyName("origin")] public string Origin { get; set; } = "";
 
-        [JsonPropertyName("time_fired")]
-        public DateTime? TimeFired { get; set; } = null;
+        [JsonPropertyName("time_fired")] public DateTime? TimeFired { get; set; } = null;
 
-        [JsonPropertyName("data")]
-        public JsonElement? DataElement { get; set; } = null;
+        [JsonPropertyName("data")] public JsonElement? DataElement { get; set; } = null;
 
-        public HassEventData? Data { get; set; } = null;
+        public HassEventData? Data { get; set; }
     }
 
-    public class HassEventData { }
+    public class HassEventData
+    {
+    }
 
     public class HassServiceEventData : HassEventData
     {
+        [JsonPropertyName("domain")] public string Domain { get; set; } = "";
 
-        [JsonPropertyName("domain")]
-        public string Domain { get; set; } = "";
+        [JsonPropertyName("service")] public string Service { get; set; } = "";
 
-        [JsonPropertyName("service")]
-        public string Service { get; set; } = "";
-
-        [JsonPropertyName("service_data")]
-        public JsonElement? ServiceData { get; set; } = null;
+        [JsonPropertyName("service_data")] public JsonElement? ServiceData { get; set; } = null;
     }
+
     public class HassStateChangedEventData : HassEventData
     {
-        [JsonPropertyName("entity_id")]
-        public string EntityId { get; set; } = "";
+        [JsonPropertyName("entity_id")] public string EntityId { get; set; } = "";
 
-        [JsonPropertyName("old_state")]
-        public HassState? OldState { get; set; } = null;
+        [JsonPropertyName("old_state")] public HassState? OldState { get; set; } = null;
 
-        [JsonPropertyName("new_state")]
-        public HassState? NewState { get; set; } = null;
+        [JsonPropertyName("new_state")] public HassState? NewState { get; set; } = null;
     }
 
     public class HassState
     {
-        [JsonPropertyName("entity_id")]
-        public string EntityId { get; set; } = "";
+        [JsonPropertyName("entity_id")] public string EntityId { get; set; } = "";
 
-        [JsonPropertyName("state")]
-        public string State { get; set; } = "";
+        [JsonPropertyName("state")] public string State { get; set; } = "";
 
-        [JsonPropertyName("attributes")]
-        public Dictionary<string, object>? Attributes { get; set; } = null;
+        [JsonPropertyName("attributes")] public Dictionary<string, object>? Attributes { get; set; } = null;
 
-        [JsonPropertyName("last_changed")]
-        public DateTime LastChanged { get; set; } = DateTime.MinValue;
+        [JsonPropertyName("last_changed")] public DateTime LastChanged { get; set; } = DateTime.MinValue;
 
-        [JsonPropertyName("last_updated")]
-        public DateTime LastUpdated { get; set; } = DateTime.MinValue;
+        [JsonPropertyName("last_updated")] public DateTime LastUpdated { get; set; } = DateTime.MinValue;
     }
 
     public class HassConfig
     {
-        [JsonPropertyName("latitude")]
-        public float? Latitude { get; set; } = null;
+        [JsonPropertyName("latitude")] public float? Latitude { get; set; } = null;
 
-        [JsonPropertyName("longitude")]
-        public float? Longitude { get; set; } = null;
+        [JsonPropertyName("longitude")] public float? Longitude { get; set; } = null;
 
-        [JsonPropertyName("elevation")]
-        public int? Elevation { get; set; } = null;
+        [JsonPropertyName("elevation")] public int? Elevation { get; set; } = null;
 
-        [JsonPropertyName("unit_system")]
-        public HassUnitSystem? UnitSystem { get; set; } = null;
+        [JsonPropertyName("unit_system")] public HassUnitSystem? UnitSystem { get; set; } = null;
 
-        [JsonPropertyName("location_name")]
-        public string? LocationName { get; set; } = null;
+        [JsonPropertyName("location_name")] public string? LocationName { get; set; } = null;
 
-        [JsonPropertyName("time_zone")]
-        public string? TimeZone { get; set; } = null;
+        [JsonPropertyName("time_zone")] public string? TimeZone { get; set; } = null;
 
-        [JsonPropertyName("components")]
-        public List<string>? Components { get; set; } = null;
+        [JsonPropertyName("components")] public List<string>? Components { get; set; } = null;
 
-        [JsonPropertyName("config_dir")]
-        public string? ConfigDir { get; set; } = null;
+        [JsonPropertyName("config_dir")] public string? ConfigDir { get; set; } = null;
 
         [JsonPropertyName("whitelist_external_dirs")]
         public List<string>? WhitelistExternalDirs { get; set; } = null;
 
-        [JsonPropertyName("version")]
-        public string? Version { get; set; } = null;
+        [JsonPropertyName("version")] public string? Version { get; set; } = null;
     }
 
     public class HassUnitSystem
     {
-        [JsonPropertyName("length")]
-        public string? Length { get; set; } = null;
+        [JsonPropertyName("length")] public string? Length { get; set; } = null;
 
-        [JsonPropertyName("mass")]
-        public string? Mass { get; set; } = null;
+        [JsonPropertyName("mass")] public string? Mass { get; set; } = null;
 
-        [JsonPropertyName("temperature")]
-        public string? Temperature { get; set; } = null;
+        [JsonPropertyName("temperature")] public string? Temperature { get; set; } = null;
 
-        [JsonPropertyName("volume")]
-        public string? Volume { get; set; } = null;
+        [JsonPropertyName("volume")] public string? Volume { get; set; } = null;
     }
 
     #endregion
@@ -153,22 +121,18 @@ namespace JoySoftware.HomeAssistant.Client
     {
         public HassAuthMessage() => Type = "auth";
 
-        [JsonPropertyName("access_token")]
-        public string AccessToken { get; set; } = "";
+        [JsonPropertyName("access_token")] public string AccessToken { get; set; } = "";
     }
-
 
 
     public class CommandMessage : HassMessageBase
     {
-        [JsonPropertyName("id")]
-        public int Id { get; set; } = 0;
+        [JsonPropertyName("id")] public int Id { get; set; } = 0;
     }
 
     public class HassPingCommand : CommandMessage
     {
         public HassPingCommand() => Type = "ping";
-
     }
 
     public enum EventType
@@ -189,8 +153,7 @@ namespace JoySoftware.HomeAssistant.Client
     {
         public SubscribeEventCommand() => Type = "subscribe_events";
 
-        [JsonPropertyName("event_type")]
-        public string? EventType { get; set; } = null;
+        [JsonPropertyName("event_type")] public string? EventType { get; set; } = null;
     }
 
     public class GetStatesCommand : CommandMessage
@@ -202,14 +165,11 @@ namespace JoySoftware.HomeAssistant.Client
     {
         public CallServiceCommand() => Type = "call_service";
 
-        [JsonPropertyName("domain")]
-        public string Domain { get; set; } = "";
+        [JsonPropertyName("domain")] public string Domain { get; set; } = "";
 
-        [JsonPropertyName("service")]
-        public string Service { get; set; } = "";
+        [JsonPropertyName("service")] public string Service { get; set; } = "";
 
-        [JsonPropertyName("service_data")]
-        public object? ServiceData { get; set; } = null;
+        [JsonPropertyName("service_data")] public object? ServiceData { get; set; } = null;
     }
 
     public class GetConfigCommand : CommandMessage
@@ -221,7 +181,7 @@ namespace JoySoftware.HomeAssistant.Client
 
     #region -- Json Extensions
 
-    public static partial class JsonExtensions
+    public static class JsonExtensions
     {
         public static T ToObject<T>(this JsonElement element, JsonSerializerOptions? options = null)
         {
@@ -230,6 +190,7 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 element.WriteTo(writer);
             }
+
             return JsonSerializer.Deserialize<T>(bufferWriter.WrittenSpan, options);
         }
     }
@@ -260,9 +221,8 @@ namespace JoySoftware.HomeAssistant.Client
             Utf8JsonWriter writer,
             HassEvent value,
             JsonSerializerOptions options) =>
-                throw new InvalidOperationException("Serialization not supported for the class EventMessage.");
+            throw new InvalidOperationException("Serialization not supported for the class EventMessage.");
     }
 
     #endregion
-
 }

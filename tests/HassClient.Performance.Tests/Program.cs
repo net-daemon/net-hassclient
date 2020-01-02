@@ -1,16 +1,17 @@
-﻿using HassClientIntegrationTests.Mocks;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Diagnostics;
 using System.Threading.Tasks;
+using HassClientIntegrationTests.Mocks;
+using Microsoft.Extensions.Logging;
 
 namespace JoySoftware.HomeAssistant.Client.Performance.Tests
 {
     internal class Program
     {
-        private static Task _homeAssistantTask = null;
-        private static HassClient client = null;
+        private static Task _homeAssistantTask;
+        private static HassClient client;
 
         public static async Task Main(string[] args)
         {
@@ -25,40 +26,27 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                 Console.WriteLine("Closing connection...");
                 await client.CloseAsync();
             }
-
         }
 
         private static Command connectHass()
         {
             var cmd = new Command("-c", "Connects to home assistant");
 
-            cmd.AddOption(new Option(new[] { "--ip", "-i" }, "IP address of Hass")
+            cmd.AddOption(new Option(new[] {"--ip", "-i"}, "IP address of Hass")
             {
-                Argument = new Argument<string>(defaultValue: () => "localhost")
-                {
-                    Arity = ArgumentArity.ExactlyOne,
-                }
+                Argument = new Argument<string>(() => "localhost") {Arity = ArgumentArity.ExactlyOne}
             });
-            cmd.AddOption(new Option(new[] { "--port", "-p" }, "Port of Hass")
+            cmd.AddOption(new Option(new[] {"--port", "-p"}, "Port of Hass")
             {
-                Argument = new Argument<int>(defaultValue: () => 8123)
-                {
-                    Arity = ArgumentArity.ExactlyOne,
-                }
+                Argument = new Argument<int>(() => 8123) {Arity = ArgumentArity.ExactlyOne}
             });
-            cmd.AddOption(new Option(new[] { "--events", "-e" }, "Get events!")
+            cmd.AddOption(new Option(new[] {"--events", "-e"}, "Get events!")
             {
-                Argument = new Argument<bool>()
-                {
-                    Arity = ArgumentArity.ExactlyOne,
-                }
+                Argument = new Argument<bool> {Arity = ArgumentArity.ExactlyOne}
             });
-            cmd.AddOption(new Option(new[] { "--token", "-t" }, "Access token")
+            cmd.AddOption(new Option(new[] {"--token", "-t"}, "Access token")
             {
-                Argument = new Argument<string>()
-                {
-                    Arity = ArgumentArity.ExactlyOne,
-                }
+                Argument = new Argument<string> {Arity = ArgumentArity.ExactlyOne}
             });
             cmd.Handler = CommandHandler.Create<string, int, bool, string>((ip, port, events, token) =>
             {
@@ -66,6 +54,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             });
             return cmd;
         }
+
         private static async Task ConnectToHomeAssistant(string ip, int port, bool events, string token)
         {
             var url = new Uri($"ws://{ip}:{port}/api/websocket");
@@ -79,17 +68,15 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                     .AddConsole();
             });
 
-            client = new HassClient(logFactory: factory);
-            bool connected = await client.ConnectAsync(url, token, true);
+            client = new HassClient(factory);
+            bool connected = await client.ConnectAsync(url, token);
             if (!connected)
             {
                 Console.WriteLine("Failed to connect to Home assistant.. bailing...");
                 return;
             }
-            else
-            {
-                Console.WriteLine("Login success");
-            }
+
+            Console.WriteLine("Login success");
             if (client.States != null)
             {
                 Console.WriteLine($"Number of states: {client.States.Count}");
@@ -114,15 +101,14 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                     {
                         var stateMessage = eventMsg?.Data as HassStateChangedEventData;
 
-                        Console.WriteLine($"{stateMessage.EntityId}: {stateMessage.OldState.State}->{stateMessage.NewState.State}");
+                        Console.WriteLine(
+                            $"{stateMessage.EntityId}: {stateMessage.OldState.State}->{stateMessage.NewState.State}");
                     }
                     else if (eventMsg.EventType == "call_service")
                     {
                         var serviceMessage = eventMsg?.Data as HassServiceEventData;
                         Console.WriteLine($"{serviceMessage.Service}: {serviceMessage.ServiceData}");
-
                     }
-
                 }
                 catch (OperationCanceledException)
                 {
@@ -134,10 +120,9 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                     Console.WriteLine("Error", e);
                     return;
                 }
-
-
             }
         }
+
         public static int SayHello()
         {
             Console.WriteLine("Hello!");
@@ -155,7 +140,6 @@ Please use following commands:
 ";
 
             Console.WriteLine(usage);
-
         }
 
         private static async Task DoPerformanceTest()
@@ -163,31 +147,35 @@ Please use following commands:
             using var mock = new HomeAssistantMockHandler();
             int NR_OF_REQUESTS = 200000;
             var wscli = new HassClient();
-            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+                false);
 
             var wscli2 = new HassClient();
-            bool result2 = await wscli2.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
+            bool result2 = await wscli2.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+                false);
 
             var wscli3 = new HassClient();
-            bool result3 = await wscli3.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
+            bool result3 = await wscli3.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+                false);
 
             var wscli4 = new HassClient();
-            bool result4 = await wscli4.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
+            bool result4 = await wscli4.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+                false);
 
             var wscli5 = new HassClient();
-            bool result5 = await wscli5.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
+            bool result5 = await wscli5.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+                false);
 
             var wscli6 = new HassClient();
-            bool result6 = await wscli6.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
+            bool result6 = await wscli6.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+                false);
 
-            var stopWatch = System.Diagnostics.Stopwatch.StartNew();
+            var stopWatch = Stopwatch.StartNew();
             var first = Task.Run(async () =>
             {
-
                 for (int i = 0; i < NR_OF_REQUESTS; i++)
                 {
                     await wscli.PingAsync(1000);
-
                 }
             });
             var second = Task.Run(async () =>
@@ -195,7 +183,6 @@ Please use following commands:
                 for (int i = 0; i < NR_OF_REQUESTS; i++)
                 {
                     await wscli2.PingAsync(1000);
-
                 }
             });
 
@@ -204,7 +191,6 @@ Please use following commands:
                 for (int i = 0; i < NR_OF_REQUESTS; i++)
                 {
                     await wscli3.PingAsync(1000);
-
                 }
             });
 
@@ -213,7 +199,6 @@ Please use following commands:
                 for (int i = 0; i < NR_OF_REQUESTS; i++)
                 {
                     await wscli4.PingAsync(1000);
-
                 }
             });
 
@@ -222,7 +207,6 @@ Please use following commands:
                 for (int i = 0; i < NR_OF_REQUESTS; i++)
                 {
                     await wscli5.PingAsync(1000);
-
                 }
             });
 
@@ -231,7 +215,6 @@ Please use following commands:
                 for (int i = 0; i < NR_OF_REQUESTS; i++)
                 {
                     await wscli6.PingAsync(1000);
-
                 }
             });
 
@@ -239,7 +222,8 @@ Please use following commands:
             Task.WaitAll(first); //, second, third, fourth, fifth, sixth
             stopWatch.Stop();
             Console.WriteLine(stopWatch.ElapsedMilliseconds);
-            Console.WriteLine("Took {0} seconds with performance of {1} roundtrips/s", stopWatch.ElapsedMilliseconds / 1000, NR_OF_REQUESTS * 6 / (stopWatch.ElapsedMilliseconds / 1000));
+            Console.WriteLine("Took {0} seconds with performance of {1} roundtrips/s",
+                stopWatch.ElapsedMilliseconds / 1000, NR_OF_REQUESTS * 6 / (stopWatch.ElapsedMilliseconds / 1000));
             Console.WriteLine("DISCONNECTS!");
             await wscli.CloseAsync();
             await wscli2.CloseAsync();
@@ -256,7 +240,8 @@ Please use following commands:
         public HomeAssistantMockHandler() => mock = new HomeAssistantMock();
 
         #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
+
+        private bool disposedValue; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
         {
@@ -282,7 +267,7 @@ Please use following commands:
             // TODO: uncomment the following line if the finalizer is overridden above.
             // GC.SuppressFinalize(this);
         }
-        #endregion
 
+        #endregion
     }
 }

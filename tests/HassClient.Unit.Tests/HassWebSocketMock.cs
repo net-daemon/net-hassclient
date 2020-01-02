@@ -1,11 +1,11 @@
-﻿using JoySoftware.HomeAssistant.Client;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using JoySoftware.HomeAssistant.Client;
 
 namespace HassClient.Unit.Tests
 
@@ -57,7 +57,9 @@ namespace HassClient.Unit.Tests
         private static byte[] msgAuthOk => File.ReadAllBytes(Path.Combine(mockTestdataPath, "auth_ok.json"));
         private static byte[] msgAuthFail => File.ReadAllBytes(Path.Combine(mockTestdataPath, "auth_notok.json"));
         private static byte[] msgResultSuccess => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_msg.json"));
-        private static byte[] msgResultNotExpected => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_msg_not_expected.json"));
+
+        private static byte[] msgResultNotExpected =>
+            File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_msg_not_expected.json"));
 
         private static byte[] msgResultFail =>
             File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_msg_success_false.json"));
@@ -90,6 +92,7 @@ namespace HassClient.Unit.Tests
 
             await Task.Delay(2, cancellationToken).ConfigureAwait(false);
         }
+
         public async Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription,
             CancellationToken cancellationToken)
         {
@@ -122,7 +125,8 @@ namespace HassClient.Unit.Tests
         public async ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer,
             CancellationToken cancellationToken)
         {
-            MockMessageType msgToSend = await ResponseMessages.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+            MockMessageType msgToSend =
+                await ResponseMessages.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
 
 
             switch (msgToSend)

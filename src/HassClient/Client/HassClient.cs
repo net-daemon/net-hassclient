@@ -35,7 +35,6 @@ namespace JoySoftware.HomeAssistant.Client
         /// <param name="ssl">Set to true if Home Assistant using ssl (recommended secure setup for Home Assistant)</param>
         /// <param name="token">Authtoken from Home Assistant for access</param>
         /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
-        /// <param name="subscribeEvents">Subscribes to all event changes, this is the default behaviour</param>
         /// <returns>Returns true if successfully connected</returns>
         Task<bool> ConnectAsync(string host, short port, bool ssl, string token, bool getStatesOnConnect);
 
@@ -45,7 +44,6 @@ namespace JoySoftware.HomeAssistant.Client
         /// <param name="url">The uri of the websocket, typically ws://ip:8123/api/websocket</param>
         /// <param name="token">Authtoken from Home Assistant for access</param>
         /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
-        /// <param name="subscribeEvents">Subscribes to all event changes, this is the default behaviour</param>
         /// <returns>Returns true if successfully connected</returns>
         Task<bool> ConnectAsync(Uri url, string token, bool getStatesOnConnect);
 
@@ -150,11 +148,6 @@ namespace JoySoftware.HomeAssistant.Client
 
         private readonly IClientWebSocketFactory? _wsFactory;
 
-        /// <summary>
-        ///     Used to cancel all asynchronous work, is internal so we can test
-        /// </summary>
-        internal CancellationTokenSource CancelSource = new CancellationTokenSource();
-
         private bool _disposed;
 
         /// <summary>
@@ -193,6 +186,11 @@ namespace JoySoftware.HomeAssistant.Client
         ///     The underlying currently connected socket or null if not connected
         /// </summary>
         private IClientWebSocket? _ws;
+
+        /// <summary>
+        ///     Used to cancel all asynchronous work, is internal so we can test
+        /// </summary>
+        internal CancellationTokenSource CancelSource = new CancellationTokenSource();
 
         /// <summary>
         ///     Instance a new HassClient
@@ -371,9 +369,9 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         /// <param name="domain">The domain for the servie, example "light"</param>
         /// <param name="service">The service to call, example "turn_on"</param>
-        /// <param name="serviceData">The service data, use anonumous types, se example</param>
+        /// <param name="serviceData">The service data, use anonymous types, se example</param>
         /// <example>
-        ///     Folowing example turn on light
+        ///     Following example turn on light
         ///     <code>
         /// var client = new HassClient();
         /// await client.ConnectAsync("192.168.1.2", 8123, false);
@@ -450,15 +448,15 @@ namespace JoySoftware.HomeAssistant.Client
         {
             lock (this)
             {
-
                 if (_isClosing || _ws == null)
                 {
                     // Already closed
                     return;
                 }
-                _isClosing = true;
 
+                _isClosing = true;
             }
+
             _logger.LogTrace("Async close websocket");
 
             // First do websocket close management
@@ -479,7 +477,6 @@ namespace JoySoftware.HomeAssistant.Client
 
             _logger.LogTrace("Async close websocket done");
             _isClosing = false;
-
         }
 
         /// <summary>
@@ -585,6 +582,7 @@ namespace JoySoftware.HomeAssistant.Client
                         break;
                 }
             }
+
             var result = await SendCommandAndWaitForResponse(command);
             return result.Success ?? false;
         }
@@ -642,7 +640,6 @@ namespace JoySoftware.HomeAssistant.Client
         /// <returns></returns>
         private async Task DoNormalClosureOfWebSocket()
         {
-
             _logger.LogTrace("Do normal close of websocket");
 
             using var timeout = new CancellationTokenSource(MaxWaitTimeSocketClose);
@@ -666,7 +663,6 @@ namespace JoySoftware.HomeAssistant.Client
 
             // Wait for read pump finishing when receiving the close message
             //if (_readMessagePumpTask != null) await Task.WhenAll(_readMessagePumpTask).ConfigureAwait(false);
-
         }
 
         protected virtual void Dispose(bool disposing)
@@ -734,8 +730,8 @@ namespace JoySoftware.HomeAssistant.Client
                 cancelProcessNextMessage.Token, CancelSource.Token);
 
             await Task.WhenAll(
-                Task.Run(ReadFromClientSocket),
-                Task.Run(WriteMessagesToChannel)
+                Task.Run(ReadFromClientSocket, cancelTokenSource.Token),
+                Task.Run(WriteMessagesToChannel, cancelTokenSource.Token)
             ).ConfigureAwait(false);
 
             // Task that reads the next message from websocket
@@ -761,13 +757,14 @@ namespace JoySoftware.HomeAssistant.Client
                             else
                             {
                                 // We did not make the close call 
-                                await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Remote closed", CancelSource.Token);
+                                await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Remote closed",
+                                    CancelSource.Token);
                                 CancelSource.Cancel();
                             }
 
                             throw new WebSocketException("Socket closed");
-
                         }
+
                         // Advance writer to the read ne of bytes
                         pipe.Writer.Advance(result.Count);
 
@@ -790,7 +787,6 @@ namespace JoySoftware.HomeAssistant.Client
                 {
                     // Make sure we always cancel the other task of any reason
                     cancelProcessNextMessage.Cancel();
-                    return;
                 }
                 catch (Exception e)
                 {
@@ -798,7 +794,6 @@ namespace JoySoftware.HomeAssistant.Client
                     cancelProcessNextMessage.Cancel(true);
                     _logger?.LogError(e, "Major failure in ReadFromClientSocketad, exit...");
                 }
-
             }
 
             // Task that deserializes the message and write the finished message to a channel
@@ -806,7 +801,8 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 try
                 {
-                    HassMessage m = await JsonSerializer.DeserializeAsync<HassMessage>(pipe.Reader.AsStream(), cancellationToken: cancelTokenSource.Token);
+                    HassMessage m = await JsonSerializer.DeserializeAsync<HassMessage>(pipe.Reader.AsStream(),
+                        cancellationToken: cancelTokenSource.Token);
                     await pipe.Reader.CompleteAsync();
                     switch (m.Type)
                     {
@@ -837,7 +833,6 @@ namespace JoySoftware.HomeAssistant.Client
                 catch (OperationCanceledException)
                 {
                     // Canceled the thread just leave
-                    return;
                 }
                 catch (Exception e)
                 {
@@ -850,7 +845,6 @@ namespace JoySoftware.HomeAssistant.Client
                     await Task.Delay(20);
                     cancelProcessNextMessage.Cancel();
                 }
-
             }
         }
 

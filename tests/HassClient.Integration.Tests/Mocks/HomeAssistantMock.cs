@@ -19,7 +19,7 @@ namespace HassClientIntegrationTests.Mocks
     ///     The Home Assistant Mock class implements a fake Home Assistant server by
     ///     exposing the websocket api and fakes responses to requests.
     /// </summary>
-    public class HomeAssistantMock
+    public class HomeAssistantMock : IDisposable
     {
         public static readonly int RecieiveBufferSize = 1024 * 4;
         private readonly IHost _host;
@@ -49,8 +49,9 @@ namespace HassClientIntegrationTests.Mocks
         {
             _host.StopAsync();
             _host.WaitForShutdown();
-            _host.Dispose();
         }
+
+        public void Dispose() => _host?.Dispose();
     }
 
     /// <summary>

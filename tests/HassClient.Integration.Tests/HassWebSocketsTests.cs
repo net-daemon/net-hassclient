@@ -8,19 +8,14 @@ using Xunit;
 namespace HassClientIntegrationTests
 {
     /// <summary>
-    /// Used to test unused stuff on the HassWebSocket
+    ///     Used to test unused stuff on the HassWebSocket
     /// </summary>
     public class HassWebSocketsTests : IDisposable
 
     {
-        private readonly HomeAssistantMock _mock;
-
         public HassWebSocketsTests()
         {
-            _mock = new HomeAssistantMock();
         }
-
-        #region --Dispose --
 
         public void Dispose()
         {
@@ -30,6 +25,8 @@ namespace HassClientIntegrationTests
             // GC.SuppressFinalize(this);
         }
 
+        private readonly HomeAssistantMock _mock;
+
         private bool _disposedValue; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
@@ -38,7 +35,6 @@ namespace HassClientIntegrationTests
             {
                 if (disposing)
                 {
-                    _mock.Stop();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
@@ -48,8 +44,6 @@ namespace HassClientIntegrationTests
             }
         }
 
-        #endregion
-
         [Fact]
         public async void TestNotImplementedFeatures()
         {
@@ -58,9 +52,12 @@ namespace HassClientIntegrationTests
             await Assert.ThrowsAsync<NotImplementedException>(() =>
                 ws.CloseOutputAsync(WebSocketCloseStatus.Empty, "", CancellationToken.None));
             await Assert.ThrowsAsync<NotImplementedException>(async () =>
-                await ws.SendAsync(new ReadOnlyMemory<byte>(), WebSocketMessageType.Text, true, CancellationToken.None));
+                await ws.SendAsync(new ReadOnlyMemory<byte>(), WebSocketMessageType.Text, true,
+                    CancellationToken.None));
             await Assert.ThrowsAsync<NotImplementedException>(() =>
                 ws.ReceiveAsync(ArraySegment<byte>.Empty, CancellationToken.None));
+
+
         }
     }
 }

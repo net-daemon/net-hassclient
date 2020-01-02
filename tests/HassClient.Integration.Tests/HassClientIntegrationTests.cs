@@ -33,6 +33,7 @@ namespace HassClientIntegrationTests
                 if (disposing)
                 {
                     _mock.Stop();
+                    _mock.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
@@ -86,8 +87,7 @@ namespace HassClientIntegrationTests
         public async void TestFetchStates()
         {
             using var wscli = new HassClient();
-            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
-                true);
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ");
             Assert.True(result);
             Assert.True(wscli.States.Count == 19);
             Assert.True(wscli.States["binary_sensor.vardagsrum_pir"].State == "on");
