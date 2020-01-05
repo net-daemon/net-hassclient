@@ -25,5 +25,5 @@ steps:
     inputs:
       command: test
       projects: '**/tests/*.Tests/*.csproj'
-      arguments: '--configuration $(buildConfiguration) --logger:"console;verbosity=minimal"
+      arguments: '--configuration $(buildConfiguration) --logger:"console;verbosity=minimal"'
 
