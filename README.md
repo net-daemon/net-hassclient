@@ -2,6 +2,9 @@
 
 This is the client for Home Assistant written in .NET core 3.1. The component is tested in windows and linux.
 
+The project is very early but basic functionality is there. The component is in alpha so major changes can be
+done since the design is not set yet.
+
 ## Installing HassClient component
 
 The component is available as nuget package.
