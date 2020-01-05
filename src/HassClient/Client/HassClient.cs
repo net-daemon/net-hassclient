@@ -266,7 +266,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
         /// <returns>Returns true if successfully connected</returns>
         public Task<bool> ConnectAsync(string host, short port, bool ssl, string token, bool getStatesOnConnect) =>
-            ConnectAsync(new Uri($"{(ssl ? "ws" : "wss")}://{host}:{port}/api/websocket"), token, getStatesOnConnect);
+            ConnectAsync(new Uri($"{(ssl ? "wss" : "ws")}://{host}:{port}/api/websocket"), token, getStatesOnConnect);
 
         /// <summary>
         ///     Connect to Home Assistant
@@ -399,11 +399,11 @@ namespace JoySoftware.HomeAssistant.Client
                     throw;
                 }
 
-                return false; // Just timeout not canceled 
+                return false; // Just timeout not canceled
             }
             catch (Exception)
             {
-                // We already logged in sendCommand 
+                // We already logged in sendCommand
                 return false;
             }
         }
@@ -756,7 +756,7 @@ namespace JoySoftware.HomeAssistant.Client
                             }
                             else
                             {
-                                // We did not make the close call 
+                                // We did not make the close call
                                 await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Remote closed",
                                     CancelSource.Token);
                                 CancelSource.Cancel();
