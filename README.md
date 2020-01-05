@@ -1,4 +1,6 @@
 # .NET Home Assistant client
+ [![Build Status](https://dev.azure.com/helto4real0721/HassClient/_apis/build/status/helto4real.net-hassclient?branchName=master)](https://dev.azure.com/helto4real0721/HassClient/_build/latest?definitionId=1&branchName=master)
+
 
 This is the client for Home Assistant written in .NET core 3.1. The component is tested in windows and linux.
 
