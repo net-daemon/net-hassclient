@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  
+
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <LangVersion>8.0</LangVersion>
     <Nullable>enable</Nullable>
     <PackageId>JoySoftware.HassClient</PackageId>
-    <Version>0.0.5-alpha</Version>
+    <Version>0.0.6-alpha</Version>
     <Authors>helto4real</Authors>
     <Company>JoySoftware</Company>
     <description>A .net core client for Home Assistant</description>
