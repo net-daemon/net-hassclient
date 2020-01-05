@@ -46,9 +46,9 @@ namespace nethassclienttest
 
         private static async Task ConnectToHomeAssistant()
         {
-            string ip = "192.168.1.7";    // Replace with your ip
-            short port = 8123;          // Replace with your port
-            string token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJiOTMzNmFhZDdkNjY0ZDhhYjE1YTdiYmZlOTNiZWE4MCIsImlhdCI6MTU3NzA0Njg1OCwiZXhwIjoxODkyNDA2ODU4fQ.bMH-Vy8dLQLtjR6ixWHcmQiWf4eoIPdKVOZfmnwH_Bc"; // Replace with hass token
+            string ip = "192.168.1.100";    // Replace with your ip
+            short port = 8123;              // Replace with your port
+            string token = "YOUR TOKEN";    // Replace with hass token
 
             client = new HassClient();
             // Connect with ip and port, no ssl and provided token.
