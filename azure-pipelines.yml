@@ -27,7 +27,7 @@ steps:
     inputs:
       command: test
       projects: '**/tests/*.Tests/*.csproj'
-      arguments: -c $(BuildConfiguration) --settings $(System.DefaultWorkingDirectory)/CodeCoverage.runsettings --collect:"XPlat Code Coverage" -- RunConfiguration.DisableAppDomain=true
+      arguments: -c $(BuildConfiguration) --collect:"XPlat Code Coverage" -- RunConfiguration.DisableAppDomain=true
 
   - task: DotNetCoreCLI@2
     displayName: Install ReportGenerator tool
