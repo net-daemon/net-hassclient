@@ -1,193 +1,99 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using JoySoftware.HomeAssistant.Client;
+using Moq;
+using System;
 using System.IO;
 using System.Net.WebSockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using JoySoftware.HomeAssistant.Client;
 
 namespace HassClient.Unit.Tests
-
 {
-    public enum MockMessageType
+    /// <summary>
+    ///     The mock to use instead of the real underlying websocket for unit testing
+    /// </summary>
+    /// <remarks>
+    ///     Add the json messages to be returned by the mock in the <see cref="ResponseMessages" /> Channel
+    /// </remarks>
+    class HassWebSocketMock : Mock<IClientWebSocket>
     {
-        AuthRequired,
-        AuthOk,
-        AuthFail,
-        ResultOk,
-        NewEvent,
-        States,
-        Pong,
-        ServiceCallOk,
-        Config,
-        ServiceEvent,
-        ResultNotOk,
-        ResultNotExpected
-    }
-
-    public class HassWebSocketFactoryMock : IClientWebSocketFactory
-    {
-        private readonly List<MockMessageType> _mockMessages;
-        public HassWebSocketFactoryMock(List<MockMessageType> mockMessages) => _mockMessages = mockMessages;
-
-        public HassWebSocketMock WebSocketClient { get; private set; }
-
-        public IClientWebSocket New()
-        {
-            WebSocketClient = new HassWebSocketMock();
-            foreach (MockMessageType msg in _mockMessages)
-            {
-                WebSocketClient.ResponseMessages.Writer.TryWrite(msg);
-            }
-
-            return WebSocketClient;
-        }
-    }
-
-    public class HassWebSocketMock : IClientWebSocket
-    {
-        private static readonly string mockTestdataPath = Path.Combine(AppContext.BaseDirectory, "Mocks", "testdata");
-
+        public static readonly string MessageFixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Messages");
         private int _currentReadPosition;
+        private int _nrOfSentMessages;
 
-        private static byte[] msgAuthRequiredMessage =>
-            File.ReadAllBytes(Path.Combine(mockTestdataPath, "auth_required.json"));
+        public HassWebSocketMock()
+        {
+            // Setup standard mock functionality
 
-        private static byte[] msgAuthOk => File.ReadAllBytes(Path.Combine(mockTestdataPath, "auth_ok.json"));
-        private static byte[] msgAuthFail => File.ReadAllBytes(Path.Combine(mockTestdataPath, "auth_notok.json"));
-        private static byte[] msgResultSuccess => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_msg.json"));
+            // Do nothing to fake a good connect
+            Setup(x => x.ConnectAsync(It.IsAny<Uri>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.Delay(2));
 
-        private static byte[] msgResultNotExpected =>
-            File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_msg_not_expected.json"));
+            // Do nothing to fake a good close
+            Setup(x =>
+                    x.CloseAsync(It.IsAny<WebSocketCloseStatus>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(() =>
+                {
+                    CloseStatus = WebSocketCloseStatus.NormalClosure;
+                    State = WebSocketState.Closed;
 
-        private static byte[] msgResultFail =>
-            File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_msg_success_false.json"));
+                    return Task.Delay(2);
+                });
 
-        private static byte[] msgNewEvent => File.ReadAllBytes(Path.Combine(mockTestdataPath, "event.json"));
-        private static byte[] msgStates => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_states.json"));
-        private static byte[] msgPong => File.ReadAllBytes(Path.Combine(mockTestdataPath, "pong.json"));
+            // Just fake good result as default
+            Setup(x => x.SendAsync(It.IsAny<ReadOnlyMemory<byte>>(),
+                    It.IsAny<WebSocketMessageType>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                .Returns(new ValueTask());
 
-        private static byte[] msgServiceCallOk =>
-            File.ReadAllBytes(Path.Combine(mockTestdataPath, "service_call_ok.json"));
+            // Return the next message in ResponseMessages as default behaviour
+            Setup(x => x.ReceiveAsync(It.IsAny<Memory<byte>>(), It.IsAny<CancellationToken>()))
+                .Returns(
+                    async (Memory<byte> buffer, CancellationToken token) =>
+                    {
+                        var msgToSendBackToClient =
+                            await ResponseMessages.Reader.ReadAsync(token).ConfigureAwait(false);
+                        _nrOfSentMessages++;
+                        return HandleResult(msgToSendBackToClient, buffer);
+                    });
 
-        private static byte[] msgServiceEvent =>
-            File.ReadAllBytes(Path.Combine(mockTestdataPath, "service_event.json"));
+            // Set Open state as default, special tests for closed states
+            SetupGet(x => x.State).Returns(WebSocketState.Open);
 
-        private static byte[] msgConfig => File.ReadAllBytes(Path.Combine(mockTestdataPath, "result_config.json"));
+            WebSocketMockFactory.Setup(n => n.New()).Returns(() => this.Object);
+        }
 
-        public bool CloseIsRun { get; set; }
-        public Channel<MockMessageType> ResponseMessages { get; } = Channel.CreateBounded<MockMessageType>(10);
+        public static string StateMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "result_states.json"));
+        public static string ConfigMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "result_config.json"));
+        public static string EventMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "event.json"));
+        public static string ServiceMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "service_event.json"));
 
         public WebSocketState State { get; set; }
 
         public WebSocketCloseStatus? CloseStatus { get; set; }
 
-        public async Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription,
-            CancellationToken cancellationToken)
-        {
-            CloseIsRun = true;
-            CloseStatus = closeStatus;
-            State = WebSocketState.Closed;
+        public Channel<byte[]> ResponseMessages { get; } = Channel.CreateBounded<byte[]>(10);
 
-            await Task.Delay(2, cancellationToken).ConfigureAwait(false);
-        }
+        public LoggerMock Logger { get; } = new LoggerMock();
 
-        public async Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription,
-            CancellationToken cancellationToken)
-        {
-            CloseIsRun = true;
-            CloseStatus = closeStatus;
-            State = WebSocketState.Closed;
+        public Mock<IClientWebSocketFactory> WebSocketMockFactory { get; } = new Mock<IClientWebSocketFactory>();
 
-            await Task.Delay(2, cancellationToken).ConfigureAwait(false);
-        }
-
-        public async Task ConnectAsync(Uri uri, CancellationToken cancel)
-        {
-            if (uri.AbsoluteUri == "ws://noconnect:9999/")
-            {
-                State = WebSocketState.Aborted;
-            }
-            else
-            {
-                State = WebSocketState.Open;
-            }
-            // Fake different connectionstatus
-
-            await Task.Delay(2);
-        }
-
-        public Task<WebSocketReceiveResult>
-            ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken) =>
-            throw new NotImplementedException();
-
-        public async ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer,
-            CancellationToken cancellationToken)
-        {
-            MockMessageType msgToSend =
-                await ResponseMessages.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
-
-
-            switch (msgToSend)
-            {
-                case MockMessageType.AuthRequired:
-                    return HandleResult(msgAuthRequiredMessage, buffer, msgToSend);
-
-                case MockMessageType.AuthOk:
-                    return HandleResult(msgAuthOk, buffer, msgToSend);
-
-                case MockMessageType.AuthFail:
-                    return HandleResult(msgAuthFail, buffer, msgToSend);
-
-                case MockMessageType.ResultOk:
-                    return HandleResult(msgResultSuccess, buffer, msgToSend);
-
-                case MockMessageType.ResultNotOk:
-                    return HandleResult(msgResultFail, buffer, msgToSend);
-
-                case MockMessageType.ResultNotExpected:
-                    return HandleResult(msgResultNotExpected, buffer, msgToSend);
-
-                case MockMessageType.NewEvent:
-                    return HandleResult(msgNewEvent, buffer, msgToSend);
-
-                case MockMessageType.States:
-                    return HandleResult(msgStates, buffer, msgToSend);
-
-                case MockMessageType.Pong:
-                    return HandleResult(msgPong, buffer, msgToSend);
-
-                case MockMessageType.ServiceCallOk:
-                    return HandleResult(msgServiceCallOk, buffer, msgToSend);
-
-                case MockMessageType.Config:
-                    return HandleResult(msgConfig, buffer, msgToSend);
-
-                case MockMessageType.ServiceEvent:
-                    return HandleResult(msgServiceEvent, buffer, msgToSend);
-            }
-
-            throw new Exception("Expected known mock message type!");
-        }
-
-        public async Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage,
-            CancellationToken cancellationToken)
-        {
-            await Task.Delay(2);
-        }
-
-        public async ValueTask SendAsync(ReadOnlyMemory<byte> buffer, WebSocketMessageType messageType,
-            bool endOfMessage, CancellationToken cancellationToken) => await Task.Delay(2);
-
-        private ValueWebSocketReceiveResult HandleResult(byte[] msg, Memory<byte> buffer, MockMessageType msgType)
+        /// <summary>
+        ///     Fakes a response from home assistant
+        /// </summary>
+        /// <remarks>
+        ///     Takes next message from channel
+        /// </remarks>
+        /// <param name="msg"></param>
+        /// <param name="buffer"></param>
+        private ValueWebSocketReceiveResult HandleResult(byte[] msg, Memory<byte> buffer)
         {
             if ((msg.Length - _currentReadPosition) > buffer.Length)
             {
                 msg.AsMemory(_currentReadPosition, buffer.Length).CopyTo(buffer);
                 _currentReadPosition += buffer.Length;
                 // Re-enter the message type in channel cause it is a continuous message
-                ResponseMessages.Writer.TryWrite(msgType);
+                ResponseMessages.Writer.TryWrite(msg);
                 return new ValueWebSocketReceiveResult(
                     buffer.Length, WebSocketMessageType.Text, false);
             }
@@ -200,42 +106,66 @@ namespace HassClient.Unit.Tests
                 len, WebSocketMessageType.Text, true);
         }
 
-        #region IDisposable Support
-
-        private bool disposedValue; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
+        /// <summary>
+        ///     Adds a fake response json message that fakes the home assistant server response
+        /// </summary>
+        /// <param name="message">Message to fake</param>
+        public void AddResponse(string message)
         {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    // TODO: dispose managed state (managed objects).
-                }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
-
-                disposedValue = true;
-            }
+            ResponseMessages.Writer.TryWrite(Encoding.UTF8.GetBytes(message));
         }
 
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        // ~HassWebSocketMock()
-        // {
-        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        //   Dispose(false);
-        // }
-
-        // This code added to correctly implement the disposable pattern.
-        public void Dispose()
+        /// <summary>
+        ///     Gets the HassClient setup with default fakes
+        /// </summary>
+        /// <returns></returns>
+        public JoySoftware.HomeAssistant.Client.HassClient GetHassClient()
         {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
+            return new JoySoftware.HomeAssistant.Client.HassClient(Logger.LoggerFactory, WebSocketMockFactory.Object);
         }
 
-        #endregion
+        /// <summary>
+        ///     Returns a HassClient that has authorize messages default but not connected
+        /// </summary>
+        public JoySoftware.HomeAssistant.Client.HassClient GetHassClientNotConnected()
+        {
+            var hassClient = GetHassClient();
+            // First message from Home Assistant is auth required
+            AddResponse(@"{""type"": ""auth_required""}");
+            // Next one we fake it is auth ok
+            AddResponse(@"{""type"": ""auth_ok""}");
+
+            return hassClient;
+        }
+
+        /// <summary>
+        ///     Returns a connected HassClient to use for testing after connection phase
+        /// </summary>
+        /// <returns></returns>
+        public async Task<JoySoftware.HomeAssistant.Client.HassClient> GetHassConnectedClient(bool getStates = false)
+        {
+            var hassClient = GetHassClient();
+            // First message from Home Assistant is auth required
+            AddResponse(@"{""type"": ""auth_required""}");
+            // Next one we fake it is auth ok
+            AddResponse(@"{""type"": ""auth_ok""}");
+
+            await hassClient.ConnectAsync(new Uri("ws://anyurldoesntmatter.org"), "FAKETOKEN", getStates);
+
+            return hassClient;
+        }
+
+        /// <summary>
+        ///     Waits until the fake websocket is connected
+        /// </summary>
+        /// <remarks>
+        ///     This is used to test other messages that requires the connection to be up
+        /// </remarks>
+        /// <returns></returns>
+        public async Task WaitUntilConnected()
+        {
+            while (_nrOfSentMessages < 2)
+                await Task.Delay(2);
+        }
     }
 }
