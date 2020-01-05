@@ -313,6 +313,44 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
+        public async void ConnectWithSslShouldStartWithWss()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the default state hass client and we add no response messages
+            var hassClient = mock.GetHassClient();
+            // First message from Home Assistant is auth required
+            mock.AddResponse(@"{""type"": ""auth_required""}");
+            // Next one we fake it is auth ok
+            mock.AddResponse(@"{""type"": ""auth_ok""}");
+
+            // ACT and ASSERT
+            // Connect with ssl
+            await hassClient.ConnectAsync("localhost", 8123, true, "FAKETOKEN", false);
+
+            mock.Verify(n => n.ConnectAsync(new Uri("wss://localhost:8123/api/websocket"), It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async void ConnectWithoutSslShouldStartWithWs()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the default state hass client and we add no response messages
+            var hassClient = mock.GetHassClient();
+            // First message from Home Assistant is auth required
+            mock.AddResponse(@"{""type"": ""auth_required""}");
+            // Next one we fake it is auth ok
+            mock.AddResponse(@"{""type"": ""auth_ok""}");
+
+            // ACT and ASSERT
+            // Connect without ssl
+            await hassClient.ConnectAsync("localhost", 8123, false, "FAKETOKEN", false);
+
+            mock.Verify(n => n.ConnectAsync(new Uri("ws://localhost:8123/api/websocket"), It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
         public async void NoPongMessagePingShouldReturnFalse()
         {
             // ARRANGE

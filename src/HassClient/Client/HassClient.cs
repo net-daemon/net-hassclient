@@ -433,10 +433,7 @@ namespace JoySoftware.HomeAssistant.Client
                     }
                 }
             }
-            catch (OperationCanceledException)
-            {
-                return false;
-            }
+            catch (OperationCanceledException) { } // Do nothing
 
             return false;
         }

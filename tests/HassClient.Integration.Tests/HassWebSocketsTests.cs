@@ -25,8 +25,6 @@ namespace HassClientIntegrationTests
             // GC.SuppressFinalize(this);
         }
 
-        private readonly HomeAssistantMock _mock;
-
         private bool _disposedValue; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
