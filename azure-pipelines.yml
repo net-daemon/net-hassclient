@@ -5,6 +5,7 @@
 
 trigger:
 - master
+- dev
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -13,11 +14,11 @@ variables:
   buildConfiguration: 'Release'
 
 steps:
-
   - task: UseDotNet@2
     displayName: 'Use .net core 3.1'
     inputs:
       version: '3.1.x'
+
   - script: dotnet build --configuration $(buildConfiguration)
     displayName: 'dotnet build $(buildConfiguration)'
 
