@@ -695,7 +695,6 @@ namespace JoySoftware.HomeAssistant.Client
                 try
                 {
                     await ProcessNextMessage();
-                    Console.WriteLine("test");
                 }
                 catch (OperationCanceledException)
                 {
