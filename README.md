@@ -14,7 +14,7 @@ Create a new console application
 ## Add the nuget package to the project
 
 ```sh
-dotnet add package JoySoftware.HassClient --version 0.0.6-alpha
+dotnet add package JoySoftware.HassClient --version 0.0.7-alpha
 ```
 
 The follwing code snippet can be used. The project will add more real example projects at a later time.
