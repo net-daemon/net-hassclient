@@ -21,7 +21,17 @@ steps:
     displayName: 'dotnet build $(buildConfiguration)'
 
   - task: DotNetCoreCLI@2
+    displayName: 'Run tests'
     inputs:
       command: test
       projects: '**/tests/*.Tests/*.csproj'
       arguments: '--configuration $(buildConfiguration) --collect "Code coverage"'
+
+  - script: reportgenerator -reports:$(Agent.TempDirectory)/**/coverage.cobertura.xml -targetdir:$(Build.SourcesDirectory)/coverlet/reports -reporttypes:"Cobertura"
+    displayName: Create reports
+
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish code coverage'
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: $(Build.SourcesDirectory)/coverlet/reports/Cobertura.xml
