@@ -5,7 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\HassClient.Integration.Tests\HassClientIntegrationTests.csproj" />
+    <ProjectReference Include="..\..\tests\HassClient.Integration.Tests\HassClientIntegrationTests.csproj" />
     <ProjectReference Include="..\..\src\HassClient\HassClient.csproj" />
   </ItemGroup>
 

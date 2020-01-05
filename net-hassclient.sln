@@ -11,7 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{312A8879
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HassClientIntegrationTests", "tests\HassClient.Integration.Tests\HassClientIntegrationTests.csproj", "{91DAD3EC-F61A-46F7-AC29-31C55752F0A5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HassClient.Performance.Tests", "tests\HassClient.Performance.Tests\HassClient.Performance.Tests.csproj", "{CC43A306-9E25-47A8-A7A9-4E9ACE97CD77}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HassClient.Performance.Tests", "console\HassClient.Performance.Tests\HassClient.Performance.Tests.csproj", "{CC43A306-9E25-47A8-A7A9-4E9ACE97CD77}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HassClient.Unit.Tests", "tests\HassClient.Unit.Tests\HassClient.Unit.Tests.csproj", "{04D61699-5E9F-4A2E-9AA8-E93358E09449}"
 EndProject
@@ -24,6 +24,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{1AA14828-5
 	ProjectSection(SolutionItems) = preProject
 		readme.md = readme.md
 	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "console", "console", "{386E514C-7212-4CB5-A46C-D2CC35C5B3C7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -90,7 +92,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{2A9BA0F2-65FD-46B2-900F-26C3FEF8B52D} = {4E31B862-FAAA-439A-999D-612BA8016AF4}
 		{91DAD3EC-F61A-46F7-AC29-31C55752F0A5} = {312A8879-0A91-4707-A849-922E8F3490DF}
-		{CC43A306-9E25-47A8-A7A9-4E9ACE97CD77} = {312A8879-0A91-4707-A849-922E8F3490DF}
+		{CC43A306-9E25-47A8-A7A9-4E9ACE97CD77} = {386E514C-7212-4CB5-A46C-D2CC35C5B3C7}
 		{04D61699-5E9F-4A2E-9AA8-E93358E09449} = {312A8879-0A91-4707-A849-922E8F3490DF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
