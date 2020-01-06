@@ -49,7 +49,7 @@ steps:
       summaryFileLocation: $(Build.SourcesDirectory)/coverlet/reports/Cobertura.xml
 
 
-  - task: NuGetCommand@2
+  - task: DotNetCoreCLI@2
     displayName: 'Make NUGET package'
     inputs:
       command: pack
