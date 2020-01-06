@@ -3,9 +3,6 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
-trigger:
-- master
-
 pool:
   vmImage: 'ubuntu-latest'
 
@@ -20,8 +17,10 @@ steps:
     displayName: 'Use .net core 3.1'
     inputs:
       version: '3.1.x'
+
   - script: dotnet build --configuration $(buildConfiguration)
     displayName: 'dotnet build $(buildConfiguration)'
+
   - task: DotNetCoreCLI@2
     displayName: 'Make NUGET package'
     inputs:
@@ -32,3 +31,8 @@ steps:
       patchVersion: '$(Patch)'
       packagesToPack: '**/HassClient.csproj'
       outputDir: '$(Build.ArtifactStagingDirectory)/NUGET'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifacts'
+    inputs:
+      PathtoPublish: '$(build.artifactstagingdirectory)'
