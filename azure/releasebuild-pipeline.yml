@@ -38,7 +38,7 @@ steps:
     displayName: 'Copy RELEASENOTES'
     inputs:
       sourceFolder: '$(Build.SourcesDirectory)'
-      contents: '**/RELEASENOTES.md)'
+      contents: '**/RELEASENOTES.md'
       targetFolder: '$(Build.ArtifactStagingDirectory)'
 
   - task: PublishBuildArtifacts@1
