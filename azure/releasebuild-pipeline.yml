@@ -4,8 +4,11 @@
 # https://aka.ms/yaml
 
 trigger:
-- master
-- dev
+  branches:
+    include:
+    exclude:
+      - master
+      - dev
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -14,8 +17,6 @@ variables:
   - group: package-information
   - name: buildConfiguration
     value: 'Release'
-
-  #version: '0.0.8-alpha'
 
 steps:
   - task: UseDotNet@2
