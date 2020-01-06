@@ -3,11 +3,6 @@
 # Add steps that run tests, create a NuGet package, deploy, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
-variables:
-  Major: '0'
-  Minor: '0'
-  Patch: '7'
-
 trigger:
 - master
 - dev
@@ -17,6 +12,9 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
+  Major: '0'
+  Minor: '0'
+  Patch: '7'
 
 steps:
   - task: UseDotNet@2
