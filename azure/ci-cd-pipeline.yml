@@ -27,7 +27,13 @@ steps:
     inputs:
       command: test
       projects: '**/tests/*.Tests/*.csproj'
-      arguments: -c $(BuildConfiguration) --collect:"XPlat Code Coverage" -- RunConfiguration.DisableAppDomain=true
+      arguments: -c $(BuildConfiguration) -v minimal --collect:"XPlat Code Coverage" -- RunConfiguration.DisableAppDomain=true
+  # - script: dotnet test --logger:"trx;verbosity=minimal" --collect:"XPlat Code Coverage" -- RunConfiguration.DisableAppDomain=true
+  # - task: PublishTestResults@2
+  #   condition: succeededOrFailed()
+  #   inputs:
+  #     testRunner: VSTest
+  #     testResultsFiles: '**/*.trx'
 
   - task: DotNetCoreCLI@2
     displayName: Install ReportGenerator Global Tool

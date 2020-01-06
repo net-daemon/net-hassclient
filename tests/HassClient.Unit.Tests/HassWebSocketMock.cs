@@ -165,9 +165,9 @@ namespace HassClient.Unit.Tests
         public async Task WaitUntilConnected()
         {
             while (_nrOfSentMessages < 2)
-                await Task.Delay(2);
+                await Task.Delay(20);
 
-            await Task.Delay(2);
+            await Task.Delay(20);
         }
     }
 }
