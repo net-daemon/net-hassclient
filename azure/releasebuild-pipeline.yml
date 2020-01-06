@@ -3,12 +3,18 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
+trigger:
+  branches:
+    exclude:
+    - '*'
+
 pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  buildConfiguration: 'Release'
-  version: '0.0.7-alpha'
+  - group: package-information
+  - name: buildConfiguration
+    value: 'Release'
 
 steps:
   - task: UseDotNet@2
@@ -26,7 +32,7 @@ steps:
       versioningScheme: byEnvVar
       packagesToPack: '**/HassClient.csproj'
       outputDir: '$(Build.ArtifactStagingDirectory)/NUGET'
-      versionEnvVar: version
+      versionEnvVar: package-version
 
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Artifacts'
