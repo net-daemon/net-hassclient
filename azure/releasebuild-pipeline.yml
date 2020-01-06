@@ -35,7 +35,7 @@ steps:
       versionEnvVar: package-version
 
   - task: CopyFiles@2
-    displayName: 'Copy RELEASNOTES'
+    displayName: 'Copy RELEASENOTES'
     inputs:
       sourceFolder: '$(Build.SourcesDirectory)'
       contents: '**/RELEASENOTES.md)'
