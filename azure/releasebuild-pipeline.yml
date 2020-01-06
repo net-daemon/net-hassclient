@@ -12,7 +12,7 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
-  version: '0.0.8-alpha'
+  #version: '0.0.8-alpha'
 
 steps:
   - task: UseDotNet@2
@@ -30,7 +30,7 @@ steps:
       versioningScheme: byEnvVar
       packagesToPack: '**/HassClient.csproj'
       outputDir: '$(Build.ArtifactStagingDirectory)/NUGET'
-      versionEnvVar: version
+      versionEnvVar: package-version
 
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Artifacts'
