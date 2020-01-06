@@ -34,6 +34,13 @@ steps:
       outputDir: '$(Build.ArtifactStagingDirectory)/NUGET'
       versionEnvVar: package-version
 
+  - task: CopyFiles@2
+    displayName: 'Copy RELEASNOTES'
+    inputs:
+      sourceFolder: '$(Build.SourcesDirectory)'
+      contents: '**/RELEASNOTES.md)'
+      targetFolder: '$(Build.ArtifactStagingDirectory)'
+
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Artifacts'
     inputs:
