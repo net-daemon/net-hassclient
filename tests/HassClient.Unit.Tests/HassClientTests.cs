@@ -27,7 +27,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the non connected hass client
+            // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
             // ACT AND ASSERT
@@ -44,7 +44,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the non connected hass client
+            // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
             // Do not add a fake service call message result 
@@ -62,7 +62,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the non connected hass client
+            // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
             // Service call successful
@@ -109,7 +109,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the non connected hass client
+            // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
             hassClient.SocketTimeout = 10;
 
@@ -124,7 +124,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the non connected hass client
+            // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
             // ACT
@@ -144,7 +144,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the non connected hass client
+            // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
             await hassClient.CloseAsync();
@@ -162,7 +162,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the non connected hass client
+            // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
             mock.Setup(x =>
@@ -183,7 +183,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the non connected hass client
+            // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
             // ACT
@@ -201,7 +201,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the non connected hass client
+            // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
             // ACT
@@ -237,7 +237,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the non connected hass client
+            // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
             // ACT AND ASSERT
@@ -355,7 +355,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the default state hass client
+            // Get the default connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
             // No pong message is sent from server...
@@ -369,7 +369,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the default state hass client
+            // Get the default connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
             // Fake return pong message
@@ -408,7 +408,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the non connected hass client
+            // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
             // Add the service message fake , check service_event.json for reference
@@ -431,7 +431,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the non connected hass client
+            // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
             var subscribeTask = hassClient.SubscribeToEvents();
@@ -480,7 +480,7 @@ namespace HassClient.Unit.Tests
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
-            // Get the non connected hass client
+            // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
             // ACT

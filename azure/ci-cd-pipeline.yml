@@ -12,6 +12,9 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
+  Major: '0'
+  Minor: '0'
+  Patch: '7'
 
 steps:
   - task: UseDotNet@2
@@ -45,3 +48,14 @@ steps:
       codeCoverageTool: Cobertura
       summaryFileLocation: $(Build.SourcesDirectory)/coverlet/reports/Cobertura.xml
 
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Make NUGET package'
+    inputs:
+      command: pack
+      versioningScheme: byPrereleaseNumber
+      majorVersion: '$(Major)'
+      minorVersion: '$(Minor)'
+      patchVersion: '$(Patch)'
+      packagesToPack: '**/HassClient.csproj'
+      outputDir: '$(Build.ArtifactStagingDirectory)/NUGET'
