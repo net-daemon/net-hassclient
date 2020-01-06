@@ -1,6 +1,6 @@
 # .NET Home Assistant client
- [![Build Status](https://dev.azure.com/helto4real0721/HassClient/_apis/build/status/helto4real.net-hassclient?branchName=master)](https://dev.azure.com/helto4real0721/HassClient/_build/latest?definitionId=1&branchName=master)
 
+[![Build Status](https://dev.azure.com/helto4real0721/HassClient/_apis/build/status/helto4real.net-hassclient?branchName=master)](https://dev.azure.com/helto4real0721/HassClient/_build/latest?definitionId=1&branchName=master)
 
 This is the client for Home Assistant written in .NET core 3.1. The component is tested in windows and linux.
 
@@ -22,7 +22,7 @@ Create a new console application
 dotnet add package JoySoftware.HassClient --version 0.0.7-alpha
 ```
 
-The follwing code snippet can be used. The project will add more real example projects at a later time.
+The following code snippet can be used. The project will add more real example projects at a later time.
 
 ```cs
 
@@ -112,5 +112,4 @@ namespace nethassclienttest
     }
 }
 
-}
 ```
