@@ -8,9 +8,7 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
-  Major: '0'
-  Minor: '0'
-  Patch: '7'
+  version: '0.0.7-alpha'
 
 steps:
   - task: UseDotNet@2
@@ -25,12 +23,10 @@ steps:
     displayName: 'Make NUGET package'
     inputs:
       command: pack
-      versioningScheme: byPrereleaseNumber
-      majorVersion: '$(Major)'
-      minorVersion: '$(Minor)'
-      patchVersion: '$(Patch)'
+      versioningScheme: byEnvVar
       packagesToPack: '**/HassClient.csproj'
       outputDir: '$(Build.ArtifactStagingDirectory)/NUGET'
+      versionEnvVar: version
 
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Artifacts'
