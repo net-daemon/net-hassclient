@@ -11,7 +11,10 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  buildConfiguration: 'Release'
+  - group: package-information
+  - name: buildConfiguration
+    value: 'Release'
+
   #version: '0.0.8-alpha'
 
 steps:
