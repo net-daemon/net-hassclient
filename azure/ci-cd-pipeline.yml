@@ -28,7 +28,7 @@ steps:
   #     command: test
   #     projects: '**/tests/*.Tests/*.csproj'
   #     arguments: -c $(BuildConfiguration) --collect:"XPlat Code Coverage" -- RunConfiguration.DisableAppDomain=true
-  - script: dotnet test --logger:console[;verbosity=minimal>] --collect:"XPlat Code Coverage" --RunConfiguration.DisableAppDomain=true
+  - script: dotnet test --logger:"console;verbosity=minimal" --collect:"XPlat Code Coverage" --RunConfiguration.DisableAppDomain=true
   - task: PublishTestResults@2
     condition: succeededOrFailed()
     inputs:
