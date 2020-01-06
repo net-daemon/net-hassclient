@@ -3,12 +3,16 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
+trigger:
+  -dev
+  -master
+
 pool:
   vmImage: 'ubuntu-latest'
 
 variables:
   buildConfiguration: 'Release'
-  version: '0.0.7-alpha'
+  version: '0.0.8-alpha'
 
 steps:
   - task: UseDotNet@2
