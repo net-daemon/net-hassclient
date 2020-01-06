@@ -166,6 +166,8 @@ namespace HassClient.Unit.Tests
         {
             while (_nrOfSentMessages < 2)
                 await Task.Delay(2);
+
+            await Task.Delay(2);
         }
     }
 }
