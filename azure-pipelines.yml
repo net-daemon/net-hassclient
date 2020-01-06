@@ -58,3 +58,4 @@ steps:
       minorVersion: '$(Minor)'
       patchVersion: '$(Patch)'
       packagesToPack: '**/HassClient.csproj'
+      outputDir: '$(Build.ArtifactStagingDirectory)/NUGET'
