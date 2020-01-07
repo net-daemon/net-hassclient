@@ -139,7 +139,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     The logger to use
         /// </summary>
-        private readonly ILogger? _logger;
+        private readonly ILogger _logger;
 
         /// <summary>
         ///     Channel used as a async thread safe way to wite messages to the websocket
@@ -147,7 +147,7 @@ namespace JoySoftware.HomeAssistant.Client
         private readonly Channel<HassMessageBase> _writeChannel =
             Channel.CreateBounded<HassMessageBase>(DefaultChannelSize);
 
-        private readonly IClientWebSocketFactory? _wsFactory;
+        private readonly IClientWebSocketFactory _wsFactory;
 
         private bool _disposed;
 
@@ -205,15 +205,6 @@ namespace JoySoftware.HomeAssistant.Client
 
             _logger = logFactory.CreateLogger<HassClient>();
             _wsFactory = wsFactory;
-        }
-
-        /// <summary>
-        ///     Instance a new HassClient
-        /// </summary>
-        public HassClient()
-        {
-            _logger = _getDefaultLoggerFactory.CreateLogger<HassClient>();
-            _wsFactory = new ClientWebSocketFactory();
         }
 
         /// <summary>
@@ -292,48 +283,46 @@ namespace JoySoftware.HomeAssistant.Client
 
             try
             {
-                IClientWebSocket ws = _wsFactory?.New()!;
+                IClientWebSocket ws = _wsFactory.New() ?? throw new NullReferenceException("Websocket cant be null!");
                 using var timerTokenSource = new CancellationTokenSource(SocketTimeout);
                 // Make a combined token source with timer and the general cancel token source
                 // The operations will cancel from ether one
                 using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
                     timerTokenSource.Token, CancelSource.Token);
 
-                if (ws != null)
+                await ws.ConnectAsync(url, connectTokenSource.Token);
+
+                if (ws.State == WebSocketState.Open)
                 {
-                    await ws.ConnectAsync(url, connectTokenSource.Token);
+                    // Initialize the correct states when successfully connecting to the websocket
+                    initStatesOnConnect(ws);
 
-                    if (ws.State == WebSocketState.Open)
+                    // Do the authenticate and get the auhtorization response
+                    HassMessage result = await handleConnectAndAuthenticate(token, connectTokenSource);
+
+                    switch (result.Type)
                     {
-                        // Initialize the correct states when successfully connecting to the websocket
-                        initStatesOnConnect(ws);
+                        case "auth_ok":
+                            if (getStatesOnConnect)
+                            {
+                                await GetStates(connectTokenSource);
+                            }
 
-                        // Do the authenticate and get the auhtorization response
-                        HassMessage result = await handleConnectAndAuthenticate(token, connectTokenSource);
+                            _logger.LogTrace($"Connected to websocket ({url})");
+                            return true;
 
-                        switch (result.Type)
-                        {
-                            case "auth_ok":
-                                if (getStatesOnConnect)
-                                {
-                                    await GetStates(connectTokenSource);
-                                }
+                        case "auth_invalid":
+                            _logger.LogError($"Failed to authenticate ({result.Message})");
+                            return false;
 
-                                _logger.LogTrace($"Connected to websocket ({url})");
-                                return true;
-
-                            case "auth_invalid":
-                                _logger.LogError($"Failed to authenticate ({result.Message})");
-                                return false;
-
-                            default:
-                                _logger.LogError($"Unexpected response ({result.Type})");
-                                return false;
-                        }
+                        default:
+                            _logger.LogError($"Unexpected response ({result.Type})");
+                            return false;
                     }
-
-                    _logger.LogDebug($"Failed to connect to websocket socket state: {ws.State}");
                 }
+
+                _logger.LogDebug($"Failed to connect to websocket socket state: {ws.State}");
+
 
                 return false;
             }

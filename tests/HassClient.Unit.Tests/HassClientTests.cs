@@ -40,6 +40,24 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
+        public async Task WhenFactoryReturnsNullWebsocketReturnsFalseAndLogsError()
+        {
+            // ARRANGE
+            var websocketFactoryMock = new Mock<IClientWebSocketFactory>();
+            websocketFactoryMock.Setup(n => n.New()).Returns(() => null);
+
+            var loggerMock = new LoggerMock();
+
+            var hassClient = new JoySoftware.HomeAssistant.Client.HassClient(loggerMock.LoggerFactory, websocketFactoryMock.Object);
+
+            // ACT and ASSERT
+            // Calls returns false and logs error
+            Assert.False(await hassClient.ConnectAsync(new Uri("ws://anyurldoesntmatter.org"), "FAKETOKEN", false));
+            loggerMock.AssertLogged(LogLevel.Error, Times.Once());
+
+        }
+
+        [Fact]
         public async void CallServiceIfCanceledShouldThrowOperationCanceledException()
         {
             // ARRANGE
@@ -408,12 +426,16 @@ namespace HassClient.Unit.Tests
             // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
-
             mock.Setup(x => x.ReceiveAsync(It.IsAny<Memory<byte>>(), It.IsAny<CancellationToken>()))
-                .Returns(async (Memory<byte> buffer, CancellationToken token) =>
-                {
-                    throw new Exception("Unexpected!");
-                });
+                .Returns((Memory<byte> buffer, CancellationToken token) =>
+               {
+                   throw new Exception("Unexpected!");
+               });
+
+
+
+            // ACT AND ASSERT
+            var subscribeTask = hassClient.SubscribeToEvents();
 
             // Service call successful
             mock.AddResponse(@"{
@@ -429,8 +451,7 @@ namespace HassClient.Unit.Tests
                                       }
                                     }");
 
-            // ACT AND ASSERT
-            await hassClient.SubscribeToEvents();
+            await subscribeTask;
 
             mock.Logger.AssertLogged(LogLevel.Error, Times.Once());
         }
