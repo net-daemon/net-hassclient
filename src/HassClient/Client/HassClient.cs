@@ -401,11 +401,6 @@ namespace JoySoftware.HomeAssistant.Client
 
                 return false; // Just timeout not canceled
             }
-            catch (Exception)
-            {
-                // We already logged in sendCommand
-                return false;
-            }
         }
 
 
