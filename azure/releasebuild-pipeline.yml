@@ -3,10 +3,9 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
-trigger:
-  branches:
-    exclude:
-    - '*'
+# Do not trigger this script on any change or pr
+trigger: none
+pr: none
 
 pool:
   vmImage: 'ubuntu-latest'
