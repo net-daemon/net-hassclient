@@ -479,7 +479,7 @@ namespace JoySoftware.HomeAssistant.Client
             return _writeChannel.Writer.TryWrite(message);
         }
 
-        private async ValueTask<HassMessage> SendCommandAndWaitForResponse(CommandMessage message)
+        internal virtual async ValueTask<HassMessage> SendCommandAndWaitForResponse(CommandMessage message)
         {
             using var timerTokenSource = new CancellationTokenSource(SocketTimeout);
             // Make a combined token source with timer and the general cancel token source
