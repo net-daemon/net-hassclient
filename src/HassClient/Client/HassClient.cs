@@ -669,7 +669,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         private async Task ReadMessagePump()
         {
-            _logger?.LogTrace("Start ReadMessagePump");
+            _logger.LogTrace("Start ReadMessagePump");
 
             // While not canceled and websocket is not closed
             while (_ws != null && (!CancelSource.IsCancellationRequested && !_ws.CloseStatus.HasValue))
@@ -686,7 +686,7 @@ namespace JoySoftware.HomeAssistant.Client
                 // Should never cast any other exception, if so it just not handle them here
             }
 
-            _logger?.LogTrace("Exit ReadMessagePump");
+            _logger.LogTrace("Exit ReadMessagePump");
         }
 
         /// <summary>
@@ -770,7 +770,7 @@ namespace JoySoftware.HomeAssistant.Client
                 }
                 catch (Exception e)
                 {
-                    _logger?.LogError(e, "Major failure in ReadFromClientSocket, exit...");
+                    _logger.LogError(e, "Major failure in ReadFromClientSocket, exit...");
                     // Make sure we always cancel the other task of any reason
                     // ReSharper disable once AccessToDisposedClosure
                     cancelProcessNextMessage.Cancel(true);
@@ -822,7 +822,7 @@ namespace JoySoftware.HomeAssistant.Client
                     // Todo: Log the seralizer error here later but continue receive
                     // messages from the server. Then we can survive the server
                     // Sending bad json messages
-                    _logger?.LogDebug(e, "Error deserialize json response");
+                    _logger.LogDebug(e, "Error deserialize json response");
                     // Make sure we put a small delay incase we have severe error so the loop
                     // doesn't kill the server
 
@@ -873,7 +873,7 @@ namespace JoySoftware.HomeAssistant.Client
 
         private async Task WriteMessagePump()
         {
-            _logger?.LogTrace("Start WriteMessagePump");
+            _logger.LogTrace("Start WriteMessagePump");
 
             while (_ws != null && (!CancelSource.IsCancellationRequested && !_ws.CloseStatus.HasValue))
             {
@@ -892,7 +892,7 @@ namespace JoySoftware.HomeAssistant.Client
                 }
             }
 
-            _logger?.LogTrace("Exit WriteMessagePump");
+            _logger.LogTrace("Exit WriteMessagePump");
         }
     }
 }

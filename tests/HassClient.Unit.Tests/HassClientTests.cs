@@ -417,6 +417,24 @@ namespace HassClient.Unit.Tests
             // ACT and ASSERT
             Assert.True(await hassClient.PingAsync(1000));
         }
+        public class UnknownCommand : CommandMessage
+        {
+            public UnknownCommand() => Type = "unknown_command";
+        }
+
+        [Fact]
+        public async Task SendingUnknownMessageShouldDiscardAndLogDebug()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            hassClient.SendMessage(new UnknownCommand());
+            hassClient.SocketTimeout = 20;
+            await hassClient.CallService("test", "test", null);
+            mock.Logger.AssertLogged(LogLevel.Error, Times.Once());
+        }
 
         [Fact]
         public async Task ReceiveAsyncThrowsExceptionProcessMessageShouldHandleException()
