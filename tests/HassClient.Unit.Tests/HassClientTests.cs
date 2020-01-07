@@ -401,6 +401,41 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
+        public async Task ReceiveAsyncThrowsExceptionProcessMessageShouldHandleException()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+
+            mock.Setup(x => x.ReceiveAsync(It.IsAny<Memory<byte>>(), It.IsAny<CancellationToken>()))
+                .Returns(async (Memory<byte> buffer, CancellationToken token) =>
+                {
+                    throw new Exception("Unexpected!");
+                });
+
+            // Service call successful
+            mock.AddResponse(@"{
+                                      ""id"": 2,
+                                      ""type"": ""result"",
+                                      ""success"": true,
+                                      ""result"": {
+                                        ""context"": {
+                                          ""id"": ""55cf75a4dbf94680804ef022aa0c67b4"",
+                                          ""parent_id"": null,
+                                          ""user_id"": ""63b2952cb986474d84be46480c8aaad3""
+                                        }
+                                      }
+                                    }");
+
+            // ACT AND ASSERT
+            await hassClient.SubscribeToEvents();
+
+            mock.Logger.AssertLogged(LogLevel.Error, Times.Once());
+        }
+
+        [Fact]
         public async Task ReturningStatesTheCountShouldBeNineteen()
         {
             // ARRANGE
@@ -422,6 +457,31 @@ namespace HassClient.Unit.Tests
 
             // ASSERT
             Assert.Equal(19, hassClient.States.Count);
+        }
+
+        [Fact]
+        public async void SendMessageFailShouldThrowException()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            var mockHassClient =
+                new Mock<JoySoftware.HomeAssistant.Client.HassClient>(mock.Logger.LoggerFactory,
+                    mock.WebSocketMockFactory.Object);
+
+
+            mock.CallBase = true;
+
+            // First message from Home Assistant is auth required
+            mock.AddResponse(@"{""type"": ""auth_required""}");
+            // Next one we fake it is auth ok
+            mock.AddResponse(@"{""type"": ""auth_ok""}");
+
+            await mockHassClient.Object.ConnectAsync(new Uri("http://192.168.1.1"), "token", false);
+            mockHassClient.Setup(n => n.SendMessage(It.IsAny<HassMessageBase>())).Returns(false);
+            // ACT AND ASSERT
+
+            await Assert.ThrowsAsync<ApplicationException>(async () =>
+                await mockHassClient.Object.CallService("light", "turn_on", null));
         }
 
         [Fact]
@@ -533,28 +593,5 @@ namespace HassClient.Unit.Tests
             // Calls connect without getting the states initially
             Assert.False(await hassClient.ConnectAsync(new Uri("ws://anyurldoesntmatter.org"), "FAKETOKEN", false));
         }
-
-        [Fact]
-        public async void SendMessageFailShouldThrowException()
-        {
-            // ARRANGE
-            var mock = new HassWebSocketMock();
-            var mockHassClient = new Mock<JoySoftware.HomeAssistant.Client.HassClient>(mock.Logger.LoggerFactory, mock.WebSocketMockFactory.Object);
-
-
-            mock.CallBase = true;
-
-            // First message from Home Assistant is auth required
-            mock.AddResponse(@"{""type"": ""auth_required""}");
-            // Next one we fake it is auth ok
-            mock.AddResponse(@"{""type"": ""auth_ok""}");
-
-            await mockHassClient.Object.ConnectAsync(new Uri("http://192.168.1.1"), "token", false);
-            mockHassClient.Setup(n => n.SendMessage(It.IsAny<HassMessageBase>())).Returns(false);
-            // ACT AND ASSERT
-
-            await Assert.ThrowsAsync<ApplicationException>(async () => await mockHassClient.Object.CallService("light", "turn_on", null));
-        }
     }
-
 }

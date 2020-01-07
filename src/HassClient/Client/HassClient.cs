@@ -781,10 +781,11 @@ namespace JoySoftware.HomeAssistant.Client
                 }
                 catch (Exception e)
                 {
+                    _logger?.LogError(e, "Major failure in ReadFromClientSocket, exit...");
                     // Make sure we always cancel the other task of any reason
                     // ReSharper disable once AccessToDisposedClosure
                     cancelProcessNextMessage.Cancel(true);
-                    _logger?.LogError(e, "Major failure in ReadFromClientSocket, exit...");
+                    throw;
                 }
             }
 
