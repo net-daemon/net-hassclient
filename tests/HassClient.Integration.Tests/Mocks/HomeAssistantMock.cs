@@ -195,10 +195,10 @@ namespace HassClientIntegrationTests.Mocks
                             try
                             {
                                 // Send close message (some bug n CloseAsync makes we have to do it this way)
-                                await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing",
+                                await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing",
                                     timeout.Token);
                                 // Wait for close message
-                                await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), timeout.Token);
+                                //await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), timeout.Token);
                             }
                             catch (OperationCanceledException)
                             {

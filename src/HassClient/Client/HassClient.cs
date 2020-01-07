@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 [assembly: InternalsVisibleTo("HassClientIntegrationTests")]
 [assembly: InternalsVisibleTo("HassClient.Performance.Tests")]
 [assembly: InternalsVisibleTo("HassClient.Unit.Tests")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
 
 namespace JoySoftware.HomeAssistant.Client
 {
@@ -361,7 +362,7 @@ namespace JoySoftware.HomeAssistant.Client
                 return result;
             }
 
-            throw new Exception($"The result not expected! {resultMessage}");
+            throw new ApplicationException($"The result not expected! {resultMessage}");
         }
 
         /// <summary>
@@ -476,7 +477,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         /// <param name="message">The message to send</param>
         /// <returns>True if successful</returns>
-        private bool SendMessage(HassMessageBase message)
+        internal virtual bool SendMessage(HassMessageBase message)
         {
             _logger.LogTrace($"Sends message {message.Type}");
             if (message is CommandMessage commandMessage)
@@ -693,11 +694,7 @@ namespace JoySoftware.HomeAssistant.Client
                     // Canceled the thread just leave
                     break;
                 }
-                catch (Exception e)
-                {
-                    _logger?.LogError(e, "Major failure in read pump, exit...");
-                    break;
-                }
+                // Should never cast any other exception, if so it just not handle them here
             }
 
             _logger?.LogTrace("Exit ReadMessagePump");
@@ -711,7 +708,7 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Write the read message to a channel.
         /// </remarks>
         /// <returns></returns>
-        private async Task ProcessNextMessage()
+        internal virtual async Task ProcessNextMessage()
         {
             var pipe = new Pipe();
 
@@ -723,7 +720,7 @@ namespace JoySoftware.HomeAssistant.Client
             await Task.WhenAll(
                 Task.Run(ReadFromClientSocket, cancelTokenSource.Token),
                 Task.Run(WriteMessagesToChannel, cancelTokenSource.Token)
-            ).ConfigureAwait(false);
+            );
 
             // Task that reads the next message from websocket
             async Task ReadFromClientSocket()
@@ -734,6 +731,7 @@ namespace JoySoftware.HomeAssistant.Client
                     {
                         Memory<byte> memory = pipe.Writer.GetMemory(DefaultReceiveBufferSize);
 
+                        // ReSharper disable once AccessToDisposedClosure
                         ValueWebSocketReceiveResult result = await _ws.ReceiveAsync(memory, cancelTokenSource.Token);
 
                         if (result.MessageType == WebSocketMessageType.Close || result.Count == 0)
@@ -743,6 +741,7 @@ namespace JoySoftware.HomeAssistant.Client
                             if (_isClosing)
                             {
                                 // We are closing, just cancel the process message
+                                // ReSharper disable once AccessToDisposedClosure
                                 cancelProcessNextMessage.Cancel();
                             }
                             else
@@ -777,13 +776,15 @@ namespace JoySoftware.HomeAssistant.Client
                 catch (WebSocketException)
                 {
                     // Make sure we always cancel the other task of any reason
+                    // ReSharper disable once AccessToDisposedClosure
                     cancelProcessNextMessage.Cancel();
                 }
                 catch (Exception e)
                 {
                     // Make sure we always cancel the other task of any reason
+                    // ReSharper disable once AccessToDisposedClosure
                     cancelProcessNextMessage.Cancel(true);
-                    _logger?.LogError(e, "Major failure in ReadFromClientSocketad, exit...");
+                    _logger?.LogError(e, "Major failure in ReadFromClientSocket, exit...");
                 }
             }
 
@@ -792,6 +793,7 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 try
                 {
+                    // ReSharper disable once AccessToDisposedClosure
                     HassMessage m = await JsonSerializer.DeserializeAsync<HassMessage>(pipe.Reader.AsStream(),
                         cancellationToken: cancelTokenSource.Token);
                     await pipe.Reader.CompleteAsync();
@@ -832,8 +834,11 @@ namespace JoySoftware.HomeAssistant.Client
                     // Sending bad json messages
                     _logger?.LogDebug(e, "Error deserialize json response");
                     // Make sure we put a small delay incase we have severe error so the loop
-                    // doesnt kill the server
-                    await Task.Delay(20);
+                    // doesn't kill the server
+
+                    // ReSharper disable once AccessToDisposedClosure
+                    await Task.Delay(20, cancelTokenSource.Token);
+                    // ReSharper disable once AccessToDisposedClosure
                     cancelProcessNextMessage.Cancel();
                 }
             }

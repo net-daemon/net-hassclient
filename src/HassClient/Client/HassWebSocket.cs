@@ -61,7 +61,7 @@ namespace JoySoftware.HomeAssistant.Client
             await _ws.CloseAsync(closeStatus, statusDescription, cancellationToken);
 
         public async Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription,
-            CancellationToken cancellationToken) => await Task.FromException(new NotImplementedException());
+            CancellationToken cancellationToken) => await _ws.CloseAsync(closeStatus, statusDescription, cancellationToken);
 
         public async Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage,
             CancellationToken cancellationToken) =>

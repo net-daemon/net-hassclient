@@ -301,15 +301,24 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void ConnectWithUriNullThrowsArgumentNullException()
+        public async void ConnectWithoutSslShouldStartWithWs()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
             // Get the default state hass client and we add no response messages
             var hassClient = mock.GetHassClient();
+            // First message from Home Assistant is auth required
+            mock.AddResponse(@"{""type"": ""auth_required""}");
+            // Next one we fake it is auth ok
+            mock.AddResponse(@"{""type"": ""auth_ok""}");
 
-            await Assert.ThrowsAsync<ArgumentNullException>(
-                async () => await hassClient.ConnectAsync(null, "lss", false));
+            // ACT and ASSERT
+            // Connect without ssl
+            await hassClient.ConnectAsync("localhost", 8123, false, "FAKETOKEN", false);
+
+            mock.Verify(
+                n => n.ConnectAsync(new Uri("ws://localhost:8123/api/websocket"), It.IsAny<CancellationToken>()),
+                Times.Once);
         }
 
         [Fact]
@@ -328,26 +337,38 @@ namespace HassClient.Unit.Tests
             // Connect with ssl
             await hassClient.ConnectAsync("localhost", 8123, true, "FAKETOKEN", false);
 
-            mock.Verify(n => n.ConnectAsync(new Uri("wss://localhost:8123/api/websocket"), It.IsAny<CancellationToken>()), Times.Once);
+            mock.Verify(
+                n => n.ConnectAsync(new Uri("wss://localhost:8123/api/websocket"), It.IsAny<CancellationToken>()),
+                Times.Once);
         }
 
         [Fact]
-        public async void ConnectWithoutSslShouldStartWithWs()
+        public async void ConnectWithUriNullThrowsArgumentNullException()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
             // Get the default state hass client and we add no response messages
             var hassClient = mock.GetHassClient();
-            // First message from Home Assistant is auth required
-            mock.AddResponse(@"{""type"": ""auth_required""}");
-            // Next one we fake it is auth ok
-            mock.AddResponse(@"{""type"": ""auth_ok""}");
 
-            // ACT and ASSERT
-            // Connect without ssl
-            await hassClient.ConnectAsync("localhost", 8123, false, "FAKETOKEN", false);
+            await Assert.ThrowsAsync<ArgumentNullException>(
+                async () => await hassClient.ConnectAsync(null, "lss", false));
+        }
 
-            mock.Verify(n => n.ConnectAsync(new Uri("ws://localhost:8123/api/websocket"), It.IsAny<CancellationToken>()), Times.Once);
+        [Fact]
+        public async Task GetConfigGetUnexpectedMessageThrowsException()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            // ACT
+            var getConfigTask = hassClient.GetConfig();
+
+            // Fake return not expected message, check result_config.json for reference
+            mock.AddResponse(@"{""id"": 2,""type"": ""result"", ""success"": true}");
+
+            await Assert.ThrowsAsync<ApplicationException>(async () => await getConfigTask);
         }
 
         [Fact]
@@ -473,6 +494,9 @@ namespace HassClient.Unit.Tests
             Assert.True(lastChanged.Value.Hour == target.Hour);
             Assert.True(lastChanged.Value.Minute == target.Minute);
             Assert.True(lastChanged.Value.Second == target.Second);
+
+            // Just test one of the NewStateOne
+            Assert.True(stateMessage.NewState?.EntityId == "binary_sensor.vardagsrum_pir");
         }
 
         [Fact]
@@ -509,5 +533,28 @@ namespace HassClient.Unit.Tests
             // Calls connect without getting the states initially
             Assert.False(await hassClient.ConnectAsync(new Uri("ws://anyurldoesntmatter.org"), "FAKETOKEN", false));
         }
+
+        [Fact]
+        public async void SendMessageFailShouldThrowException()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            var mockHassClient = new Mock<JoySoftware.HomeAssistant.Client.HassClient>(mock.Logger.LoggerFactory, mock.WebSocketMockFactory.Object);
+
+
+            mock.CallBase = true;
+
+            // First message from Home Assistant is auth required
+            mock.AddResponse(@"{""type"": ""auth_required""}");
+            // Next one we fake it is auth ok
+            mock.AddResponse(@"{""type"": ""auth_ok""}");
+
+            await mockHassClient.Object.ConnectAsync(new Uri("http://192.168.1.1"), "token", false);
+            mockHassClient.Setup(n => n.SendMessage(It.IsAny<HassMessageBase>())).Returns(false);
+            // ACT AND ASSERT
+
+            await Assert.ThrowsAsync<ApplicationException>(async () => await mockHassClient.Object.CallService("light", "turn_on", null));
+        }
     }
+
 }
