@@ -23,7 +23,7 @@ namespace HassClient.Unit.Tests
         [InlineData(EventType.StateChanged)]
         [InlineData(EventType.TimeChanged)]
         [InlineData(EventType.HomeAssistantStop)]
-        public async void SubscriptToEventTypeShouldReturnEvent(EventType eventType)
+        public async Task SubscriptToEventTypeShouldReturnEvent(EventType eventType)
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -39,8 +39,33 @@ namespace HassClient.Unit.Tests
             Assert.NotNull(eventMsg);
         }
 
+        [Theory]
+        [InlineData(WebSocketState.Closed)]
+        [InlineData(WebSocketState.Aborted)]
+        [InlineData(WebSocketState.CloseReceived)]
+        [InlineData(WebSocketState.CloseSent)]
+        [InlineData(WebSocketState.Connecting)]
+        [InlineData(WebSocketState.None)]
+        public async Task ConnectWithStateOtherThanOpenShouldReturnFalse(WebSocketState state)
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the default state hass client
+            var hassClient = mock.GetHassClient();
+            // Set Closed state to fake
+            mock.SetupGet(x => x.State).Returns(state);
+
+            // ACT and ASSERT
+            Assert.False(await hassClient.ConnectAsync(new Uri("ws://anyurldoesntmatter.org"), "FAKETOKEN", false));
+        }
+
+        public class UnknownCommand : CommandMessage
+        {
+            public UnknownCommand() => Type = "unknown_command";
+        }
+
         [Fact]
-        public async void CallServiceIfCanceledShouldThrowOperationCanceledException()
+        public async Task CallServiceIfCanceledShouldThrowOperationCanceledException()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -58,7 +83,7 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void CallServiceSuccessfulReturnsTrue()
+        public async Task CallServiceSuccessfulReturnsTrue()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -87,7 +112,7 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void CallServiceUnhandledErrorThrowsException()
+        public async Task CallServiceUnhandledErrorThrowsException()
         {
             // ARRANGE
             var webSocketMock = Mock.Of<IClientWebSocket>(ws =>
@@ -105,7 +130,7 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void CallServiceWithTimeoutShouldReturnFalse()
+        public async Task CallServiceWithTimeoutShouldReturnFalse()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -120,7 +145,7 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void ClientGetUnexpectedMessageRecoversResultNotNull()
+        public async Task ClientGetUnexpectedMessageRecoversResultNotNull()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -158,7 +183,7 @@ namespace HassClient.Unit.Tests
 
         //TODO: Fix the test
         [Fact]
-        public async void CloseAsyncWithTimeoutThrowsOperationCanceledExceotion()
+        public async Task CloseAsyncWithTimeoutThrowsOperationCanceledExceotion()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -179,7 +204,7 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void CommandWithUnsuccessfulShouldThrowAggregateException()
+        public async Task CommandWithUnsuccessfulShouldThrowAggregateException()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -197,7 +222,7 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void ConfigShouldBeCorrect()
+        public async Task ConfigShouldBeCorrect()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -233,7 +258,7 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void ConnectAlreadyConnectedThrowsInvalidOperation()
+        public async Task ConnectAlreadyConnectedThrowsInvalidOperation()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -248,7 +273,7 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void ConnectShouldReturnTrue()
+        public async Task ConnectShouldReturnTrue()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -266,7 +291,7 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void ConnectTimeoutReturnsFalse()
+        public async Task ConnectTimeoutReturnsFalse()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -281,7 +306,7 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void ConnectWithAuthFailLogsErrorAndReturnFalse()
+        public async Task ConnectWithAuthFailLogsErrorAndReturnFalse()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -301,38 +326,7 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void ConnectWithUriNullThrowsArgumentNullException()
-        {
-            // ARRANGE
-            var mock = new HassWebSocketMock();
-            // Get the default state hass client and we add no response messages
-            var hassClient = mock.GetHassClient();
-
-            await Assert.ThrowsAsync<ArgumentNullException>(
-                async () => await hassClient.ConnectAsync(null, "lss", false));
-        }
-
-        [Fact]
-        public async void ConnectWithSslShouldStartWithWss()
-        {
-            // ARRANGE
-            var mock = new HassWebSocketMock();
-            // Get the default state hass client and we add no response messages
-            var hassClient = mock.GetHassClient();
-            // First message from Home Assistant is auth required
-            mock.AddResponse(@"{""type"": ""auth_required""}");
-            // Next one we fake it is auth ok
-            mock.AddResponse(@"{""type"": ""auth_ok""}");
-
-            // ACT and ASSERT
-            // Connect with ssl
-            await hassClient.ConnectAsync("localhost", 8123, true, "FAKETOKEN", false);
-
-            mock.Verify(n => n.ConnectAsync(new Uri("wss://localhost:8123/api/websocket"), It.IsAny<CancellationToken>()), Times.Once);
-        }
-
-        [Fact]
-        public async void ConnectWithoutSslShouldStartWithWs()
+        public async Task ConnectWithoutSslShouldStartWithWs()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -347,11 +341,96 @@ namespace HassClient.Unit.Tests
             // Connect without ssl
             await hassClient.ConnectAsync("localhost", 8123, false, "FAKETOKEN", false);
 
-            mock.Verify(n => n.ConnectAsync(new Uri("ws://localhost:8123/api/websocket"), It.IsAny<CancellationToken>()), Times.Once);
+            mock.Verify(
+                n => n.ConnectAsync(new Uri("ws://localhost:8123/api/websocket"), It.IsAny<CancellationToken>()),
+                Times.Once);
         }
 
         [Fact]
-        public async void NoPongMessagePingShouldReturnFalse()
+        public async Task ConnectWithSslShouldStartWithWss()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the default state hass client and we add no response messages
+            var hassClient = mock.GetHassClient();
+            // First message from Home Assistant is auth required
+            mock.AddResponse(@"{""type"": ""auth_required""}");
+            // Next one we fake it is auth ok
+            mock.AddResponse(@"{""type"": ""auth_ok""}");
+
+            // ACT and ASSERT
+            // Connect with ssl
+            await hassClient.ConnectAsync("localhost", 8123, true, "FAKETOKEN", false);
+
+            mock.Verify(
+                n => n.ConnectAsync(new Uri("wss://localhost:8123/api/websocket"), It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task ConnectWithUriNullThrowsArgumentNullException()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the default state hass client and we add no response messages
+            var hassClient = mock.GetHassClient();
+
+            await Assert.ThrowsAsync<ArgumentNullException>(
+                async () => await hassClient.ConnectAsync(null, "lss", false));
+        }
+
+        [Fact]
+        public async Task GetConfigGetUnexpectedMessageThrowsException()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            // ACT
+            var getConfigTask = hassClient.GetConfig();
+
+            // Fake return not expected message, check result_config.json for reference
+            mock.AddResponse(@"{""id"": 2,""type"": ""result"", ""success"": true}");
+
+            await Assert.ThrowsAsync<ApplicationException>(async () => await getConfigTask);
+        }
+
+        [Fact]
+        public async Task GetConfigGetUnexpectedResultThrowsException()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            var mockHassClient =
+                new Mock<JoySoftware.HomeAssistant.Client.HassClient>(mock.Logger.LoggerFactory,
+                    mock.WebSocketMockFactory.Object);
+
+
+            mockHassClient.CallBase = true;
+
+            // First message from Home Assistant is auth required
+            mock.AddResponse(@"{""type"": ""auth_required""}");
+            // Next one we fake it is auth ok
+            mock.AddResponse(@"{""type"": ""auth_ok""}");
+
+            await mockHassClient.Object.ConnectAsync(new Uri("http://192.168.1.1"), "token", false);
+
+            mockHassClient.Setup(n => n.SendCommandAndWaitForResponse(It.IsAny<CommandMessage>())).Returns(
+                new ValueTask<HassMessage>(new HassMessage
+                {
+                    Id = 2,
+                    Type = "result",
+                    Result = "Not correct type as we should test"
+                }));
+
+            // ACT AND ASSERT
+            var getConfigTask = mockHassClient.Object.GetConfig();
+
+            await Assert.ThrowsAsync<ApplicationException>(async () => await getConfigTask);
+        }
+
+        [Fact]
+        public async Task NoPongMessagePingShouldReturnFalse()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -365,7 +444,7 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void PingShouldReturnTrue()
+        public async Task PingShouldReturnTrue()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -377,6 +456,43 @@ namespace HassClient.Unit.Tests
 
             // ACT and ASSERT
             Assert.True(await hassClient.PingAsync(1000));
+        }
+
+        [Fact]
+        public async Task ReceiveAsyncThrowsExceptionProcessMessageShouldHandleException()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            mock.Setup(x => x.ReceiveAsync(It.IsAny<Memory<byte>>(), It.IsAny<CancellationToken>()))
+                .Returns((Memory<byte> buffer, CancellationToken token) =>
+                {
+                    throw new Exception("Unexpected!");
+                });
+
+
+            // ACT AND ASSERT
+            var subscribeTask = hassClient.SubscribeToEvents();
+
+            // Service call successful
+            mock.AddResponse(@"{
+                                      ""id"": 2,
+                                      ""type"": ""result"",
+                                      ""success"": true,
+                                      ""result"": {
+                                        ""context"": {
+                                          ""id"": ""55cf75a4dbf94680804ef022aa0c67b4"",
+                                          ""parent_id"": null,
+                                          ""user_id"": ""63b2952cb986474d84be46480c8aaad3""
+                                        }
+                                      }
+                                    }");
+            await Task.Delay(20);
+            await subscribeTask;
+
+            mock.Logger.AssertLogged(LogLevel.Error, Times.Once());
         }
 
         [Fact]
@@ -404,7 +520,46 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void ServiceEventShouldHaveCorrectObject()
+        public async Task SendingUnknownMessageShouldDiscardAndLogDebug()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            hassClient.SendMessage(new UnknownCommand());
+            hassClient.SocketTimeout = 20;
+            await hassClient.CallService("test", "test", null);
+            mock.Logger.AssertLogged(LogLevel.Error, Times.Once());
+        }
+
+        [Fact]
+        public async Task SendMessageFailShouldThrowException()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            var mockHassClient =
+                new Mock<JoySoftware.HomeAssistant.Client.HassClient>(mock.Logger.LoggerFactory,
+                    mock.WebSocketMockFactory.Object);
+
+
+            mockHassClient.CallBase = true;
+
+            // First message from Home Assistant is auth required
+            mock.AddResponse(@"{""type"": ""auth_required""}");
+            // Next one we fake it is auth ok
+            mock.AddResponse(@"{""type"": ""auth_ok""}");
+
+            await mockHassClient.Object.ConnectAsync(new Uri("http://192.168.1.1"), "token", false);
+            mockHassClient.Setup(n => n.SendMessage(It.IsAny<HassMessageBase>())).Returns(false);
+            // ACT AND ASSERT
+
+            await Assert.ThrowsAsync<ApplicationException>(async () =>
+                await mockHassClient.Object.CallService("light", "turn_on", null));
+        }
+
+        [Fact]
+        public async Task ServiceEventShouldHaveCorrectObject()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -427,7 +582,7 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void SubscribeToEventsReturnsCorrectEvent()
+        public async Task SubscribeToEventsReturnsCorrectEvent()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -473,10 +628,13 @@ namespace HassClient.Unit.Tests
             Assert.True(lastChanged.Value.Hour == target.Hour);
             Assert.True(lastChanged.Value.Minute == target.Minute);
             Assert.True(lastChanged.Value.Second == target.Second);
+
+            // Just test one of the NewStateOne
+            Assert.True(stateMessage.NewState?.EntityId == "binary_sensor.vardagsrum_pir");
         }
 
         [Fact]
-        public async void SubscribeToEventsReturnsTrue()
+        public async Task SubscribeToEventsReturnsTrue()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();
@@ -493,7 +651,56 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
-        public async void WrongMessagesFromHassShouldReturnFalse()
+        public async Task UnsupportedCommandMessageShouldBeLogged()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            hassClient.SendMessage(new UnknownCommand());
+            //UnknownCommand
+            mock.AddResponse(@"{""id"": 2, ""type"": ""result"", ""success"": true, ""result"": null}");
+
+            await Task.Delay(20);
+
+            mock.Logger.AssertLogged(LogLevel.Error, Times.Once());
+        }
+
+        [Fact]
+        public async Task UnsupportedMessageReceivedShouldBeDebugLogged()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Don´t remove, the client does stuff in the background while delay
+            // ReSharper disable once UnusedVariable
+            var hassClient = await mock.GetHassConnectedClient();
+
+            mock.AddResponse(@"{""type"": ""unknown""}");
+            await Task.Delay(5);
+            mock.Logger.AssertLogged(LogLevel.Debug, Times.AtLeast(1));
+        }
+
+        [Fact]
+        public async Task WhenFactoryReturnsNullWebsocketReturnsFalseAndLogsError()
+        {
+            // ARRANGE
+            var websocketFactoryMock = new Mock<IClientWebSocketFactory>();
+            websocketFactoryMock.Setup(n => n.New()).Returns(() => null);
+
+            var loggerMock = new LoggerMock();
+
+            var hassClient =
+                new JoySoftware.HomeAssistant.Client.HassClient(loggerMock.LoggerFactory, websocketFactoryMock.Object);
+
+            // ACT and ASSERT
+            // Calls returns false and logs error
+            Assert.False(await hassClient.ConnectAsync(new Uri("ws://anyurldoesntmatter.org"), "FAKETOKEN", false));
+            loggerMock.AssertLogged(LogLevel.Error, Times.Once());
+        }
+
+        [Fact]
+        public async Task WrongMessagesFromHassShouldReturnFalse()
         {
             // ARRANGE
             var mock = new HassWebSocketMock();

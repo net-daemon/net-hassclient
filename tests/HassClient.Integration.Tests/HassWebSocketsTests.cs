@@ -1,5 +1,4 @@
-﻿using HassClientIntegrationTests.Mocks;
-using JoySoftware.HomeAssistant.Client;
+﻿using JoySoftware.HomeAssistant.Client;
 using System;
 using System.Net.WebSockets;
 using System.Threading;
@@ -47,8 +46,6 @@ namespace HassClientIntegrationTests
         {
             using var ws = new HassWebSocket();
 
-            await Assert.ThrowsAsync<NotImplementedException>(() =>
-                ws.CloseOutputAsync(WebSocketCloseStatus.Empty, "", CancellationToken.None));
             await Assert.ThrowsAsync<NotImplementedException>(async () =>
                 await ws.SendAsync(new ReadOnlyMemory<byte>(), WebSocketMessageType.Text, true,
                     CancellationToken.None));

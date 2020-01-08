@@ -84,6 +84,18 @@ namespace HassClientIntegrationTests
         }
 
         [Fact]
+        public async void RemoteCloseThrowsException()
+        {
+            using var wscli = new HassClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+                false);
+            var eventTask = wscli.ReadEventAsync();
+            wscli.SendMessage(new CommandMessage() { Id = 2, Type = "fake_disconnect_test" });
+
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await eventTask);
+        }
+
+        [Fact]
         public async void TestFetchStates()
         {
             using var wscli = new HassClient();

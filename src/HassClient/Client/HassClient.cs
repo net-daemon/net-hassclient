@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 [assembly: InternalsVisibleTo("HassClientIntegrationTests")]
 [assembly: InternalsVisibleTo("HassClient.Performance.Tests")]
 [assembly: InternalsVisibleTo("HassClient.Unit.Tests")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
 
 namespace JoySoftware.HomeAssistant.Client
 {
@@ -138,7 +139,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     The logger to use
         /// </summary>
-        private readonly ILogger? _logger;
+        private readonly ILogger _logger;
 
         /// <summary>
         ///     Channel used as a async thread safe way to wite messages to the websocket
@@ -146,7 +147,7 @@ namespace JoySoftware.HomeAssistant.Client
         private readonly Channel<HassMessageBase> _writeChannel =
             Channel.CreateBounded<HassMessageBase>(DefaultChannelSize);
 
-        private readonly IClientWebSocketFactory? _wsFactory;
+        private readonly IClientWebSocketFactory _wsFactory;
 
         private bool _disposed;
 
@@ -204,15 +205,6 @@ namespace JoySoftware.HomeAssistant.Client
 
             _logger = logFactory.CreateLogger<HassClient>();
             _wsFactory = wsFactory;
-        }
-
-        /// <summary>
-        ///     Instance a new HassClient
-        /// </summary>
-        public HassClient()
-        {
-            _logger = _getDefaultLoggerFactory.CreateLogger<HassClient>();
-            _wsFactory = new ClientWebSocketFactory();
         }
 
         /// <summary>
@@ -291,48 +283,46 @@ namespace JoySoftware.HomeAssistant.Client
 
             try
             {
-                IClientWebSocket ws = _wsFactory?.New()!;
+                IClientWebSocket ws = _wsFactory.New() ?? throw new NullReferenceException("Websocket cant be null!");
                 using var timerTokenSource = new CancellationTokenSource(SocketTimeout);
                 // Make a combined token source with timer and the general cancel token source
                 // The operations will cancel from ether one
                 using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
                     timerTokenSource.Token, CancelSource.Token);
 
-                if (ws != null)
+                await ws.ConnectAsync(url, connectTokenSource.Token);
+
+                if (ws.State == WebSocketState.Open)
                 {
-                    await ws.ConnectAsync(url, connectTokenSource.Token);
+                    // Initialize the correct states when successfully connecting to the websocket
+                    initStatesOnConnect(ws);
 
-                    if (ws.State == WebSocketState.Open)
+                    // Do the authenticate and get the auhtorization response
+                    HassMessage result = await handleConnectAndAuthenticate(token, connectTokenSource);
+
+                    switch (result.Type)
                     {
-                        // Initialize the correct states when successfully connecting to the websocket
-                        initStatesOnConnect(ws);
+                        case "auth_ok":
+                            if (getStatesOnConnect)
+                            {
+                                await GetStates(connectTokenSource);
+                            }
 
-                        // Do the authenticate and get the auhtorization response
-                        HassMessage result = await handleConnectAndAuthenticate(token, connectTokenSource);
+                            _logger.LogTrace($"Connected to websocket ({url})");
+                            return true;
 
-                        switch (result.Type)
-                        {
-                            case "auth_ok":
-                                if (getStatesOnConnect)
-                                {
-                                    await GetStates(connectTokenSource);
-                                }
+                        case "auth_invalid":
+                            _logger.LogError($"Failed to authenticate ({result.Message})");
+                            return false;
 
-                                _logger.LogTrace($"Connected to websocket ({url})");
-                                return true;
-
-                            case "auth_invalid":
-                                _logger.LogError($"Failed to authenticate ({result.Message})");
-                                return false;
-
-                            default:
-                                _logger.LogError($"Unexpected response ({result.Type})");
-                                return false;
-                        }
+                        default:
+                            _logger.LogError($"Unexpected response ({result.Type})");
+                            return false;
                     }
-
-                    _logger.LogDebug($"Failed to connect to websocket socket state: {ws.State}");
                 }
+
+                _logger.LogDebug($"Failed to connect to websocket socket state: {ws.State}");
+
 
                 return false;
             }
@@ -361,7 +351,7 @@ namespace JoySoftware.HomeAssistant.Client
                 return result;
             }
 
-            throw new Exception($"The result not expected! {resultMessage}");
+            throw new ApplicationException($"The result not expected! {resultMessage}");
         }
 
         /// <summary>
@@ -400,11 +390,6 @@ namespace JoySoftware.HomeAssistant.Client
                 }
 
                 return false; // Just timeout not canceled
-            }
-            catch (Exception)
-            {
-                // We already logged in sendCommand
-                return false;
             }
         }
 
@@ -467,7 +452,7 @@ namespace JoySoftware.HomeAssistant.Client
                 await Task.WhenAll(_readMessagePumpTask, _writeMessagePumpTask);
             }
 
-            _ws?.Dispose();
+            _ws.Dispose();
             _ws = null;
 
             CancelSource = new CancellationTokenSource();
@@ -481,7 +466,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         /// <param name="message">The message to send</param>
         /// <returns>True if successful</returns>
-        private bool SendMessage(HassMessageBase message)
+        internal virtual bool SendMessage(HassMessageBase message)
         {
             _logger.LogTrace($"Sends message {message.Type}");
             if (message is CommandMessage commandMessage)
@@ -494,7 +479,7 @@ namespace JoySoftware.HomeAssistant.Client
             return _writeChannel.Writer.TryWrite(message);
         }
 
-        private async ValueTask<HassMessage> SendCommandAndWaitForResponse(CommandMessage message)
+        internal virtual async ValueTask<HassMessage> SendCommandAndWaitForResponse(CommandMessage message)
         {
             using var timerTokenSource = new CancellationTokenSource(SocketTimeout);
             // Make a combined token source with timer and the general cancel token source
@@ -664,19 +649,21 @@ namespace JoySoftware.HomeAssistant.Client
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!_disposed)
+            if (_disposed)
             {
-                // If disposing equals true, dispose all managed
-                // and unmanaged resources.
-                //
-                if (disposing)
-                {
-                    _ws?.Dispose();
-                    CancelSource.Dispose();
-                }
-
-                _disposed = true;
+                return;
             }
+
+            // If disposing equals true, dispose all managed
+            // and unmanaged resources.
+            //
+            if (disposing)
+            {
+                _ws?.Dispose();
+                CancelSource.Dispose();
+            }
+
+            _disposed = true;
         }
 
         /// <summary>
@@ -684,7 +671,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         private async Task ReadMessagePump()
         {
-            _logger?.LogTrace("Start ReadMessagePump");
+            _logger.LogTrace("Start ReadMessagePump");
 
             // While not canceled and websocket is not closed
             while (_ws != null && (!CancelSource.IsCancellationRequested && !_ws.CloseStatus.HasValue))
@@ -698,14 +685,10 @@ namespace JoySoftware.HomeAssistant.Client
                     // Canceled the thread just leave
                     break;
                 }
-                catch (Exception e)
-                {
-                    _logger?.LogError(e, "Major failure in read pump, exit...");
-                    break;
-                }
+                // Should never cast any other exception, if so it just not handle them here
             }
 
-            _logger?.LogTrace("Exit ReadMessagePump");
+            _logger.LogTrace("Exit ReadMessagePump");
         }
 
         /// <summary>
@@ -716,7 +699,7 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Write the read message to a channel.
         /// </remarks>
         /// <returns></returns>
-        private async Task ProcessNextMessage()
+        internal virtual async Task ProcessNextMessage()
         {
             var pipe = new Pipe();
 
@@ -728,7 +711,7 @@ namespace JoySoftware.HomeAssistant.Client
             await Task.WhenAll(
                 Task.Run(ReadFromClientSocket, cancelTokenSource.Token),
                 Task.Run(WriteMessagesToChannel, cancelTokenSource.Token)
-            ).ConfigureAwait(false);
+            );
 
             // Task that reads the next message from websocket
             async Task ReadFromClientSocket()
@@ -739,6 +722,7 @@ namespace JoySoftware.HomeAssistant.Client
                     {
                         Memory<byte> memory = pipe.Writer.GetMemory(DefaultReceiveBufferSize);
 
+                        // ReSharper disable once AccessToDisposedClosure
                         ValueWebSocketReceiveResult result = await _ws.ReceiveAsync(memory, cancelTokenSource.Token);
 
                         if (result.MessageType == WebSocketMessageType.Close || result.Count == 0)
@@ -748,6 +732,7 @@ namespace JoySoftware.HomeAssistant.Client
                             if (_isClosing)
                             {
                                 // We are closing, just cancel the process message
+                                // ReSharper disable once AccessToDisposedClosure
                                 cancelProcessNextMessage.Cancel();
                             }
                             else
@@ -782,13 +767,16 @@ namespace JoySoftware.HomeAssistant.Client
                 catch (WebSocketException)
                 {
                     // Make sure we always cancel the other task of any reason
+                    // ReSharper disable once AccessToDisposedClosure
                     cancelProcessNextMessage.Cancel();
                 }
                 catch (Exception e)
                 {
+                    _logger.LogError(e, "Major failure in ReadFromClientSocket, exit...");
                     // Make sure we always cancel the other task of any reason
+                    // ReSharper disable once AccessToDisposedClosure
                     cancelProcessNextMessage.Cancel(true);
-                    _logger?.LogError(e, "Major failure in ReadFromClientSocketad, exit...");
+                    throw;
                 }
             }
 
@@ -797,6 +785,7 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 try
                 {
+                    // ReSharper disable once AccessToDisposedClosure
                     HassMessage m = await JsonSerializer.DeserializeAsync<HassMessage>(pipe.Reader.AsStream(),
                         cancellationToken: cancelTokenSource.Token);
                     await pipe.Reader.CompleteAsync();
@@ -835,10 +824,13 @@ namespace JoySoftware.HomeAssistant.Client
                     // Todo: Log the seralizer error here later but continue receive
                     // messages from the server. Then we can survive the server
                     // Sending bad json messages
-                    _logger?.LogDebug(e, "Error deserialize json response");
+                    _logger.LogDebug(e, "Error deserialize json response");
                     // Make sure we put a small delay incase we have severe error so the loop
-                    // doesnt kill the server
-                    await Task.Delay(20);
+                    // doesn't kill the server
+
+                    // ReSharper disable once AccessToDisposedClosure
+                    await Task.Delay(20, cancelTokenSource.Token);
+                    // ReSharper disable once AccessToDisposedClosure
                     cancelProcessNextMessage.Cancel();
                 }
             }
@@ -868,7 +860,7 @@ namespace JoySoftware.HomeAssistant.Client
                         case "call_service":
                             break; // Do nothing
                         default:
-                            _logger.LogError($"The result message {command} is not supported");
+                            _logger.LogError($"The command message {command} is not supported");
                             break;
                     }
                 }
@@ -883,7 +875,7 @@ namespace JoySoftware.HomeAssistant.Client
 
         private async Task WriteMessagePump()
         {
-            _logger?.LogTrace("Start WriteMessagePump");
+            _logger.LogTrace("Start WriteMessagePump");
 
             while (_ws != null && (!CancelSource.IsCancellationRequested && !_ws.CloseStatus.HasValue))
             {
@@ -902,7 +894,7 @@ namespace JoySoftware.HomeAssistant.Client
                 }
             }
 
-            _logger?.LogTrace("Exit WriteMessagePump");
+            _logger.LogTrace("Exit WriteMessagePump");
         }
     }
 }
