@@ -489,7 +489,7 @@ namespace HassClient.Unit.Tests
                                         }
                                       }
                                     }");
-
+            await Task.Delay(20);
             await subscribeTask;
 
             mock.Logger.AssertLogged(LogLevel.Error, Times.Once());
@@ -648,6 +648,37 @@ namespace HassClient.Unit.Tests
 
             // ASSERT
             Assert.True(await subscribeTask);
+        }
+
+        [Fact]
+        public async Task UnsupportedCommandMessageShouldBeLogged()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            hassClient.SendMessage(new UnknownCommand());
+            //UnknownCommand
+            mock.AddResponse(@"{""id"": 2, ""type"": ""result"", ""success"": true, ""result"": null}");
+
+            await Task.Delay(20);
+
+            mock.Logger.AssertLogged(LogLevel.Error, Times.Once());
+        }
+
+        [Fact]
+        public async Task UnsupportedMessageReceivedShouldBeDebugLogged()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Don´t remove, the client does stuff in the background while delay
+            // ReSharper disable once UnusedVariable
+            var hassClient = await mock.GetHassConnectedClient();
+
+            mock.AddResponse(@"{""type"": ""unknown""}");
+            await Task.Delay(5);
+            mock.Logger.AssertLogged(LogLevel.Debug, Times.AtLeast(1));
         }
 
         [Fact]

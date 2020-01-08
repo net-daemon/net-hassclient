@@ -452,7 +452,7 @@ namespace JoySoftware.HomeAssistant.Client
                 await Task.WhenAll(_readMessagePumpTask, _writeMessagePumpTask);
             }
 
-            _ws?.Dispose();
+            _ws.Dispose();
             _ws = null;
 
             CancelSource = new CancellationTokenSource();
@@ -649,19 +649,21 @@ namespace JoySoftware.HomeAssistant.Client
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!_disposed)
+            if (_disposed)
             {
-                // If disposing equals true, dispose all managed
-                // and unmanaged resources.
-                //
-                if (disposing)
-                {
-                    _ws?.Dispose();
-                    CancelSource.Dispose();
-                }
-
-                _disposed = true;
+                return;
             }
+
+            // If disposing equals true, dispose all managed
+            // and unmanaged resources.
+            //
+            if (disposing)
+            {
+                _ws?.Dispose();
+                CancelSource.Dispose();
+            }
+
+            _disposed = true;
         }
 
         /// <summary>
@@ -858,7 +860,7 @@ namespace JoySoftware.HomeAssistant.Client
                         case "call_service":
                             break; // Do nothing
                         default:
-                            _logger.LogError($"The result message {command} is not supported");
+                            _logger.LogError($"The command message {command} is not supported");
                             break;
                     }
                 }
