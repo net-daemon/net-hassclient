@@ -1,11 +1,11 @@
-using JoySoftware.HomeAssistant.Client;
-using Microsoft.Extensions.Logging;
-using Moq;
 using System;
 using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using JoySoftware.HomeAssistant.Client;
+using Microsoft.Extensions.Logging;
+using Moq;
 using Xunit;
 
 namespace HassClient.Unit.Tests
@@ -75,7 +75,7 @@ namespace HassClient.Unit.Tests
             // Do not add a fake service call message result 
 
             // ACT
-            var callServiceTask = hassClient.CallService("light", "turn_on", new { entity_id = "light.tomas_rum" });
+            var callServiceTask = hassClient.CallService("light", "turn_on", new {entity_id = "light.tomas_rum"});
             hassClient.CancelSource.Cancel();
 
             // ASSERT
@@ -105,7 +105,7 @@ namespace HassClient.Unit.Tests
                                     }");
 
             // ACT
-            var result = await hassClient.CallService("light", "turn_on", new { entity_id = "light.tomas_rum" });
+            var result = await hassClient.CallService("light", "turn_on", new {entity_id = "light.tomas_rum"});
 
             // Assert 
             Assert.True(result);
@@ -141,7 +141,7 @@ namespace HassClient.Unit.Tests
             // ACT AND ASSERT
 
             // Do not add a message and force timeout
-            Assert.False(await hassClient.CallService("light", "turn_on", new { entity_id = "light.tomas_rum" }));
+            Assert.False(await hassClient.CallService("light", "turn_on", new {entity_id = "light.tomas_rum"}));
         }
 
         [Fact]
@@ -418,9 +418,7 @@ namespace HassClient.Unit.Tests
             mockHassClient.Setup(n => n.SendCommandAndWaitForResponse(It.IsAny<CommandMessage>())).Returns(
                 new ValueTask<HassMessage>(new HassMessage
                 {
-                    Id = 2,
-                    Type = "result",
-                    Result = "Not correct type as we should test"
+                    Id = 2, Type = "result", Result = "Not correct type as we should test"
                 }));
 
             // ACT AND ASSERT

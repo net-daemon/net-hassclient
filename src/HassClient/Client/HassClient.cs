@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -9,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 [assembly: InternalsVisibleTo("HassClientIntegrationTests")]
 [assembly: InternalsVisibleTo("HassClient.Performance.Tests")]
@@ -90,6 +90,13 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Gracefully closes the connection to Home Assistant
         /// </summary>
         Task CloseAsync();
+
+        /// <summary>
+        ///     Subscribe to all or single events from HomeAssistant
+        /// </summary>
+        /// <param name="eventType">The type of event subscribed to</param>
+        /// <returns>Returns true if successful</returns>
+        Task<bool> SubscribeToEvents(EventType eventType = EventType.All);
     }
 
     /// <summary>
@@ -132,8 +139,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         private readonly JsonSerializerOptions _defaultSerializerOptions = new JsonSerializerOptions
         {
-            WriteIndented = false,
-            IgnoreNullValues = true
+            WriteIndented = false, IgnoreNullValues = true
         };
 
         /// <summary>
@@ -224,7 +230,7 @@ namespace JoySoftware.HomeAssistant.Client
         });
 
         /// <summary>
-        ///     Dispose the WSCLient
+        ///     Dispose the WSClient
         /// </summary>
         public void Dispose()
         {
@@ -295,10 +301,10 @@ namespace JoySoftware.HomeAssistant.Client
                 if (ws.State == WebSocketState.Open)
                 {
                     // Initialize the correct states when successfully connecting to the websocket
-                    initStatesOnConnect(ws);
+                    InitStatesOnConnect(ws);
 
                     // Do the authenticate and get the auhtorization response
-                    HassMessage result = await handleConnectAndAuthenticate(token, connectTokenSource);
+                    HassMessage result = await HandleConnectAndAuthenticate(token, connectTokenSource);
 
                     switch (result.Type)
                     {
@@ -376,9 +382,7 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 HassMessage result = await SendCommandAndWaitForResponse(new CallServiceCommand
                 {
-                    Domain = domain,
-                    Service = service,
-                    ServiceData = serviceData
+                    Domain = domain, Service = service, ServiceData = serviceData
                 });
                 return result.Success ?? false;
             }
@@ -461,6 +465,45 @@ namespace JoySoftware.HomeAssistant.Client
             _isClosing = false;
         }
 
+        public async Task<bool> SubscribeToEvents(EventType eventType = EventType.All)
+        {
+            var command = new SubscribeEventCommand();
+
+            if (eventType != EventType.All)
+            {
+                switch (eventType)
+                {
+                    case EventType.HomeAssistantStart:
+                        command.EventType = "homeassistant_start";
+                        break;
+                    case EventType.HomeAssistantStop:
+                        command.EventType = "homeassistant_stop";
+                        break;
+                    case EventType.StateChanged:
+                        command.EventType = "state_changed";
+                        break;
+                    case EventType.ServiceRegistered:
+                        command.EventType = "service_registered";
+                        break;
+                    case EventType.CallService:
+                        command.EventType = "call_service";
+                        break;
+                    case EventType.ServiceExecuted:
+                        command.EventType = "service_executed";
+                        break;
+                    case EventType.PlatformDiscovered:
+                        command.EventType = "platform_discovered";
+                        break;
+                    case EventType.ComponentLoaded:
+                        command.EventType = "component_loaded";
+                        break;
+                }
+            }
+
+            var result = await SendCommandAndWaitForResponse(command);
+            return result.Success ?? false;
+        }
+
         /// <summary>
         ///     Send message and correctly handle message id counter
         /// </summary>
@@ -530,45 +573,6 @@ namespace JoySoftware.HomeAssistant.Client
             }
         }
 
-        public async Task<bool> SubscribeToEvents(EventType eventType = EventType.All)
-        {
-            var command = new SubscribeEventCommand();
-
-            if (eventType != EventType.All)
-            {
-                switch (eventType)
-                {
-                    case EventType.HomeAssistantStart:
-                        command.EventType = "homeassistant_start";
-                        break;
-                    case EventType.HomeAssistantStop:
-                        command.EventType = "homeassistant_stop";
-                        break;
-                    case EventType.StateChanged:
-                        command.EventType = "state_changed";
-                        break;
-                    case EventType.ServiceRegistered:
-                        command.EventType = "service_registered";
-                        break;
-                    case EventType.CallService:
-                        command.EventType = "call_service";
-                        break;
-                    case EventType.ServiceExecuted:
-                        command.EventType = "service_executed";
-                        break;
-                    case EventType.PlatformDiscovered:
-                        command.EventType = "platform_discovered";
-                        break;
-                    case EventType.ComponentLoaded:
-                        command.EventType = "component_loaded";
-                        break;
-                }
-            }
-
-            var result = await SendCommandAndWaitForResponse(command);
-            return result.Success ?? false;
-        }
-
         private async Task GetStates(CancellationTokenSource connectTokenSource)
         {
             SendMessage(new GetStatesCommand());
@@ -582,20 +586,20 @@ namespace JoySoftware.HomeAssistant.Client
             }
         }
 
-        private async Task<HassMessage> handleConnectAndAuthenticate(string token,
+        private async Task<HassMessage> HandleConnectAndAuthenticate(string token,
             CancellationTokenSource connectTokenSource)
         {
             HassMessage result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
             if (result.Type == "auth_required")
             {
-                SendMessage(new HassAuthMessage { AccessToken = token });
+                SendMessage(new HassAuthMessage {AccessToken = token});
                 result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
             }
 
             return result;
         }
 
-        private void initStatesOnConnect(IClientWebSocket ws)
+        private void InitStatesOnConnect(IClientWebSocket ws)
         {
             _ws = ws;
             _messageId = 1;
@@ -685,6 +689,7 @@ namespace JoySoftware.HomeAssistant.Client
                     // Canceled the thread just leave
                     break;
                 }
+
                 // Should never cast any other exception, if so it just not handle them here
             }
 
@@ -808,7 +813,7 @@ namespace JoySoftware.HomeAssistant.Client
                             break;
                         case "result":
 
-                            _messageChannel.Writer.TryWrite(getResultMessage(m));
+                            _messageChannel.Writer.TryWrite(GetResultMessage(m));
                             break;
                         default:
                             _logger.LogDebug($"Unexpected eventtype {m.Type}, discarding message!");
@@ -839,7 +844,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     Get the correct result message from HassMessage
         /// </summary>
-        private HassMessage getResultMessage(HassMessage m)
+        private HassMessage GetResultMessage(HassMessage m)
         {
             if (m.Id > 0)
             {
