@@ -1,7 +1,7 @@
-﻿using JoySoftware.HomeAssistant.Client;
-using System;
+﻿using System;
 using System.Net.WebSockets;
 using System.Threading;
+using JoySoftware.HomeAssistant.Client;
 using Xunit;
 
 namespace HassClientIntegrationTests
@@ -12,10 +12,6 @@ namespace HassClientIntegrationTests
     public class HassWebSocketsTests : IDisposable
 
     {
-        public HassWebSocketsTests()
-        {
-        }
-
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
@@ -51,8 +47,6 @@ namespace HassClientIntegrationTests
                     CancellationToken.None));
             await Assert.ThrowsAsync<NotImplementedException>(() =>
                 ws.ReceiveAsync(ArraySegment<byte>.Empty, CancellationToken.None));
-
-
         }
     }
 }

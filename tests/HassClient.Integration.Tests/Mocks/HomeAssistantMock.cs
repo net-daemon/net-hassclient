@@ -1,8 +1,3 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using System;
 using System.IO;
 using System.Net.WebSockets;
@@ -10,6 +5,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 // ReSharper disable UnusedAutoPropertyAccessor.Local
 
@@ -29,6 +29,8 @@ namespace HassClientIntegrationTests.Mocks
             _host = CreateHostBuilder().Build();
             _host.Start();
         }
+
+        public void Dispose() => _host?.Dispose();
 
         /// <summary>
         ///     Starts a websocket server in a generic host
@@ -50,8 +52,6 @@ namespace HassClientIntegrationTests.Mocks
             _host.StopAsync();
             _host.WaitForShutdown();
         }
-
-        public void Dispose() => _host?.Dispose();
     }
 
     /// <summary>
@@ -69,7 +69,7 @@ namespace HassClientIntegrationTests.Mocks
         private readonly byte[] _pongMessage =
             File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Mocks", "testdata", "pong.json"));
 
-        private readonly JsonSerializerOptions serializeOptions = new JsonSerializerOptions { WriteIndented = true };
+        private readonly JsonSerializerOptions serializeOptions = new JsonSerializerOptions {WriteIndented = true};
 
         public HassMockStartup(IConfiguration configuration) => Configuration = configuration;
 
@@ -162,7 +162,7 @@ namespace HassClientIntegrationTests.Mocks
                             SendCommandMessage subscribeEventMessage =
                                 JsonSerializer.Deserialize<SendCommandMessage>(
                                     new ReadOnlySpan<byte>(buffer, 0, result.Count));
-                            var response = new ResultMessage { Id = subscribeEventMessage.Id };
+                            var response = new ResultMessage {Id = subscribeEventMessage.Id};
                             // First send normal ok response
                             byte[] responseString =
                                 JsonSerializer.SerializeToUtf8Bytes(response, typeof(ResultMessage), serializeOptions);

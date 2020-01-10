@@ -1,12 +1,12 @@
-﻿using JoySoftware.HomeAssistant.Client;
-using Moq;
-using System;
+﻿using System;
 using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using JoySoftware.HomeAssistant.Client;
+using Moq;
 
 namespace HassClient.Unit.Tests
 {
@@ -18,7 +18,9 @@ namespace HassClient.Unit.Tests
     /// </remarks>
     class HassWebSocketMock : Mock<IClientWebSocket>
     {
-        public static readonly string MessageFixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Messages");
+        public static readonly string MessageFixturePath =
+            Path.Combine(AppContext.BaseDirectory, "Fixtures", "Messages");
+
         private int _currentReadPosition;
         private int _nrOfSentMessages;
 

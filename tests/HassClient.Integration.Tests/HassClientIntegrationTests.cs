@@ -1,7 +1,7 @@
-using HassClientIntegrationTests.Mocks;
-using JoySoftware.HomeAssistant.Client;
 using System;
 using System.Text.Json;
+using HassClientIntegrationTests.Mocks;
+using JoySoftware.HomeAssistant.Client;
 using Xunit;
 
 namespace HassClientIntegrationTests
@@ -44,6 +44,18 @@ namespace HassClientIntegrationTests
         }
 
         [Fact]
+        public async void RemoteCloseThrowsException()
+        {
+            using var wscli = new HassClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+                false);
+            var eventTask = wscli.ReadEventAsync();
+            wscli.SendMessage(new CommandMessage {Id = 2, Type = "fake_disconnect_test"});
+
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await eventTask);
+        }
+
+        [Fact]
         public async void TestBasicLoginFail()
         {
             using var wscli = new HassClient();
@@ -81,18 +93,6 @@ namespace HassClientIntegrationTests
             // Do close
             await wscli.CloseAsync();
             Assert.Throws<AggregateException>(() => eventTask.Result);
-        }
-
-        [Fact]
-        public async void RemoteCloseThrowsException()
-        {
-            using var wscli = new HassClient();
-            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
-                false);
-            var eventTask = wscli.ReadEventAsync();
-            wscli.SendMessage(new CommandMessage() { Id = 2, Type = "fake_disconnect_test" });
-
-            await Assert.ThrowsAsync<OperationCanceledException>(async () => await eventTask);
         }
 
         [Fact]
