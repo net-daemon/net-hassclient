@@ -848,6 +848,7 @@ namespace JoySoftware.HomeAssistant.Client
             }
         }
 
+
         /// <summary>
         ///     Get the correct result message from HassMessage
         /// </summary>
@@ -861,11 +862,13 @@ namespace JoySoftware.HomeAssistant.Client
                     switch (command)
                     {
                         case "get_states":
-                            m.Result = m.ResultElement?.ToObject<List<HassState>>();
+                            //var options = new JsonSerializerOptions();
+                            //options.Converters.Add(new HassStateConverter());
+                            m.Result = m.ResultElement?.ToHassStates(_defaultSerializerOptions);
                             break;
 
                         case "get_config":
-                            m.Result = m.ResultElement?.ToObject<HassConfig>();
+                            m.Result = m.ResultElement?.ToObject<HassConfig>(_defaultSerializerOptions);
                             break;
                         case "subscribe_events":
                             break; // Do nothing

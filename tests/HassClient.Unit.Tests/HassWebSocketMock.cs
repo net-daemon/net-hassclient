@@ -68,6 +68,9 @@ namespace HassClient.Unit.Tests
         public static string StateMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "result_states.json"));
         public static string ConfigMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "result_config.json"));
         public static string EventMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "event.json"));
+        public static string EventMessageInteger => File.ReadAllText(Path.Combine(MessageFixturePath, "event_integer.json"));
+        public static string EventMessageDouble => File.ReadAllText(Path.Combine(MessageFixturePath, "event_double.json"));
+        public static string EventMessageBoolean => File.ReadAllText(Path.Combine(MessageFixturePath, "event_boolean.json"));
         public static string ServiceMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "service_event.json"));
 
         public WebSocketState State { get; set; }

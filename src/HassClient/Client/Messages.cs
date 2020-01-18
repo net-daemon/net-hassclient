@@ -60,22 +60,30 @@ namespace JoySoftware.HomeAssistant.Client
     {
         [JsonPropertyName("entity_id")] public string EntityId { get; set; } = "";
 
-        [JsonPropertyName("old_state")] public HassState? OldState { get; set; } = null;
+        [JsonConverter(typeof(HassStateConverter))]
+        [JsonPropertyName("old_state")]
+        public HassState? OldState { get; set; } = null;
 
-        [JsonPropertyName("new_state")] public HassState? NewState { get; set; } = null;
+        [JsonConverter(typeof(HassStateConverter))]
+        [JsonPropertyName("new_state")]
+        public HassState? NewState { get; set; } = null;
     }
 
     public class HassState
     {
         [JsonPropertyName("entity_id")] public string EntityId { get; set; } = "";
 
-        [JsonPropertyName("state")] public string State { get; set; } = "";
+        [JsonPropertyName("state")] public dynamic? State { get; set; } = "";
 
         [JsonPropertyName("attributes")] public Dictionary<string, object>? Attributes { get; set; } = null;
 
         [JsonPropertyName("last_changed")] public DateTime LastChanged { get; set; } = DateTime.MinValue;
 
         [JsonPropertyName("last_updated")] public DateTime LastUpdated { get; set; } = DateTime.MinValue;
+    }
+
+    public class HassStates : List<HassState>
+    {
     }
 
     public class HassConfig
@@ -193,6 +201,66 @@ namespace JoySoftware.HomeAssistant.Client
 
             return JsonSerializer.Deserialize<T>(bufferWriter.WrittenSpan, options);
         }
+
+        public static HassStates ToHassStates(this JsonElement element, JsonSerializerOptions? options = null)
+        {
+            var bufferWriter = new ArrayBufferWriter<byte>();
+            using (var writer = new Utf8JsonWriter(bufferWriter))
+            {
+                element.WriteTo(writer);
+            }
+
+            var hassStates = JsonSerializer.Deserialize<HassStates>(bufferWriter.WrittenSpan, options);
+
+            foreach (var hassState in hassStates)
+            {
+                hassState.State = ((JsonElement)hassState.State).ToDynamicValue();
+            }
+
+            return hassStates;
+        }
+
+        public static object? ToDynamicValue(this JsonElement elem)
+        {
+            switch (elem.ValueKind)
+            {
+                case JsonValueKind.String:
+                    return elem.GetString();
+                case JsonValueKind.False:
+                    return false;
+                case JsonValueKind.True:
+                    return true;
+                case JsonValueKind.Number:
+                    return elem.TryGetInt64(out Int64 intValue) ? intValue : elem.GetDouble();
+                case JsonValueKind.Null:
+                    return null;
+            }
+
+            return null;
+        }
+    }
+
+    public class HassStateConverter : JsonConverter<HassState>
+    {
+        public override HassState Read(
+            ref Utf8JsonReader reader,
+            Type typeToConvert,
+            JsonSerializerOptions options)
+        {
+            HassState m = JsonSerializer.Deserialize<HassState>(ref reader, options);
+
+            JsonElement elem = m.State;
+
+            m.State = elem.ToDynamicValue();
+
+            return m;
+        }
+
+        public override void Write(
+            Utf8JsonWriter writer,
+            HassState value,
+            JsonSerializerOptions options) =>
+            throw new InvalidOperationException("Serialization not supported for the class EventMessage.");
     }
 
     public class HassEventConverter : JsonConverter<HassEvent>
@@ -207,10 +275,10 @@ namespace JoySoftware.HomeAssistant.Client
             switch (m.EventType)
             {
                 case "state_changed":
-                    m.Data = m.DataElement?.ToObject<HassStateChangedEventData>();
+                    m.Data = m.DataElement?.ToObject<HassStateChangedEventData>(options);
                     break;
                 case "call_service":
-                    m.Data = m.DataElement?.ToObject<HassServiceEventData>();
+                    m.Data = m.DataElement?.ToObject<HassServiceEventData>(options);
                     break;
             }
 
