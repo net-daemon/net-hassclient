@@ -1,4 +1,5 @@
 using System;
+using System.Dynamic;
 using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading;
@@ -123,7 +124,7 @@ namespace HassClient.Unit.Tests
                 mf.New() == webSocketMock
             );
 
-            var hc = new JoySoftware.HomeAssistant.Client.HassClient(wsFactory: factoryMock);
+            var hc = new JoySoftware.HomeAssistant.Client.HassClient(null, factoryMock);
 
             // ACT AND ASSERTs
             await Assert.ThrowsAsync<OperationCanceledException>(async () => await hc.SubscribeToEvents());

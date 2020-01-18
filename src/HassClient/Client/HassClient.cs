@@ -203,8 +203,15 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Instance a new HassClient
         /// </summary>
         /// <param name="logFactory">The LogFactory to use for logging, null uses default values from config.</param>
+        public HassClient(ILoggerFactory? logFactory = null) : 
+            this(logFactory, new ClientWebSocketFactory()) { }
+
+        /// <summary>
+        ///     Instance a new HassClient
+        /// </summary>
+        /// <param name="logFactory">The LogFactory to use for logging, null uses default values from config.</param>
         /// <param name="wsFactory">The factory to use for websockets, mainly for testing purposes</param>
-        internal HassClient(ILoggerFactory? logFactory = null, IClientWebSocketFactory? wsFactory = null)
+        internal HassClient(ILoggerFactory? logFactory, IClientWebSocketFactory? wsFactory)
         {
             logFactory ??= _getDefaultLoggerFactory;
             wsFactory ??= new ClientWebSocketFactory();
