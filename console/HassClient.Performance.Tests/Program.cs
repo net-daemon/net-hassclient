@@ -79,6 +79,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                 Console.WriteLine($"Number of states: {client.States.Count}");
             }
 
+            var tempTest = client.States["sensor.frysnere_temperature"];
             if (events)
             {
                 // Subscribe to all events
