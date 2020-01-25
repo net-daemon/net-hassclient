@@ -87,6 +87,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             }
 
             //var test = await client.CallService("light", "toggle", new { entity_id = "light.tomas_rum" });
+            var tt = await client.SetState("sensor.csharp", "cool", new {daemon = true});
 
             while (true)
             {
@@ -114,7 +115,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                 }
                 catch (OperationCanceledException)
                 {
-                    // Gracefull
+                    // Graceful
                     return;
                 }
                 catch (Exception e)

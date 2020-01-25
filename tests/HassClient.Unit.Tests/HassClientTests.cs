@@ -1,11 +1,17 @@
 using System;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.WebSockets;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.dotMemoryUnit.Kernel;
 using JoySoftware.HomeAssistant.Client;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Moq.Protected;
 using Xunit;
 
 namespace HassClient.Unit.Tests
@@ -485,7 +491,7 @@ namespace HassClient.Unit.Tests
             var mock = new HassWebSocketMock();
             var mockHassClient =
                 new Mock<JoySoftware.HomeAssistant.Client.HassClient>(mock.Logger.LoggerFactory,
-                    mock.WebSocketMockFactory.Object);
+                    mock.WebSocketMockFactory.Object, null);
 
 
             mockHassClient.CallBase = true;
@@ -621,7 +627,7 @@ namespace HassClient.Unit.Tests
             var mock = new HassWebSocketMock();
             var mockHassClient =
                 new Mock<JoySoftware.HomeAssistant.Client.HassClient>(mock.Logger.LoggerFactory,
-                    mock.WebSocketMockFactory.Object);
+                    mock.WebSocketMockFactory.Object, null);
 
 
             mockHassClient.CallBase = true;
@@ -772,7 +778,8 @@ namespace HassClient.Unit.Tests
             var loggerMock = new LoggerMock();
 
             var hassClient =
-                new JoySoftware.HomeAssistant.Client.HassClient(loggerMock.LoggerFactory, websocketFactoryMock.Object);
+                new JoySoftware.HomeAssistant.Client.HassClient(loggerMock.LoggerFactory, websocketFactoryMock.Object,
+                    null);
 
             // ACT and ASSERT
             // Calls returns false and logs error
@@ -796,6 +803,83 @@ namespace HassClient.Unit.Tests
             // ACT and ASSERT
             // Calls connect without getting the states initially
             Assert.False(await hassClient.ConnectAsync(new Uri("ws://anyurldoesntmatter.org"), "FAKETOKEN", false));
+        }
+
+        [Fact]
+        public async Task HttpClientShouldCallCorrectHttpMessageHandler()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            var httpMessageHandlerMock = new Mock<HttpMessageHandler>();
+            httpMessageHandlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(
+                    () => new HttpResponseMessage()
+                    {
+                        StatusCode = HttpStatusCode.OK, // Set non success return code
+                        Content = new StringContent("{}", Encoding.UTF8)
+                    }); ;
+
+            // Get the default state hass client
+            var hassClient = await mock.GetHassConnectedClient(false, httpMessageHandlerMock.Object);
+
+            await hassClient.SetState("sensor.my_sensor", "new_state", new {attr1 = "hello"});
+
+            // ACT and ASSERT
+            // Calls connect without getting the states initially
+            httpMessageHandlerMock.Protected()
+                .Verify(
+                    "SendAsync",
+                    Times.Exactly(1), // we expected a single external request
+                    ItExpr.Is<HttpRequestMessage>(req =>
+                            req.Method == HttpMethod.Post // we expected a GET request
+                            && req.RequestUri ==
+                            new Uri("http://anyurldoesntmatter.org/api/states/sensor.my_sensor") // to this uri
+                    ),
+                    ItExpr.IsAny<CancellationToken>()
+                );
+        }
+
+        [Fact]
+        public async Task SetStateNonSuccessHttpResponseCodeReturnNull()
+        {
+
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            var httpMessageHandlerMock = new Mock<HttpMessageHandler>();
+            httpMessageHandlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(
+                    () => new HttpResponseMessage()
+                    {
+                        StatusCode = HttpStatusCode.NotFound, // Set non success return code
+                        Content = new StringContent("{}", Encoding.UTF8)
+                    });
+
+            // Get the default state hass client
+            var hassClient = await mock.GetHassConnectedClient(false, httpMessageHandlerMock.Object);
+
+            var result = await hassClient.SetState("sensor.my_sensor", "new_state", new {attr1 = "hello"});
+
+            // ACT and ASSERT
+            Assert.Null(result);
+
+        }
+
+        [Fact]
+        public async Task SetStateTimeOutReturnNull()
+        {
+            //Todo: Implement SetStateTimeOutReturnNull
+        }
+
+        [Fact]
+        public async Task SetStateExceptionLogsErrorAndReturnNull()
+        {
+            //Todo: Implement SetStateExceptionLogsErrorAndReturnNull
         }
     }
 }

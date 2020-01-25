@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net.Http;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -125,9 +126,10 @@ namespace HassClient.Unit.Tests
         ///     Gets the HassClient setup with default fakes
         /// </summary>
         /// <returns></returns>
-        public JoySoftware.HomeAssistant.Client.HassClient GetHassClient()
+        public JoySoftware.HomeAssistant.Client.HassClient GetHassClient(HttpMessageHandler httpMessageHandler = null)
         {
-            return new JoySoftware.HomeAssistant.Client.HassClient(Logger.LoggerFactory, WebSocketMockFactory.Object);
+            
+            return new JoySoftware.HomeAssistant.Client.HassClient(Logger.LoggerFactory, WebSocketMockFactory.Object, httpMessageHandler ?? null);
         }
 
         /// <summary>
@@ -148,9 +150,9 @@ namespace HassClient.Unit.Tests
         ///     Returns a connected HassClient to use for testing after connection phase
         /// </summary>
         /// <returns></returns>
-        public async Task<JoySoftware.HomeAssistant.Client.HassClient> GetHassConnectedClient(bool getStates = false)
+        public async Task<JoySoftware.HomeAssistant.Client.HassClient> GetHassConnectedClient(bool getStates = false, HttpMessageHandler httpMessageHandler = null)
         {
-            var hassClient = GetHassClient();
+            var hassClient = GetHassClient(httpMessageHandler);
             // First message from Home Assistant is auth required
             AddResponse(@"{""type"": ""auth_required""}");
             // Next one we fake it is auth ok

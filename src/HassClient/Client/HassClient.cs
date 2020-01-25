@@ -2,12 +2,17 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO.Pipelines;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using System.Web;
+using System.Xml.XPath;
 using Microsoft.Extensions.Logging;
 
 [assembly: InternalsVisibleTo("HassClientIntegrationTests")]
@@ -27,6 +32,29 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         /// <remarks>Can be fully loaded when connecting by setting getStatesOnConnect=true</remarks>
         ConcurrentDictionary<string, HassState> States { get; }
+
+        /// <summary>
+        ///     Calls a service to home assistant
+        /// </summary>
+        /// <param name="domain">The domain for the servie, example "light"</param>
+        /// <param name="service">The service to call, example "turn_on"</param>
+        /// <param name="serviceData">The service data, use anonumous types, se example</param>
+        /// <example>
+        ///     Following example turn on light
+        ///     <code>
+        ///         var client = new HassClient();
+        ///         await client.ConnectAsync("192.168.1.2", 8123, false);
+        ///         await client.CallService("light", "turn_on", new {entity_id="light.myawesomelight"});
+        ///         await client.CloseAsync();
+        ///     </code>
+        /// </example>
+        /// <returns>True if successfully called service</returns>
+        Task<bool> CallService(string domain, string service, object serviceData);
+
+        /// <summary>
+        ///     Gracefully closes the connection to Home Assistant
+        /// </summary>
+        Task CloseAsync();
 
         /// <summary>
         ///     Connect to Home Assistant
@@ -54,6 +82,13 @@ namespace JoySoftware.HomeAssistant.Client
         Task<HassConfig> GetConfig();
 
         /// <summary>
+        ///     Pings Home Assistant to check if connection is alive
+        /// </summary>
+        /// <param name="timeout">The timeout to wait for Home Assistant to return pong message</param>
+        /// <returns>True if connection is alive.</returns>
+        Task<bool> PingAsync(int timeout);
+
+        /// <summary>
         ///     Returns next incoming event and completes async operation
         /// </summary>
         /// <remarks>Set subscribeEvents=true on ConnectAsync to use.</remarks>
@@ -62,34 +97,12 @@ namespace JoySoftware.HomeAssistant.Client
         Task<HassEvent> ReadEventAsync();
 
         /// <summary>
-        ///     Calls a service to home assistant
+        ///     Sets the state of an entity
         /// </summary>
-        /// <param name="domain">The domain for the servie, example "light"</param>
-        /// <param name="service">The service to call, example "turn_on"</param>
-        /// <param name="serviceData">The service data, use anonumous types, se example</param>
-        /// <example>
-        ///     Following example turn on light
-        ///     <code>
-        ///         var client = new HassClient();
-        ///         await client.ConnectAsync("192.168.1.2", 8123, false);
-        ///         await client.CallService("light", "turn_on", new {entity_id="light.myawesomelight"});
-        ///         await client.CloseAsync();
-        ///     </code>
-        /// </example>
-        /// <returns>True if successfully called service</returns>
-        Task<bool> CallService(string domain, string service, object serviceData);
-
-        /// <summary>
-        ///     Pings Home Assistant to check if connection is alive
-        /// </summary>
-        /// <param name="timeout">The timeout to wait for Home Assistant to return pong message</param>
-        /// <returns>True if connection is alive.</returns>
-        Task<bool> PingAsync(int timeout);
-
-        /// <summary>
-        ///     Gracefully closes the connection to Home Assistant
-        /// </summary>
-        Task CloseAsync();
+        /// <param name="entityId">The id</param>
+        /// <param name="attributes"></param>
+        /// <returns>Returns the full state object from Home Assistant</returns>
+        Task<HassState?> SetState(string entityId, string state, object? attributes);
 
         /// <summary>
         ///     Subscribe to all or single events from HomeAssistant
@@ -107,9 +120,9 @@ namespace JoySoftware.HomeAssistant.Client
     public class HassClient : IHassClient, IDisposable
     {
         /// <summary>
-        ///     The max time we will wait for the socket to gracefully close
+        ///     Used to cancel all asynchronous work, is internal so we can test
         /// </summary>
-        private const int MaxWaitTimeSocketClose = 5000; // 5 seconds
+        internal CancellationTokenSource CancelSource = new CancellationTokenSource();
 
         /// <summary>
         ///     Default size for channel
@@ -121,11 +134,16 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         private const int DefaultReceiveBufferSize = 1024 * 4;
 
-
         /// <summary>
         ///     The default timeout for websockets
         /// </summary>
-        private const int DefaultTimeout = 5000; // 5 seconds
+        private const int DefaultTimeout = 5000;
+
+        /// <summary>
+        ///     The max time we will wait for the socket to gracefully close
+        /// </summary>
+        private const int MaxWaitTimeSocketClose = 5000; // 5 seconds
+ // 5 seconds
 
         /// <summary>
         ///     Thread safe dicitionary that holds information about all command and command id:s
@@ -141,6 +159,11 @@ namespace JoySoftware.HomeAssistant.Client
         {
             WriteIndented = false, IgnoreNullValues = true
         };
+
+        /// <summary>
+        ///     Base url to the API (non socket)
+        /// </summary>
+        private string _apiUrl = "";
 
         /// <summary>
         ///     The logger to use
@@ -195,30 +218,39 @@ namespace JoySoftware.HomeAssistant.Client
         private IClientWebSocket? _ws;
 
         /// <summary>
-        ///     Used to cancel all asynchronous work, is internal so we can test
+        ///     The http client used for post and get operations through the Home Assistant API
         /// </summary>
-        internal CancellationTokenSource CancelSource = new CancellationTokenSource();
+        private readonly HttpClient _httpClient;
 
         /// <summary>
         ///     Instance a new HassClient
         /// </summary>
         /// <param name="logFactory">The LogFactory to use for logging, null uses default values from config.</param>
         public HassClient(ILoggerFactory? logFactory = null) : 
-            this(logFactory, new ClientWebSocketFactory()) { }
+            this(logFactory, new ClientWebSocketFactory(), null) { }
 
         /// <summary>
         ///     Instance a new HassClient
         /// </summary>
         /// <param name="logFactory">The LogFactory to use for logging, null uses default values from config.</param>
         /// <param name="wsFactory">The factory to use for websockets, mainly for testing purposes</param>
-        internal HassClient(ILoggerFactory? logFactory, IClientWebSocketFactory? wsFactory)
+        /// <param name="httpMessageHandler">httpMessage handler (used for mocking)</param>
+        internal HassClient(ILoggerFactory? logFactory, IClientWebSocketFactory? wsFactory, HttpMessageHandler? httpMessageHandler)
         {
             logFactory ??= _getDefaultLoggerFactory;
             wsFactory ??= new ClientWebSocketFactory();
-
-            _logger = logFactory.CreateLogger<HassClient>();
+            _httpClient = httpMessageHandler != null ? 
+                new HttpClient(httpMessageHandler) : new HttpClient();
+        
             _wsFactory = wsFactory;
+            _logger = logFactory.CreateLogger<HassClient>();
         }
+
+        /// <summary>
+        ///     The current states of the entities.
+        /// </summary>
+        public ConcurrentDictionary<string, HassState> States { get; } =
+            new ConcurrentDictionary<string, HassState>(Environment.ProcessorCount * 2, DefaultChannelSize);
 
         /// <summary>
         ///     Internal property for tests to access the timeout during unit testing
@@ -237,29 +269,81 @@ namespace JoySoftware.HomeAssistant.Client
         });
 
         /// <summary>
-        ///     Dispose the WSClient
+        ///     Calls a service to home assistant
         /// </summary>
-        public void Dispose()
+        /// <param name="domain">The domain for the servie, example "light"</param>
+        /// <param name="service">The service to call, example "turn_on"</param>
+        /// <param name="serviceData">The service data, use anonymous types, se example</param>
+        /// <example>
+        ///     Following example turn on light
+        ///     <code>
+        /// var client = new HassClient();
+        /// await client.ConnectAsync("192.168.1.2", 8123, false);
+        /// await client.CallService("light", "turn_on", new {entity_id="light.myawesomelight"});
+        /// await client.CloseAsync();
+        /// </code>
+        /// </example>
+        /// <returns>True if successfully called service</returns>
+        public async Task<bool> CallService(string domain, string service, object serviceData)
         {
-            Dispose(true);
-            // This object will be cleaned up by the Dispose method.
-            GC.SuppressFinalize(this);
+            try
+            {
+                HassMessage result = await SendCommandAndWaitForResponse(new CallServiceCommand
+                {
+                    Domain = domain,
+                    Service = service,
+                    ServiceData = serviceData
+                });
+                return result.Success ?? false;
+            }
+            catch (OperationCanceledException)
+            {
+                if (CancelSource.IsCancellationRequested)
+                {
+                    throw;
+                }
+
+                return false; // Just timeout not canceled
+            }
         }
 
-
         /// <summary>
-        ///     The current states of the entities.
+        ///     Closes the websocket
         /// </summary>
-        public ConcurrentDictionary<string, HassState> States { get; } =
-            new ConcurrentDictionary<string, HassState>(Environment.ProcessorCount * 2, DefaultChannelSize);
+        public async Task CloseAsync()
+        {
+            lock (this)
+            {
+                if (_isClosing || _ws == null)
+                {
+                    // Already closed
+                    return;
+                }
 
-        /// <summary>
-        ///     Returns next incoming event and completes async operation
-        /// </summary>
-        /// <remarks>Set subscribeEvents=true on ConnectAsync to use.</remarks>
-        /// <exception>OperationCanceledException if the operation is canceled.</exception>
-        /// <returns>Returns next event</returns>
-        public async Task<HassEvent> ReadEventAsync() => await _eventChannel.Reader.ReadAsync(CancelSource.Token);
+                _isClosing = true;
+            }
+
+            _logger.LogTrace("Async close websocket");
+
+            // First do websocket close management
+            await DoNormalClosureOfWebSocket();
+            // Cancel all async stuff
+            CancelSource.Cancel();
+
+            // Wait for read and write tasks to complete max 5 seconds
+            if (_readMessagePumpTask != null && _writeMessagePumpTask != null)
+            {
+                await Task.WhenAll(_readMessagePumpTask, _writeMessagePumpTask);
+            }
+
+            _ws.Dispose();
+            _ws = null;
+
+            CancelSource = new CancellationTokenSource();
+
+            _logger.LogTrace("Async close websocket done");
+            _isClosing = false;
+        }
 
         /// <summary>
         ///     Connect to Home Assistant
@@ -288,10 +372,22 @@ namespace JoySoftware.HomeAssistant.Client
                 throw new ArgumentNullException(nameof(url), "Expected url to be provided");
             }
 
+            var httpScheme = (url.Scheme == "ws") ? "http" : "https";
+
+            _apiUrl = $"{ httpScheme}://{url.Host}:{url.Port}/api";
+
             // Check if we already have a websocket running
             if (_ws != null)
             {
-                throw new InvalidOperationException("Allready connected to the remote websocket.");
+                throw new InvalidOperationException("Already connected to the remote websocket.");
+            }
+
+            // Setup default headers for httpclient
+            if (_httpClient != null)
+            {
+                _httpClient.DefaultRequestHeaders.Clear();
+                _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
             }
 
             try
@@ -349,6 +445,15 @@ namespace JoySoftware.HomeAssistant.Client
         }
 
         /// <summary>
+        ///     Dispose the WSClient
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            // This object will be cleaned up by the Dispose method.
+            GC.SuppressFinalize(this);
+        }
+        /// <summary>
         ///     Gets the configuration of the connected Home Assistant instance
         /// </summary>
         public async Task<HassConfig> GetConfig()
@@ -366,44 +471,6 @@ namespace JoySoftware.HomeAssistant.Client
 
             throw new ApplicationException($"The result not expected! {resultMessage}");
         }
-
-        /// <summary>
-        ///     Calls a service to home assistant
-        /// </summary>
-        /// <param name="domain">The domain for the servie, example "light"</param>
-        /// <param name="service">The service to call, example "turn_on"</param>
-        /// <param name="serviceData">The service data, use anonymous types, se example</param>
-        /// <example>
-        ///     Following example turn on light
-        ///     <code>
-        /// var client = new HassClient();
-        /// await client.ConnectAsync("192.168.1.2", 8123, false);
-        /// await client.CallService("light", "turn_on", new {entity_id="light.myawesomelight"});
-        /// await client.CloseAsync();
-        /// </code>
-        /// </example>
-        /// <returns>True if successfully called service</returns>
-        public async Task<bool> CallService(string domain, string service, object serviceData)
-        {
-            try
-            {
-                HassMessage result = await SendCommandAndWaitForResponse(new CallServiceCommand
-                {
-                    Domain = domain, Service = service, ServiceData = serviceData
-                });
-                return result.Success ?? false;
-            }
-            catch (OperationCanceledException)
-            {
-                if (CancelSource.IsCancellationRequested)
-                {
-                    throw;
-                }
-
-                return false; // Just timeout not canceled
-            }
-        }
-
 
         /// <summary>
         ///     Pings Home Assistant to check if connection is alive
@@ -435,41 +502,43 @@ namespace JoySoftware.HomeAssistant.Client
         }
 
         /// <summary>
-        ///     Closes the websocket
+        ///     Returns next incoming event and completes async operation
         /// </summary>
-        public async Task CloseAsync()
+        /// <remarks>Set subscribeEvents=true on ConnectAsync to use.</remarks>
+        /// <exception>OperationCanceledException if the operation is canceled.</exception>
+        /// <returns>Returns next event</returns>
+        public async Task<HassEvent> ReadEventAsync() => await _eventChannel.Reader.ReadAsync(CancelSource.Token);
+
+        public async Task<HassState?> SetState(string entityId, string state, object? attributes)
         {
-            lock (this)
+   
+            var apiUrl = $"{_apiUrl}/states/{HttpUtility.UrlEncode(entityId)}";
+            var content = JsonSerializer.Serialize<object>(
+                    new
+                    {
+                        state = state,
+                        attributes = attributes
+                    }, _defaultSerializerOptions);
+
+            try
             {
-                if (_isClosing || _ws == null)
+                var result = await _httpClient.PostAsync(new Uri(apiUrl),
+                    new StringContent(content, Encoding.UTF8),
+                    CancelSource.Token);
+
+                if (result.IsSuccessStatusCode)
                 {
-                    // Already closed
-                    return;
+                    var hassState = await JsonSerializer.DeserializeAsync<HassState>(await result.Content.ReadAsStreamAsync(),
+                        _defaultSerializerOptions);
+
+                    return hassState;
                 }
-
-                _isClosing = true;
             }
-
-            _logger.LogTrace("Async close websocket");
-
-            // First do websocket close management
-            await DoNormalClosureOfWebSocket();
-            // Cancel all async stuff
-            CancelSource.Cancel();
-
-            // Wait for read and write tasks to complete max 5 seconds
-            if (_readMessagePumpTask != null && _writeMessagePumpTask != null)
+            catch (Exception e)
             {
-                await Task.WhenAll(_readMessagePumpTask, _writeMessagePumpTask);
+                _logger.LogError(e, "Failed to set state");
             }
-
-            _ws.Dispose();
-            _ws = null;
-
-            CancelSource = new CancellationTokenSource();
-
-            _logger.LogTrace("Async close websocket done");
-            _isClosing = false;
+            return null;
         }
 
         public async Task<bool> SubscribeToEvents(EventType eventType = EventType.All)
@@ -509,198 +578,6 @@ namespace JoySoftware.HomeAssistant.Client
 
             var result = await SendCommandAndWaitForResponse(command);
             return result.Success ?? false;
-        }
-
-        /// <summary>
-        ///     Send message and correctly handle message id counter
-        /// </summary>
-        /// <param name="message">The message to send</param>
-        /// <returns>True if successful</returns>
-        internal virtual bool SendMessage(HassMessageBase message)
-        {
-            _logger.LogTrace($"Sends message {message.Type}");
-            if (message is CommandMessage commandMessage)
-            {
-                commandMessage.Id = ++_messageId;
-                //We save the type of command so we can deserialize the correct message later
-                _commandsSent[_messageId] = commandMessage.Type;
-            }
-
-            return _writeChannel.Writer.TryWrite(message);
-        }
-
-        internal virtual async ValueTask<HassMessage> SendCommandAndWaitForResponse(CommandMessage message)
-        {
-            using var timerTokenSource = new CancellationTokenSource(SocketTimeout);
-            // Make a combined token source with timer and the general cancel token source
-            // The operations will cancel from ether one
-            using var sendCommandTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
-                timerTokenSource.Token, CancelSource.Token);
-
-            try
-            {
-                if (!SendMessage(message))
-                    throw new ApplicationException($"Send message {message.Type} failed!");
-
-                while (true)
-                {
-                    HassMessage result = await _messageChannel.Reader.ReadAsync(sendCommandTokenSource.Token);
-                    if (result.Id == message.Id)
-                    {
-                        if (result.Type != "result" || result.Success != true)
-                        {
-                            _logger.LogError($"Unexpected response from command ({result.Type}, {result.Success})");
-                        }
-
-                        return result;
-                    }
-
-                    // Not the response, push message back
-                    bool res = _messageChannel.Writer.TryWrite(result);
-
-                    if (!res)
-                    {
-                        throw new ApplicationException("Failed to write to message channel!");
-                    }
-
-                    // Delay for a short period to let the message arrive we are searching for
-                    await Task.Delay(10);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                _logger.LogError($"Fail to send command {message.Type} and receive correct command within timeout. ");
-                throw;
-            }
-            catch (Exception e)
-            {
-                _logger.LogError($"Fail to send command {message.Type}. ");
-                _logger.LogDebug(e, "Fail to send command.");
-                throw;
-            }
-        }
-
-        private async Task GetStates(CancellationTokenSource connectTokenSource)
-        {
-            SendMessage(new GetStatesCommand());
-            HassMessage result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
-            if (result?.Result is List<HassState> wsResult)
-            {
-                foreach (HassState state in wsResult)
-                {
-                    States[state.EntityId] = state;
-                }
-            }
-        }
-
-        private async Task<HassMessage> HandleConnectAndAuthenticate(string token,
-            CancellationTokenSource connectTokenSource)
-        {
-            HassMessage result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
-            if (result.Type == "auth_required")
-            {
-                SendMessage(new HassAuthMessage {AccessToken = token});
-                result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
-            }
-
-            return result;
-        }
-
-        private void InitStatesOnConnect(IClientWebSocket ws)
-        {
-            _ws = ws;
-            _messageId = 1;
-
-            _isClosing = false;
-
-            // Make sure we have new channels so we are not have old messages
-            _messageChannel = Channel.CreateBounded<HassMessage>(DefaultChannelSize);
-            _eventChannel = Channel.CreateBounded<HassEvent>(DefaultChannelSize);
-
-            CancelSource = new CancellationTokenSource();
-            _readMessagePumpTask = Task.Run(ReadMessagePump);
-            _writeMessagePumpTask = Task.Run(WriteMessagePump);
-        }
-
-        /// <summary>
-        ///     Close the websocket gracefully
-        /// </summary>
-        /// <remarks>
-        ///     The code waits for the server to return closed state.
-        ///     There was problems using the CloseAsync only. It did not properly work as expected
-        ///     The code is using CloseOutputAsync instead and wait for status closed
-        /// </remarks>
-        /// <returns></returns>
-        private async Task DoNormalClosureOfWebSocket()
-        {
-            _logger.LogTrace("Do normal close of websocket");
-
-            using var timeout = new CancellationTokenSource(MaxWaitTimeSocketClose);
-
-            if (_ws != null &&
-                (_ws.State == WebSocketState.CloseReceived ||
-                 _ws.State == WebSocketState.Open))
-            {
-                try
-                {
-                    await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
-                }
-                catch (OperationCanceledException)
-                {
-                    // normal upon task/token cancellation, disregard
-                    _logger.LogTrace("Close operations took more than 5 seconds.. closing hard!");
-                }
-            }
-
-            //_readMessagePumpTask.Wait();
-
-            // Wait for read pump finishing when receiving the close message
-            //if (_readMessagePumpTask != null) await Task.WhenAll(_readMessagePumpTask).ConfigureAwait(false);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            // If disposing equals true, dispose all managed
-            // and unmanaged resources.
-            //
-            if (disposing)
-            {
-                _ws?.Dispose();
-                CancelSource.Dispose();
-            }
-
-            _disposed = true;
-        }
-
-        /// <summary>
-        ///     A pump that reads incoming messages and put them on the read channel.
-        /// </summary>
-        private async Task ReadMessagePump()
-        {
-            _logger.LogTrace("Start ReadMessagePump");
-
-            // While not canceled and websocket is not closed
-            while (_ws != null && (!CancelSource.IsCancellationRequested && !_ws.CloseStatus.HasValue))
-            {
-                try
-                {
-                    await ProcessNextMessage();
-                }
-                catch (OperationCanceledException)
-                {
-                    // Canceled the thread just leave
-                    break;
-                }
-
-                // Should never cast any other exception, if so it just not handle them here
-            }
-
-            _logger.LogTrace("Exit ReadMessagePump");
         }
 
         /// <summary>
@@ -848,6 +725,128 @@ namespace JoySoftware.HomeAssistant.Client
             }
         }
 
+        internal virtual async ValueTask<HassMessage> SendCommandAndWaitForResponse(CommandMessage message)
+        {
+            using var timerTokenSource = new CancellationTokenSource(SocketTimeout);
+            // Make a combined token source with timer and the general cancel token source
+            // The operations will cancel from ether one
+            using var sendCommandTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+                timerTokenSource.Token, CancelSource.Token);
+
+            try
+            {
+                if (!SendMessage(message))
+                    throw new ApplicationException($"Send message {message.Type} failed!");
+
+                while (true)
+                {
+                    HassMessage result = await _messageChannel.Reader.ReadAsync(sendCommandTokenSource.Token);
+                    if (result.Id == message.Id)
+                    {
+                        if (result.Type != "result" || result.Success != true)
+                        {
+                            _logger.LogError($"Unexpected response from command ({result.Type}, {result.Success})");
+                        }
+
+                        return result;
+                    }
+
+                    // Not the response, push message back
+                    bool res = _messageChannel.Writer.TryWrite(result);
+
+                    if (!res)
+                    {
+                        throw new ApplicationException("Failed to write to message channel!");
+                    }
+
+                    // Delay for a short period to let the message arrive we are searching for
+                    await Task.Delay(10);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogError($"Fail to send command {message.Type} and receive correct command within timeout. ");
+                throw;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Fail to send command {message.Type}. ");
+                _logger.LogDebug(e, "Fail to send command.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        ///     Send message and correctly handle message id counter
+        /// </summary>
+        /// <param name="message">The message to send</param>
+        /// <returns>True if successful</returns>
+        internal virtual bool SendMessage(HassMessageBase message)
+        {
+            _logger.LogTrace($"Sends message {message.Type}");
+            if (message is CommandMessage commandMessage)
+            {
+                commandMessage.Id = ++_messageId;
+                //We save the type of command so we can deserialize the correct message later
+                _commandsSent[_messageId] = commandMessage.Type;
+            }
+
+            return _writeChannel.Writer.TryWrite(message);
+        }
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            // If disposing equals true, dispose all managed
+            // and unmanaged resources.
+            //
+            if (disposing)
+            {
+                _ws?.Dispose();
+                CancelSource.Dispose();
+            }
+
+            _disposed = true;
+        }
+
+        /// <summary>
+        ///     Close the websocket gracefully
+        /// </summary>
+        /// <remarks>
+        ///     The code waits for the server to return closed state.
+        ///     There was problems using the CloseAsync only. It did not properly work as expected
+        ///     The code is using CloseOutputAsync instead and wait for status closed
+        /// </remarks>
+        /// <returns></returns>
+        private async Task DoNormalClosureOfWebSocket()
+        {
+            _logger.LogTrace("Do normal close of websocket");
+
+            using var timeout = new CancellationTokenSource(MaxWaitTimeSocketClose);
+
+            if (_ws != null &&
+                (_ws.State == WebSocketState.CloseReceived ||
+                 _ws.State == WebSocketState.Open))
+            {
+                try
+                {
+                    await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // normal upon task/token cancellation, disregard
+                    _logger.LogTrace("Close operations took more than 5 seconds.. closing hard!");
+                }
+            }
+
+            //_readMessagePumpTask.Wait();
+
+            // Wait for read pump finishing when receiving the close message
+            //if (_readMessagePumpTask != null) await Task.WhenAll(_readMessagePumpTask).ConfigureAwait(false);
+        }
 
         /// <summary>
         ///     Get the correct result message from HassMessage
@@ -888,6 +887,72 @@ namespace JoySoftware.HomeAssistant.Client
             return m;
         }
 
+        private async Task GetStates(CancellationTokenSource connectTokenSource)
+        {
+            SendMessage(new GetStatesCommand());
+            HassMessage result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
+            if (result?.Result is List<HassState> wsResult)
+            {
+                foreach (HassState state in wsResult)
+                {
+                    States[state.EntityId] = state;
+                }
+            }
+        }
+
+        private async Task<HassMessage> HandleConnectAndAuthenticate(string token,
+            CancellationTokenSource connectTokenSource)
+        {
+            HassMessage result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
+            if (result.Type == "auth_required")
+            {
+                SendMessage(new HassAuthMessage {AccessToken = token});
+                result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token);
+            }
+
+            return result;
+        }
+
+        private void InitStatesOnConnect(IClientWebSocket ws)
+        {
+            _ws = ws;
+            _messageId = 1;
+
+            _isClosing = false;
+
+            // Make sure we have new channels so we are not have old messages
+            _messageChannel = Channel.CreateBounded<HassMessage>(DefaultChannelSize);
+            _eventChannel = Channel.CreateBounded<HassEvent>(DefaultChannelSize);
+
+            CancelSource = new CancellationTokenSource();
+            _readMessagePumpTask = Task.Run(ReadMessagePump);
+            _writeMessagePumpTask = Task.Run(WriteMessagePump);
+        }
+        /// <summary>
+        ///     A pump that reads incoming messages and put them on the read channel.
+        /// </summary>
+        private async Task ReadMessagePump()
+        {
+            _logger.LogTrace("Start ReadMessagePump");
+
+            // While not canceled and websocket is not closed
+            while (_ws != null && (!CancelSource.IsCancellationRequested && !_ws.CloseStatus.HasValue))
+            {
+                try
+                {
+                    await ProcessNextMessage();
+                }
+                catch (OperationCanceledException)
+                {
+                    // Canceled the thread just leave
+                    break;
+                }
+
+                // Should never cast any other exception, if so it just not handle them here
+            }
+
+            _logger.LogTrace("Exit ReadMessagePump");
+        }
         private async Task WriteMessagePump()
         {
             _logger.LogTrace("Start WriteMessagePump");
