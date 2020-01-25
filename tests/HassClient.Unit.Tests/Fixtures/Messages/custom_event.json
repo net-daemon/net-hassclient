@@ -1,0 +1,20 @@
+﻿{
+  "id": 15,
+  "type": "event",
+  "event": {
+    "event_type": "CUSTOM_EVENT",
+    "data": {
+      "an_object": {
+        "entity_id": "light.some_light",
+        "value_array":  [1,2,3,4,5,6] 
+      }
+    },
+    "origin": "REMOTE",
+    "time_fired": "2020-01-25T11:53:08.885907+00:00",
+    "context": {
+      "id": "e83d7e6a45234615acafdec526f51700",
+      "parent_id": null,
+      "user_id": "63b2952cb986474d84be46480c8aaad3"
+    }
+  }
+}

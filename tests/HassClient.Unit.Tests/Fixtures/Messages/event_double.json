@@ -7,7 +7,7 @@
       "entity_id": "sensor.double_sensor",
       "old_state": {
         "entity_id": "sensor.double_sensor",
-        "state": 1.23,
+        "state": "1.23",
         "attributes": {
           "battery_level": 100
         },
@@ -20,7 +20,7 @@
       },
       "new_state": {
         "entity_id": "sensor.double_sensor",
-        "state": 3.21,
+        "state": "3.21",
         "attributes": {
           "battery_level": 100
         },

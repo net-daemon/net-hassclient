@@ -27,6 +27,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Fixtures\Messages\custom_event.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Fixtures\Messages\event_boolean.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -107,6 +107,10 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                         var serviceMessage = eventMsg?.Data as HassServiceEventData;
                         Console.WriteLine($"{serviceMessage.Service}: {serviceMessage.ServiceData}");
                     }
+                    else
+                    {
+                        Console.WriteLine("event!");
+                    }
                 }
                 catch (OperationCanceledException)
                 {

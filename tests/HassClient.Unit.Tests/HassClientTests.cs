@@ -1,5 +1,4 @@
 using System;
-using System.Dynamic;
 using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading;
@@ -381,6 +380,88 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
+        public async Task CustomEventShouldHaveCorrectObject()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            // Add the service message fake , check service_event.json for reference
+            mock.AddResponse(HassWebSocketMock.CustomEventMessage);
+
+            // ACT
+            var result = await hassClient.ReadEventAsync();
+            var customEvent = result?.Data;
+
+
+            // ASSERT
+            Assert.Equal("light.some_light", customEvent?.an_object.entity_id);
+            Assert.IsType<object[]>(customEvent?.an_object.value_array);
+            var x = customEvent?.an_object.value_array[0];
+
+            Assert.Equal(1, x);
+        }
+
+        [Fact]
+        public async Task EventWithStateBooleanShouldHaveCorrectTypeAndValue()
+        {
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            // Add response event message, see event.json as reference
+            mock.AddResponse(HassWebSocketMock.EventMessageBoolean);
+
+            // ACT
+            HassEvent eventMsg = await hassClient.ReadEventAsync();
+
+            var stateMessage = eventMsg.Data as HassStateChangedEventData;
+
+            Assert.Equal(true, stateMessage?.NewState.State);
+            Assert.Equal(false, stateMessage?.OldState.State);
+        }
+
+        [Fact]
+        public async Task EventWithStateDoubleShouldHaveCorrectTypeAndValue()
+        {
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            // Add response event message, see event.json as reference
+            mock.AddResponse(HassWebSocketMock.EventMessageDouble);
+
+            // ACT
+            HassEvent eventMsg = await hassClient.ReadEventAsync();
+
+            var stateMessage = eventMsg.Data as HassStateChangedEventData;
+
+            Assert.Equal(3.21, stateMessage?.NewState.State);
+            Assert.Equal(1.23, stateMessage?.OldState.State);
+        }
+
+
+        [Fact]
+        public async Task EventWithStateIntegerShouldHaveCorrectTypeAndValue()
+        {
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            // Add response event message, see event.json as reference
+            mock.AddResponse(HassWebSocketMock.EventMessageInteger);
+
+            // ACT
+            HassEvent eventMsg = await hassClient.ReadEventAsync();
+
+            var stateMessage = eventMsg.Data as HassStateChangedEventData;
+
+            Assert.Equal(321, stateMessage?.NewState.State);
+            Assert.Equal(123, stateMessage?.OldState.State);
+        }
+
+        [Fact]
         public async Task GetConfigGetUnexpectedMessageThrowsException()
         {
             // ARRANGE
@@ -416,11 +497,12 @@ namespace HassClient.Unit.Tests
 
             await mockHassClient.Object.ConnectAsync(new Uri("http://192.168.1.1"), "token", false);
 
-            mockHassClient.Setup(n => n.SendCommandAndWaitForResponse(It.IsAny<CommandMessage>())).Returns(
-                new ValueTask<HassMessage>(new HassMessage
-                {
-                    Id = 2, Type = "result", Result = "Not correct type as we should test"
-                }));
+            mockHassClient.Setup(n => n.SendCommandAndWaitForResponse(It.IsAny<CommandMessage>()))
+                .Returns(
+                    new ValueTask<HassMessage>(new HassMessage
+                    {
+                        Id = 2, Type = "result", Result = "Not correct type as we should test"
+                    }));
 
             // ACT AND ASSERT
             var getConfigTask = mockHassClient.Object.GetConfig();
@@ -578,66 +660,6 @@ namespace HassClient.Unit.Tests
             Assert.Equal("light", serviceEvent.Domain);
             Assert.Equal("toggle", serviceEvent.Service!);
             Assert.Equal("light.tomas_rum", c?.GetString());
-        }
-
-
-        [Fact]
-        public async Task EventWithStateIntegerShouldHaveCorrectTypeAndValue()
-        {
-            var mock = new HassWebSocketMock();
-            // Get the connected hass client
-            var hassClient = await mock.GetHassConnectedClient();
-
-            // Add response event message, see event.json as reference
-            mock.AddResponse(HassWebSocketMock.EventMessageInteger);
-
-            // ACT
-            HassEvent eventMsg = await hassClient.ReadEventAsync();
-
-            var stateMessage = eventMsg.Data as HassStateChangedEventData;
-
-            Assert.Equal(321, stateMessage?.NewState.State);
-            Assert.Equal(123, stateMessage?.OldState.State);
-
-        }
-
-        [Fact]
-        public async Task EventWithStateDoubleShouldHaveCorrectTypeAndValue()
-        {
-            var mock = new HassWebSocketMock();
-            // Get the connected hass client
-            var hassClient = await mock.GetHassConnectedClient();
-
-            // Add response event message, see event.json as reference
-            mock.AddResponse(HassWebSocketMock.EventMessageDouble);
-
-            // ACT
-            HassEvent eventMsg = await hassClient.ReadEventAsync();
-
-            var stateMessage = eventMsg.Data as HassStateChangedEventData;
-
-            Assert.Equal(3.21, stateMessage?.NewState.State);
-            Assert.Equal(1.23, stateMessage?.OldState.State);
-
-        }
-
-        [Fact]
-        public async Task EventWithStateBooleanShouldHaveCorrectTypeAndValue()
-        {
-            var mock = new HassWebSocketMock();
-            // Get the connected hass client
-            var hassClient = await mock.GetHassConnectedClient();
-
-            // Add response event message, see event.json as reference
-            mock.AddResponse(HassWebSocketMock.EventMessageBoolean);
-
-            // ACT
-            HassEvent eventMsg = await hassClient.ReadEventAsync();
-
-            var stateMessage = eventMsg.Data as HassStateChangedEventData;
-
-            Assert.Equal(true, stateMessage?.NewState.State);
-            Assert.Equal(false, stateMessage?.OldState.State);
         }
 
         [Fact]
