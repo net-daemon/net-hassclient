@@ -374,7 +374,15 @@ namespace JoySoftware.HomeAssistant.Client
 
             var httpScheme = (url.Scheme == "ws") ? "http" : "https";
 
-            _apiUrl = $"{ httpScheme}://{url.Host}:{url.Port}/api";
+            if (url.Host == "hassio" && url.Port == 0)
+            {
+                _apiUrl = "http://hassio/homeassistant/api";
+            }
+            else
+            {
+                _apiUrl = $"{httpScheme}://{url.Host}:{url.Port}/api";
+            }
+            
 
             // Check if we already have a websocket running
             if (_ws != null)
