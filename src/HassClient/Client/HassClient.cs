@@ -39,6 +39,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <param name="domain">The domain for the servie, example "light"</param>
         /// <param name="service">The service to call, example "turn_on"</param>
         /// <param name="serviceData">The service data, use anonumous types, se example</param>
+        /// <param name="waitForResponse">If true, it wait for the response from Hass else just ignore</param>
         /// <example>
         ///     Following example turn on light
         ///     <code>
@@ -49,7 +50,7 @@ namespace JoySoftware.HomeAssistant.Client
         ///     </code>
         /// </example>
         /// <returns>True if successfully called service</returns>
-        Task<bool> CallService(string domain, string service, object serviceData);
+        Task<bool> CallService(string domain, string service, object serviceData, bool waitForResponse=true);
 
         /// <summary>
         ///     Gracefully closes the connection to Home Assistant
@@ -152,6 +153,14 @@ namespace JoySoftware.HomeAssistant.Client
         private readonly ConcurrentDictionary<int, string> _commandsSent =
             new ConcurrentDictionary<int, string>(32, 200);
 
+        /// <summary>
+        ///     Thread safe dicitionary that holds information about all command and command id:s
+        ///     Is used to correclty deserialize the result messages from commands.
+        /// </summary>
+        private readonly ConcurrentDictionary<int, string> _commandsSentAndResponseShouldBeDisregarded =
+            new ConcurrentDictionary<int, string>(32, 200);
+
+        
         /// <summary>
         ///     Default Json serialization options, Hass expects intended
         /// </summary>
@@ -274,6 +283,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <param name="domain">The domain for the servie, example "light"</param>
         /// <param name="service">The service to call, example "turn_on"</param>
         /// <param name="serviceData">The service data, use anonymous types, se example</param>
+        /// <param name="waitForResponse">If true, it wait for the response from Hass else just ignore</param>
         /// <example>
         ///     Following example turn on light
         ///     <code>
@@ -284,7 +294,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// </code>
         /// </example>
         /// <returns>True if successfully called service</returns>
-        public async Task<bool> CallService(string domain, string service, object serviceData)
+        public async Task<bool> CallService(string domain, string service, object serviceData, bool waitForResponse = true)
         {
             try
             {
@@ -293,7 +303,7 @@ namespace JoySoftware.HomeAssistant.Client
                     Domain = domain,
                     Service = service,
                     ServiceData = serviceData
-                });
+                }, waitForResponse);
                 return result.Success ?? false;
             }
             catch (OperationCanceledException)
@@ -704,8 +714,9 @@ namespace JoySoftware.HomeAssistant.Client
                             _messageChannel.Writer.TryWrite(m);
                             break;
                         case "result":
-
-                            _messageChannel.Writer.TryWrite(GetResultMessage(m));
+                            var resultMessage = GetResultMessage(m);
+                            if (resultMessage!=null)
+                                _messageChannel.Writer.TryWrite(resultMessage);
                             break;
                         default:
                             _logger.LogDebug($"Unexpected eventtype {m.Type}, discarding message!");
@@ -733,7 +744,7 @@ namespace JoySoftware.HomeAssistant.Client
             }
         }
 
-        internal virtual async ValueTask<HassMessage> SendCommandAndWaitForResponse(CommandMessage message)
+        internal virtual async ValueTask<HassMessage> SendCommandAndWaitForResponse(CommandMessage message, bool waitForResponse=true)
         {
             using var timerTokenSource = new CancellationTokenSource(SocketTimeout);
             // Make a combined token source with timer and the general cancel token source
@@ -743,8 +754,11 @@ namespace JoySoftware.HomeAssistant.Client
 
             try
             {
-                if (!SendMessage(message))
+                if (!SendMessage(message, waitForResponse))
                     throw new ApplicationException($"Send message {message.Type} failed!");
+                
+                if (!waitForResponse)
+                    return new HassMessage {Success = true};
 
                 while (true)
                 {
@@ -767,6 +781,7 @@ namespace JoySoftware.HomeAssistant.Client
                         throw new ApplicationException("Failed to write to message channel!");
                     }
 
+
                     // Delay for a short period to let the message arrive we are searching for
                     await Task.Delay(10);
                 }
@@ -788,15 +803,23 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Send message and correctly handle message id counter
         /// </summary>
         /// <param name="message">The message to send</param>
+        /// <param name="waitForResponse">True if sender expects response</param>
         /// <returns>True if successful</returns>
-        internal virtual bool SendMessage(HassMessageBase message)
+        internal virtual bool SendMessage(HassMessageBase message, bool waitForResponse=true)
         {
             _logger.LogTrace($"Sends message {message.Type}");
             if (message is CommandMessage commandMessage)
             {
                 commandMessage.Id = ++_messageId;
-                //We save the type of command so we can deserialize the correct message later
-                _commandsSent[_messageId] = commandMessage.Type;
+                if (waitForResponse)
+                {
+                    //We save the type of command so we can deserialize the correct message later
+                    _commandsSent[_messageId] = commandMessage.Type;
+                }
+                else
+                {
+                    _commandsSentAndResponseShouldBeDisregarded[_messageId] = commandMessage.Type; ;
+                }
             }
 
             return _writeChannel.Writer.TryWrite(message);
@@ -859,12 +882,12 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     Get the correct result message from HassMessage
         /// </summary>
-        private HassMessage GetResultMessage(HassMessage m)
+        private HassMessage? GetResultMessage(HassMessage m)
         {
             if (m.Id > 0)
             {
                 // It is an command response, get command
-                if (_commandsSent.Remove(m.Id, out string? command))
+                if (_commandsSent.TryRemove(m.Id, out string? command))
                 {
                     switch (command)
                     {
@@ -888,7 +911,8 @@ namespace JoySoftware.HomeAssistant.Client
                 }
                 else
                 {
-                    return m;
+                    // Make sure we discard messages that no one is waiting for
+                    return _commandsSentAndResponseShouldBeDisregarded.TryRemove(m.Id, out string? _) ? null : m;
                 }
             }
 

@@ -117,6 +117,36 @@ namespace HassClient.Unit.Tests
             Assert.True(result);
         }
 
+        [Fact]
+        public async Task CallServiceWithoutResponseShouldReturnSuccessWitoutReturnMessage()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            // Service call successful
+            mock.AddResponse(@"{
+                                      ""id"": 2,
+                                      ""type"": ""result"",
+                                      ""success"": true,
+                                      ""result"": {
+                                        ""context"": {
+                                          ""id"": ""55cf75a4dbf94680804ef022aa0c67b4"",
+                                          ""parent_id"": null,
+                                          ""user_id"": ""63b2952cb986474d84be46480c8aaad3""
+                                        }
+                                      }
+                                    }");
+
+            // ACT
+            var result = await hassClient.CallService("light", "turn_on", new { entity_id = "light.tomas_rum" }, false);
+
+            // Assert 
+            Assert.True(result);
+
+        }
+
         //[Fact]
         //public async Task CallServiceUnhandledErrorThrowsException()
         //{
@@ -503,12 +533,14 @@ namespace HassClient.Unit.Tests
 
             await mockHassClient.Object.ConnectAsync(new Uri("http://192.168.1.1"), "token", false);
 
-            mockHassClient.Setup(n => n.SendCommandAndWaitForResponse(It.IsAny<CommandMessage>()))
-                .Returns(
-                    new ValueTask<HassMessage>(new HassMessage
-                    {
-                        Id = 2, Type = "result", Result = "Not correct type as we should test"
-                    }));
+            mockHassClient.Setup(n => 
+                    n.SendCommandAndWaitForResponse(
+                        It.IsAny<CommandMessage>(), It.IsAny<bool>()))
+                    .Returns(
+                        new ValueTask<HassMessage>(new HassMessage
+                        {
+                            Id = 2, Type = "result", Result = "Not correct type as we should test"
+                        }));
 
             // ACT AND ASSERT
             var getConfigTask = mockHassClient.Object.GetConfig();
@@ -638,7 +670,8 @@ namespace HassClient.Unit.Tests
             mock.AddResponse(@"{""type"": ""auth_ok""}");
 
             await mockHassClient.Object.ConnectAsync(new Uri("http://192.168.1.1"), "token", false);
-            mockHassClient.Setup(n => n.SendMessage(It.IsAny<HassMessageBase>())).Returns(false);
+            mockHassClient.Setup(n => n.SendMessage(It.IsAny<HassMessageBase>(), 
+                It.IsAny<bool>())).Returns(false);
             // ACT AND ASSERT
 
             await Assert.ThrowsAsync<ApplicationException>(async () =>
@@ -668,6 +701,7 @@ namespace HassClient.Unit.Tests
             Assert.Equal("light.tomas_rum", c?.GetString());
         }
 
+   
         [Fact]
         public async Task SubscribeToEventsReturnsCorrectEvent()
         {
