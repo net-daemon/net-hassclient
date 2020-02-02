@@ -915,5 +915,104 @@ namespace HassClient.Unit.Tests
         {
             //Todo: Implement SetStateExceptionLogsErrorAndReturnNull
         }
+
+        [Fact]
+        public async Task SendEventHttpClientShouldCallCorrectHttpMessageHandler()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            var httpMessageHandlerMock = new Mock<HttpMessageHandler>();
+            httpMessageHandlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(
+                    () => new HttpResponseMessage()
+                    {
+                        StatusCode = HttpStatusCode.OK, // Set non success return code
+                        Content = new StringContent("{}", Encoding.UTF8)
+                    }); ;
+
+            // Get the default state hass client
+            var hassClient = await mock.GetHassConnectedClient(false, httpMessageHandlerMock.Object);
+
+            await hassClient.SendEvent("test_event", new { custom_data = "hello" });
+
+            // ACT and ASSERT
+            // Calls connect without getting the states initially
+            httpMessageHandlerMock.Protected()
+                .Verify(
+                    "SendAsync",
+                    Times.Exactly(1), // we expected a single external request
+                    ItExpr.Is<HttpRequestMessage>(req =>
+                            req.Method == HttpMethod.Post // we expected a GET request
+                            && req.RequestUri ==
+                            new Uri("http://anyurldoesntmatter.org/api/events/test_event") // to this uri
+                    ),
+                    ItExpr.IsAny<CancellationToken>()
+                );
+        }
+
+        [Fact]
+        public async Task SendEventFaileHttpClientShouldReturnFalse()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            var httpMessageHandlerMock = new Mock<HttpMessageHandler>();
+            httpMessageHandlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(
+                    () => new HttpResponseMessage()
+                    {
+                        StatusCode = HttpStatusCode.BadRequest, // Set non non success return code
+                        Content = new StringContent("{}", Encoding.UTF8)
+                    }); ;
+
+            // Get the default state hass client
+            var hassClient = await mock.GetHassConnectedClient(false, httpMessageHandlerMock.Object);
+
+            var result = await hassClient.SendEvent("test_event", new { custom_data = "hello" });
+
+            Assert.False(result);
+        }
+
+        [Fact]
+        public async Task SendEventNoDataHttpClientShouldCallCorrectHttpMessageHandler()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            var httpMessageHandlerMock = new Mock<HttpMessageHandler>();
+            httpMessageHandlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(
+                    () => new HttpResponseMessage()
+                    {
+                        StatusCode = HttpStatusCode.OK, // Set non success return code
+                        Content = new StringContent("{}", Encoding.UTF8)
+                    }); ;
+
+            // Get the default state hass client
+            var hassClient = await mock.GetHassConnectedClient(false, httpMessageHandlerMock.Object);
+
+            await hassClient.SendEvent("test_event");
+
+            // ACT and ASSERT
+            // Calls connect without getting the states initially
+            httpMessageHandlerMock.Protected()
+                .Verify(
+                    "SendAsync",
+                    Times.Exactly(1), // we expected a single external request
+                    ItExpr.Is<HttpRequestMessage>(req =>
+                            req.Method == HttpMethod.Post // we expected a GET request
+                            && req.RequestUri ==
+                            new Uri("http://anyurldoesntmatter.org/api/events/test_event") // to this uri
+                    ),
+                    ItExpr.IsAny<CancellationToken>()
+                );
+        }
     }
 }

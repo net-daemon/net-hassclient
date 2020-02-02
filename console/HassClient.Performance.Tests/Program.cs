@@ -66,6 +66,10 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             });
 
             client = new HassClient(factory);
+            var token_env = Environment.GetEnvironmentVariable("HASS_TOKEN");
+            if (token_env != null)
+                token = token_env;
+
             bool connected = await client.ConnectAsync(ip, port, false, token, true);
             if (!connected)
             {
@@ -87,8 +91,9 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             }
 
             //var test = await client.CallService("light", "toggle", new { entity_id = "light.tomas_rum" });
-            var tt = await client.SetState("sensor.csharp", "cool", new {daemon = true});
+            //var tt = await client.SetState("sensor.csharp", "cool", new {daemon = true});
 
+            var result = await client.SendEvent("test_event", new { data="hello" });
             while (true)
             {
                 try

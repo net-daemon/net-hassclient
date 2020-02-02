@@ -98,6 +98,14 @@ namespace JoySoftware.HomeAssistant.Client
         Task<HassEvent> ReadEventAsync();
 
         /// <summary>
+        ///     Sends custom event on Home Assistant eventbus
+        /// </summary>
+        /// <param name="eventId">Event identifier</param>
+        /// <param name="data">Data being sent with the event</param>
+        /// <returns></returns>
+        Task<bool> SendEvent(string eventId, object? data = null);
+
+        /// <summary>
         ///     Sets the state of an entity
         /// </summary>
         /// <param name="entityId">The id</param>
@@ -170,9 +178,9 @@ namespace JoySoftware.HomeAssistant.Client
         };
 
         /// <summary>
-        ///     Base url to the API (non socket)
+        ///     The http client used for post and get operations through the Home Assistant API
         /// </summary>
-        private string _apiUrl = "";
+        private readonly HttpClient _httpClient;
 
         /// <summary>
         ///     The logger to use
@@ -187,6 +195,10 @@ namespace JoySoftware.HomeAssistant.Client
 
         private readonly IClientWebSocketFactory _wsFactory;
 
+        /// <summary>
+        ///     Base url to the API (non socket)
+        /// </summary>
+        private string _apiUrl = "";
         private bool _disposed;
 
         /// <summary>
@@ -225,12 +237,6 @@ namespace JoySoftware.HomeAssistant.Client
         ///     The underlying currently connected socket or null if not connected
         /// </summary>
         private IClientWebSocket? _ws;
-
-        /// <summary>
-        ///     The http client used for post and get operations through the Home Assistant API
-        /// </summary>
-        private readonly HttpClient _httpClient;
-
         /// <summary>
         ///     Instance a new HassClient
         /// </summary>
@@ -527,6 +533,34 @@ namespace JoySoftware.HomeAssistant.Client
         /// <returns>Returns next event</returns>
         public async Task<HassEvent> ReadEventAsync() => await _eventChannel.Reader.ReadAsync(CancelSource.Token);
 
+        public async Task<bool> SendEvent(string eventId, object? data = null)
+        {
+            var apiUrl = $"{_apiUrl}/events/{HttpUtility.UrlEncode(eventId)}";
+            var content = "";
+
+            if (data != null)
+            {
+                content = JsonSerializer.Serialize<object>(data, _defaultSerializerOptions);
+            }
+            try
+            {
+                var result = await _httpClient.PostAsync(new Uri(apiUrl),
+                    new StringContent(content, Encoding.UTF8),
+                    CancelSource.Token);
+
+                if (result.IsSuccessStatusCode)
+                {
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to set state");
+            }
+            return false;
+        }
+
+  
         public async Task<HassState?> SetState(string entityId, string state, object? attributes)
         {
    

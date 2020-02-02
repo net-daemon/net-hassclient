@@ -106,6 +106,20 @@ namespace JoySoftware.HomeAssistant.Client
 
     #region -- Sending messages --
 
+    //public class EventCommand : CommandMessage
+    //{
+    //    public EventCommand() => Type = "event";
+    //    [JsonPropertyName("event")] public EventCommandDetail Event { get; set; }
+
+    //}
+
+    //public class EventCommandDetail
+    //{
+    //    [JsonPropertyName("data")] public dynamic? Data { get; set; } = null;
+    //    [JsonPropertyName("event_type")] public string EventType { get; set; }
+    //    [JsonPropertyName("time_fired")] public dynamic? Data { get; set; } = null;
+    //}
+
     public enum EventType
     {
         All = 0,
