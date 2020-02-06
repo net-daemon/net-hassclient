@@ -93,7 +93,8 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             //var test = await client.CallService("light", "toggle", new { entity_id = "light.tomas_rum" });
             //var tt = await client.SetState("sensor.csharp", "cool", new {daemon = true});
 
-            var result = await client.SendEvent("test_event", new { data="hello" });
+            //var result = await client.SendEvent("test_event", new { data="hello" });
+
             while (true)
             {
                 try
@@ -111,6 +112,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                     else if (eventMsg.EventType == "call_service")
                     {
                         var serviceMessage = eventMsg?.Data as HassServiceEventData;
+                        serviceMessage.ServiceData = null;
                         Console.WriteLine($"{serviceMessage.Service}: {serviceMessage.ServiceData}");
                     }
                     else

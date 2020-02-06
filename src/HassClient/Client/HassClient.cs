@@ -942,6 +942,7 @@ namespace JoySoftware.HomeAssistant.Client
                             _logger.LogError($"The command message {command} is not supported");
                             break;
                     }
+                    m.ResultElement = null;
                 }
                 else
                 {
