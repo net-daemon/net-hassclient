@@ -339,26 +339,37 @@ namespace JoySoftware.HomeAssistant.Client
                 _isClosing = true;
             }
 
-            _logger.LogTrace("Async close websocket");
-
-            // First do websocket close management
-            await DoNormalClosureOfWebSocket();
-            // Cancel all async stuff
-            CancelSource.Cancel();
-
-            // Wait for read and write tasks to complete max 5 seconds
-            if (_readMessagePumpTask != null && _writeMessagePumpTask != null)
+            try
             {
-                await Task.WhenAll(_readMessagePumpTask, _writeMessagePumpTask);
+                _logger.LogTrace("Async close websocket");
+
+                // First do websocket close management
+                await DoNormalClosureOfWebSocket();
+                // Cancel all async stuff
+                CancelSource.Cancel();
+
+                // Wait for read and write tasks to complete max 5 seconds
+                if (_readMessagePumpTask != null && _writeMessagePumpTask != null)
+                {
+                    await Task.WhenAll(_readMessagePumpTask, _writeMessagePumpTask);
+                }
             }
+            catch 
+            {
 
-            _ws.Dispose();
-            _ws = null;
+                throw;
+            }
+            finally
+            {
+                if (_ws != null)
+                    _ws.Dispose();
+                _ws = null;
 
-            CancelSource = new CancellationTokenSource();
+                CancelSource = new CancellationTokenSource();
 
-            _logger.LogTrace("Async close websocket done");
-            _isClosing = false;
+                _logger.LogTrace("Async close websocket done");
+                _isClosing = false;
+            }
         }
 
         /// <summary>
