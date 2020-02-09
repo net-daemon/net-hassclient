@@ -699,9 +699,11 @@ namespace HassClient.Unit.Tests
             Assert.Equal("light", serviceEvent.Domain);
             Assert.Equal("toggle", serviceEvent.Service!);
             Assert.Equal("light.tomas_rum", c?.GetString());
+            Assert.Equal("light.tomas_rum", serviceEvent.Data.entity_id);
+
         }
 
-   
+
         [Fact]
         public async Task SubscribeToEventsReturnsCorrectEvent()
         {

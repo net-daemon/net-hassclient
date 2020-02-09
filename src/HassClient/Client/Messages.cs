@@ -64,6 +64,8 @@ namespace JoySoftware.HomeAssistant.Client
         [JsonPropertyName("service")] public string Service { get; set; } = "";
 
         [JsonPropertyName("service_data")] public JsonElement? ServiceData { get; set; } = null;
+
+        public dynamic? Data { get; set; } = null;
     }
 
     public class HassState
@@ -275,6 +277,8 @@ namespace JoySoftware.HomeAssistant.Client
             else if (m.EventType == "call_service")
             {
                 m.Data = m.DataElement?.ToObject<HassServiceEventData>(options);
+                if (m.Data!=null)
+                    ((HassServiceEventData)m.Data).Data = ((HassServiceEventData)m.Data).ServiceData?.ToDynamic();
             }
             else
             {
