@@ -401,7 +401,7 @@ namespace JoySoftware.HomeAssistant.Client
 
             var httpScheme = (url.Scheme == "ws") ? "http" : "https";
 
-            if (url.Host == "supervisor" && url.Port == 0)
+            if (url.Host == "supervisor")
             {
                 // Todo: DO NOT HARD CODE URLs NOOB!
                 _apiUrl = "http://supervisor/core/api";
@@ -453,7 +453,7 @@ namespace JoySoftware.HomeAssistant.Client
                                 await GetStates(connectTokenSource);
                             }
 
-                            _logger.LogTrace($"Connected to websocket ({url})");
+                            _logger.LogTrace($"Connected to websocket ({url}) on host {url.Host} and the api ({_apiUrl})");
                             return true;
 
                         case "auth_invalid":
