@@ -5,24 +5,21 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": ".NET Core Launch (web)",
+            "name": ".NET Core Launch (console)",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/WS/bin/Debug/netcoreapp3.1/WS.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/src/WS",
-            "stopAtEntry": false,
-            "serverReadyAction": {
-                "action": "openExternally",
-                "pattern": "^\\s*Now listening on:\\s+(https?://\\S+)"
-            },
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            },
-            "sourceFileMap": {
-                "/Views": "${workspaceFolder}/src/WS"
-            }
+            "program": "${workspaceFolder}/console/HassClient.Performance.Tests/bin/Debug/netcoreapp3.1/HassClient.Performance.Tests.dll",
+            "args": [
+                "-c",
+                "--ip 192.168.1.7 ",
+                "--port 8123 ",
+                "--events true ",
+                "--token \"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiIzY2U4ZDdmMjg5NTc0MDY4YjA5Nzk2ZGMyZmNjYWI3NCIsImlhdCI6MTU3OTY3MTA2MywiZXhwIjoxODk1MDMxMDYzfQ.MuQTEYy9HDkV62GzY6fX9ECn_U8vFd5ffashw3sz_3M\""
+            ],
+            "cwd": "${workspaceFolder}/console/HassClient.Performance.Tests",
+            "console": "internalConsole",
+            "stopAtEntry": false
         },
         {
             "name": ".NET Core Attach",

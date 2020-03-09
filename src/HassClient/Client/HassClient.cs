@@ -401,9 +401,10 @@ namespace JoySoftware.HomeAssistant.Client
 
             var httpScheme = (url.Scheme == "ws") ? "http" : "https";
 
-            if (url.Host == "hassio" && url.Port == 0)
+            if (url.Host == "supervisor" && url.Port == 0)
             {
-                _apiUrl = "http://hassio/homeassistant/api";
+                // Todo: DO NOT HARD CODE URLs NOOB!
+                _apiUrl = "http://supervisor/core/api";
             }
             else
             {
