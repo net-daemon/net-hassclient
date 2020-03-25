@@ -1,7 +1,7 @@
 // For format details, see https://aka.ms/vscode-remote/devcontainer.json or the definition README at
 // https://github.com/microsoft/vscode-dev-containers/tree/master/containers/dotnetcore-latest
 {
-	"name": "C# (.NET Core Latest)",
+	"name": "NetHassClient",
 	"dockerFile": "Dockerfile",
 	// Use 'settings' to set *default* container specific settings.json values on container create.
 	// You can edit these settings after create using File > Preferences > Settings > Remote.
@@ -11,9 +11,9 @@
 	},
 	"postCreateCommand": "dotnet restore src/HassClient && dotnet restore tests/HassClient.Tests",
 	// Uncomment the next line if you want to publish any ports.
-	"appPort": [
-		5001
-	],
+	// "appPort": [
+	// 	5001
+	// ],
 	// Uncomment the next line to run commands after the container is created.
 	// "postCreateCommand": "dotnet restore",
 	// Uncomment the next line to use a non-root user. On Linux, this will prevent

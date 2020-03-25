@@ -7,7 +7,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.dotMemoryUnit.Kernel;
 using JoySoftware.HomeAssistant.Client;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -78,7 +77,7 @@ namespace HassClient.Unit.Tests
             // Get the connected hass client
             var hassClient = await mock.GetHassConnectedClient();
 
-            // Do not add a fake service call message result 
+            // Do not add a fake service call message result
 
             // ACT
             var callServiceTask = hassClient.CallService("light", "turn_on", new {entity_id = "light.tomas_rum"});
@@ -113,7 +112,7 @@ namespace HassClient.Unit.Tests
             // ACT
             var result = await hassClient.CallService("light", "turn_on", new {entity_id = "light.tomas_rum"});
 
-            // Assert 
+            // Assert
             Assert.True(result);
         }
 
@@ -142,7 +141,7 @@ namespace HassClient.Unit.Tests
             // ACT
             var result = await hassClient.CallService("light", "turn_on", new { entity_id = "light.tomas_rum" }, false);
 
-            // Assert 
+            // Assert
             Assert.True(result);
 
         }
@@ -533,7 +532,7 @@ namespace HassClient.Unit.Tests
 
             await mockHassClient.Object.ConnectAsync(new Uri("http://192.168.1.1"), "token", false);
 
-            mockHassClient.Setup(n => 
+            mockHassClient.Setup(n =>
                     n.SendCommandAndWaitForResponse(
                         It.IsAny<CommandMessage>(), It.IsAny<bool>()))
                     .Returns(
@@ -670,7 +669,7 @@ namespace HassClient.Unit.Tests
             mock.AddResponse(@"{""type"": ""auth_ok""}");
 
             await mockHassClient.Object.ConnectAsync(new Uri("http://192.168.1.1"), "token", false);
-            mockHassClient.Setup(n => n.SendMessage(It.IsAny<HassMessageBase>(), 
+            mockHassClient.Setup(n => n.SendMessage(It.IsAny<HassMessageBase>(),
                 It.IsAny<bool>())).Returns(false);
             // ACT AND ASSERT
 

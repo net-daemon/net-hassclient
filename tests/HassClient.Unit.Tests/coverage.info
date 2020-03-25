@@ -1,0 +1,1218 @@
+SF:/workspaces/net-hassclient/src/HassClient/Client/HassClient.cs
+FN:266,System.Collections.Concurrent.ConcurrentDictionary`2<System.String,JoySoftware.HomeAssistant.Client.HassState> JoySoftware.HomeAssistant.Client.HassClient::get_States()
+FNDA:20,System.Collections.Concurrent.ConcurrentDictionary`2<System.String,JoySoftware.HomeAssistant.Client.HassState> JoySoftware.HomeAssistant.Client.HassClient::get_States()
+DA:267,20
+FN:272,System.Int32 JoySoftware.HomeAssistant.Client.HassClient::get_SocketTimeout()
+FNDA:138,System.Int32 JoySoftware.HomeAssistant.Client.HassClient::get_SocketTimeout()
+DA:273,138
+FN:277,Microsoft.Extensions.Logging.ILoggerFactory JoySoftware.HomeAssistant.Client.HassClient::get__getDefaultLoggerFactory()
+FNDA:0,Microsoft.Extensions.Logging.ILoggerFactory JoySoftware.HomeAssistant.Client.HassClient::get__getDefaultLoggerFactory()
+DA:278,0
+DA:279,0
+DA:280,0
+DA:281,0
+DA:282,0
+DA:283,0
+DA:284,0
+BRDA:278,6,0,0
+BRDA:278,6,1,0
+FN:384,System.Threading.Tasks.Task`1<System.Boolean> JoySoftware.HomeAssistant.Client.HassClient::ConnectAsync(System.String,System.Int16,System.Boolean,System.String,System.Boolean)
+FNDA:2,System.Threading.Tasks.Task`1<System.Boolean> JoySoftware.HomeAssistant.Client.HassClient::ConnectAsync(System.String,System.Int16,System.Boolean,System.String,System.Boolean)
+DA:385,2
+BRDA:385,7,0,1
+BRDA:385,7,1,1
+FN:486,System.Void JoySoftware.HomeAssistant.Client.HassClient::Dispose()
+FNDA:0,System.Void JoySoftware.HomeAssistant.Client.HassClient::Dispose()
+DA:487,0
+DA:488,0
+DA:490,0
+DA:491,0
+FN:854,System.Boolean JoySoftware.HomeAssistant.Client.HassClient::SendMessage(JoySoftware.HomeAssistant.Client.HassMessageBase,System.Boolean)
+FNDA:74,System.Boolean JoySoftware.HomeAssistant.Client.HassClient::SendMessage(JoySoftware.HomeAssistant.Client.HassMessageBase,System.Boolean)
+DA:855,74
+DA:856,74
+DA:857,74
+DA:858,27
+DA:859,27
+DA:860,27
+DA:861,26
+DA:863,26
+DA:864,26
+DA:866,1
+DA:867,2
+DA:868,1
+DA:869,27
+DA:871,74
+DA:872,74
+BRDA:857,47,0,27
+BRDA:860,77,0,26
+BRDA:860,77,1,1
+BRDA:857,47,1,74
+FN:873,System.Void JoySoftware.HomeAssistant.Client.HassClient::Dispose(System.Boolean)
+FNDA:0,System.Void JoySoftware.HomeAssistant.Client.HassClient::Dispose(System.Boolean)
+DA:874,0
+DA:875,0
+DA:876,0
+DA:877,0
+DA:883,0
+DA:884,0
+DA:885,0
+DA:886,0
+DA:887,0
+DA:889,0
+DA:890,0
+BRDA:875,9,0,0
+BRDA:875,9,1,0
+BRDA:883,17,0,0
+BRDA:885,27,0,0
+BRDA:885,27,1,0
+BRDA:883,17,1,0
+FN:931,JoySoftware.HomeAssistant.Client.HassMessage JoySoftware.HomeAssistant.Client.HassClient::GetResultMessage(JoySoftware.HomeAssistant.Client.HassMessage)
+FNDA:23,JoySoftware.HomeAssistant.Client.HassMessage JoySoftware.HomeAssistant.Client.HassClient::GetResultMessage(JoySoftware.HomeAssistant.Client.HassMessage)
+DA:932,23
+DA:933,23
+DA:934,22
+DA:936,22
+DA:937,20
+DA:938,20
+DA:943,1
+DA:944,1
+DA:947,4
+DA:948,4
+DA:950,13
+DA:952,1
+DA:954,1
+DA:955,1
+DA:957,20
+DA:958,20
+DA:960,2
+DA:962,2
+DA:964,20
+DA:966,21
+DA:967,23
+BRDA:933,12,0,22
+BRDA:936,39,0,20
+BRDA:938,52,0,20
+BRDA:938,68,0,19
+BRDA:938,81,0,15
+BRDA:938,94,0,2
+BRDA:938,68,1,1
+BRDA:943,128,0,0
+BRDA:943,128,1,1
+BRDA:938,81,1,4
+BRDA:947,175,0,2
+BRDA:947,175,1,2
+BRDA:938,52,1,1
+BRDA:938,107,0,1
+BRDA:938,94,1,20
+BRDA:938,107,1,20
+BRDA:936,39,1,2
+BRDA:962,284,0,1
+BRDA:962,284,1,1
+BRDA:933,12,1,21
+FN:995,System.Void JoySoftware.HomeAssistant.Client.HassClient::InitStatesOnConnect(JoySoftware.HomeAssistant.Client.IClientWebSocket)
+FNDA:48,System.Void JoySoftware.HomeAssistant.Client.HassClient::InitStatesOnConnect(JoySoftware.HomeAssistant.Client.IClientWebSocket)
+DA:996,48
+DA:997,48
+DA:998,48
+DA:1000,48
+DA:1003,48
+DA:1004,48
+DA:1006,48
+DA:1007,48
+DA:1008,48
+DA:1009,48
+FN:244,System.Void JoySoftware.HomeAssistant.Client.HassClient::.ctor(Microsoft.Extensions.Logging.ILoggerFactory)
+FNDA:0,System.Void JoySoftware.HomeAssistant.Client.HassClient::.ctor(Microsoft.Extensions.Logging.ILoggerFactory)
+DA:245,0
+FN:133,System.Void JoySoftware.HomeAssistant.Client.HassClient::.ctor(Microsoft.Extensions.Logging.ILoggerFactory,JoySoftware.HomeAssistant.Client.IClientWebSocketFactory,System.Net.Http.HttpMessageHandler)
+FNDA:56,System.Void JoySoftware.HomeAssistant.Client.HassClient::.ctor(Microsoft.Extensions.Logging.ILoggerFactory,JoySoftware.HomeAssistant.Client.IClientWebSocketFactory,System.Net.Http.HttpMessageHandler)
+DA:134,56
+DA:161,56
+DA:162,56
+DA:168,56
+DA:169,56
+DA:175,56
+DA:176,56
+DA:177,56
+DA:178,56
+DA:193,56
+DA:194,56
+DA:201,56
+DA:207,56
+DA:218,56
+DA:224,56
+DA:253,56
+DA:254,56
+DA:255,56
+DA:256,56
+DA:257,56
+DA:258,56
+DA:260,56
+DA:261,56
+DA:262,56
+DA:268,56
+BRDA:255,183,0,0
+BRDA:255,183,1,56
+BRDA:256,193,0,0
+BRDA:256,193,1,56
+BRDA:257,204,0,51
+BRDA:257,204,1,5
+FN:303,System.Void JoySoftware.HomeAssistant.Client.HassClient/<CallService>d__32::MoveNext()
+FNDA:6,System.Void JoySoftware.HomeAssistant.Client.HassClient/<CallService>d__32::MoveNext()
+DA:304,6
+DA:306,6
+DA:307,6
+DA:308,6
+DA:309,6
+DA:310,6
+DA:311,6
+DA:312,6
+DA:313,2
+DA:315,3
+DA:316,3
+DA:317,3
+DA:318,1
+DA:319,1
+DA:322,2
+DA:324,4
+BRDA:304,17,0,6
+BRDA:307,101,0,4
+BRDA:304,17,1,4
+BRDA:307,101,1,6
+BRDA:317,248,0,1
+BRDA:317,248,1,2
+FN:329,System.Void JoySoftware.HomeAssistant.Client.HassClient/<CloseAsync>d__33::MoveNext()
+FNDA:2,System.Void JoySoftware.HomeAssistant.Client.HassClient/<CloseAsync>d__33::MoveNext()
+DA:330,2
+DA:331,2
+DA:332,2
+DA:333,2
+DA:334,0
+DA:336,0
+DA:339,2
+DA:340,2
+DA:343,2
+DA:344,2
+DA:347,2
+DA:349,2
+DA:352,2
+DA:353,2
+DA:354,2
+DA:355,2
+DA:356,2
+DA:357,0
+DA:358,0
+DA:360,0
+DA:363,2
+DA:364,2
+DA:365,2
+DA:366,2
+DA:368,2
+DA:370,2
+DA:371,2
+DA:372,2
+DA:373,2
+BRDA:333,65,0,2
+BRDA:333,65,1,0
+BRDA:333,86,0,0
+BRDA:333,86,1,2
+BRDA:340,143,0,4
+BRDA:340,149,0,2
+BRDA:340,143,1,1
+BRDA:352,317,0,2
+BRDA:352,317,1,0
+BRDA:352,340,0,2
+BRDA:340,149,1,2
+BRDA:352,340,1,2
+BRDA:360,490,0,2
+BRDA:364,511,0,2
+BRDA:364,511,1,2
+BRDA:360,490,1,5
+FN:395,System.Void JoySoftware.HomeAssistant.Client.HassClient/<ConnectAsync>d__35::MoveNext()
+FNDA:57,System.Void JoySoftware.HomeAssistant.Client.HassClient/<ConnectAsync>d__35::MoveNext()
+DA:396,57
+DA:397,57
+DA:398,1
+DA:399,1
+DA:402,56
+DA:404,56
+DA:405,0
+DA:407,0
+DA:408,0
+DA:410,56
+DA:411,56
+DA:412,56
+DA:416,56
+DA:417,1
+DA:418,1
+DA:422,55
+DA:423,55
+DA:424,55
+DA:425,55
+DA:426,55
+DA:427,55
+DA:430,55
+DA:431,55
+DA:432,54
+DA:435,54
+DA:436,54
+DA:438,54
+DA:440,54
+DA:441,48
+DA:443,48
+DA:446,48
+DA:448,47
+DA:451,45
+DA:452,1
+DA:453,1
+DA:454,1
+DA:456,45
+DA:457,45
+DA:460,1
+DA:461,1
+DA:464,1
+DA:465,1
+DA:469,6
+DA:472,6
+DA:474,2
+DA:475,2
+DA:476,2
+DA:477,2
+DA:478,2
+DA:480,2
+DA:481,55
+BRDA:397,33,0,1
+BRDA:397,33,1,56
+BRDA:402,74,0,3
+BRDA:402,74,1,53
+BRDA:404,116,0,0
+BRDA:404,116,1,56
+BRDA:416,212,0,1
+BRDA:416,212,1,55
+BRDA:422,244,0,55
+BRDA:422,244,1,156
+BRDA:427,353,0,55
+BRDA:431,378,0,1
+BRDA:431,378,1,54
+BRDA:427,353,1,155
+BRDA:432,422,0,54
+BRDA:432,422,1,155
+BRDA:435,468,0,54
+BRDA:435,468,1,52
+BRDA:440,639,0,48
+BRDA:435,468,2,48
+BRDA:448,831,0,47
+BRDA:448,856,0,2
+BRDA:448,856,1,45
+BRDA:451,890,0,1
+BRDA:435,468,3,1
+BRDA:451,890,1,45
+BRDA:448,870,1,1
+BRDA:448,831,1,1
+BRDA:448,870,0,1
+BRDA:440,639,1,6
+FN:495,System.Void JoySoftware.HomeAssistant.Client.HassClient/<GetConfig>d__37::MoveNext()
+FNDA:5,System.Void JoySoftware.HomeAssistant.Client.HassClient/<GetConfig>d__37::MoveNext()
+DA:496,5
+DA:497,5
+DA:499,5
+DA:500,5
+DA:502,3
+DA:503,3
+DA:504,2
+DA:505,2
+DA:508,1
+DA:509,2
+BRDA:497,48,0,4
+BRDA:497,48,1,5
+BRDA:499,163,0,2
+BRDA:499,163,1,3
+BRDA:503,212,0,2
+BRDA:503,212,1,1
+FN:516,System.Void JoySoftware.HomeAssistant.Client.HassClient/<PingAsync>d__38::MoveNext()
+FNDA:2,System.Void JoySoftware.HomeAssistant.Client.HassClient/<PingAsync>d__38::MoveNext()
+DA:517,2
+DA:518,2
+DA:521,2
+DA:522,2
+DA:525,2
+DA:526,2
+DA:527,2
+DA:528,2
+DA:529,1
+DA:530,1
+DA:531,1
+DA:533,0
+DA:534,0
+DA:535,3
+DA:537,1
+DA:538,2
+BRDA:518,34,0,2
+BRDA:518,34,1,3
+BRDA:521,80,0,3
+BRDA:521,80,1,3
+BRDA:521,88,0,2
+BRDA:526,114,0,2
+BRDA:528,169,0,1
+BRDA:521,88,1,1
+BRDA:528,169,1,2
+BRDA:529,296,0,1
+BRDA:529,296,1,0
+BRDA:526,114,1,0
+FN:545,System.Void JoySoftware.HomeAssistant.Client.HassClient/<ReadEventAsync>d__39::MoveNext()
+FNDA:16,System.Void JoySoftware.HomeAssistant.Client.HassClient/<ReadEventAsync>d__39::MoveNext()
+DA:546,16
+BRDA:546,67,0,16
+BRDA:546,67,1,16
+FN:548,System.Void JoySoftware.HomeAssistant.Client.HassClient/<SendEvent>d__40::MoveNext()
+FNDA:3,System.Void JoySoftware.HomeAssistant.Client.HassClient/<SendEvent>d__40::MoveNext()
+DA:549,3
+DA:550,3
+DA:551,3
+DA:553,3
+DA:554,2
+DA:555,2
+DA:556,2
+DA:558,3
+DA:559,3
+DA:560,3
+DA:561,3
+DA:563,3
+DA:564,2
+DA:565,2
+DA:567,1
+DA:568,0
+DA:569,0
+DA:570,0
+DA:571,0
+DA:572,1
+DA:573,3
+BRDA:553,75,0,2
+BRDA:553,75,1,3
+BRDA:556,109,0,3
+BRDA:556,109,1,0
+BRDA:563,305,0,2
+BRDA:563,305,1,1
+FN:576,System.Void JoySoftware.HomeAssistant.Client.HassClient/<SetState>d__41::MoveNext()
+FNDA:2,System.Void JoySoftware.HomeAssistant.Client.HassClient/<SetState>d__41::MoveNext()
+DA:577,2
+DA:579,2
+DA:580,2
+DA:581,2
+DA:582,2
+DA:583,2
+DA:584,2
+DA:585,2
+DA:588,2
+DA:589,2
+DA:590,2
+DA:591,2
+DA:593,2
+DA:594,1
+DA:595,1
+DA:596,1
+DA:598,1
+DA:600,1
+DA:601,0
+DA:602,0
+DA:603,0
+DA:604,0
+DA:605,1
+DA:606,2
+BRDA:580,95,0,2
+BRDA:580,95,1,0
+BRDA:593,315,0,1
+BRDA:580,95,2,0
+BRDA:595,485,0,0
+BRDA:580,95,3,0
+BRDA:595,485,1,1
+BRDA:593,315,1,1
+FN:608,System.Void JoySoftware.HomeAssistant.Client.HassClient/<SubscribeToEvents>d__42::MoveNext()
+FNDA:13,System.Void JoySoftware.HomeAssistant.Client.HassClient/<SubscribeToEvents>d__42::MoveNext()
+DA:609,13
+DA:610,13
+DA:612,13
+DA:613,9
+DA:614,9
+DA:617,1
+DA:618,1
+DA:620,1
+DA:621,1
+DA:623,1
+DA:624,1
+DA:626,1
+DA:627,1
+DA:629,1
+DA:630,1
+DA:632,1
+DA:633,1
+DA:635,1
+DA:636,1
+DA:638,1
+DA:639,1
+DA:641,9
+DA:643,13
+DA:644,13
+DA:645,13
+BRDA:612,40,0,9
+BRDA:614,72,1,1
+BRDA:614,72,2,1
+BRDA:614,72,3,1
+BRDA:614,72,5,1
+BRDA:614,72,6,1
+BRDA:614,72,7,1
+BRDA:614,72,8,1
+BRDA:614,72,9,1
+BRDA:614,72,0,9
+BRDA:614,72,4,9
+BRDA:612,40,1,13
+BRDA:643,310,0,13
+BRDA:643,310,1,13
+FN:670,System.Void JoySoftware.HomeAssistant.Client.HassClient/<>c__DisplayClass43_0/<<ProcessNextMessage>g__ReadFromClientSocket|0>d::MoveNext()
+FNDA:182,System.Void JoySoftware.HomeAssistant.Client.HassClient/<>c__DisplayClass43_0/<<ProcessNextMessage>g__ReadFromClientSocket|0>d::MoveNext()
+DA:671,182
+DA:673,182
+DA:674,184
+DA:675,184
+DA:676,184
+DA:679,184
+DA:681,136
+DA:682,0
+DA:685,0
+DA:686,0
+DA:689,0
+DA:690,0
+DA:692,0
+DA:694,0
+DA:695,0
+DA:696,0
+DA:697,0
+DA:699,0
+DA:703,136
+DA:705,136
+DA:707,136
+DA:708,134
+DA:710,134
+DA:711,134
+DA:713,2
+DA:714,134
+DA:715,3
+DA:716,3
+DA:718,3
+DA:720,0
+DA:721,0
+DA:724,0
+DA:725,0
+DA:726,1
+DA:727,1
+DA:728,1
+DA:731,1
+DA:732,1
+DA:734,134
+BRDA:671,9,0,182
+BRDA:671,9,1,225
+BRDA:671,18,0,182
+BRDA:674,950,1,184
+BRDA:679,159,0,87
+BRDA:671,18,1,43
+BRDA:679,159,1,139
+BRDA:681,277,0,136
+BRDA:681,277,1,0
+BRDA:681,300,0,0
+BRDA:685,326,0,0
+BRDA:685,326,1,0
+BRDA:694,419,0,0
+BRDA:671,18,2,0
+BRDA:694,419,1,0
+BRDA:681,300,1,136
+BRDA:705,614,0,0
+BRDA:671,18,3,0
+BRDA:705,614,1,136
+BRDA:707,708,0,134
+BRDA:710,751,0,0
+BRDA:671,18,4,0
+BRDA:710,751,1,134
+BRDA:707,708,1,2
+BRDA:674,873,0,184
+BRDA:674,905,0,184
+BRDA:674,905,1,0
+BRDA:674,873,1,0
+BRDA:674,950,0,134
+FN:737,System.Void JoySoftware.HomeAssistant.Client.HassClient/<>c__DisplayClass43_0/<<ProcessNextMessage>g__WriteMessagesToChannel|1>d::MoveNext()
+FNDA:182,System.Void JoySoftware.HomeAssistant.Client.HassClient/<>c__DisplayClass43_0/<<ProcessNextMessage>g__WriteMessagesToChannel|1>d::MoveNext()
+DA:738,182
+DA:740,182
+DA:742,182
+DA:743,182
+DA:744,134
+DA:745,134
+DA:748,16
+DA:749,16
+DA:750,16
+DA:751,16
+DA:753,16
+DA:760,94
+DA:761,94
+DA:763,23
+DA:764,23
+DA:765,22
+DA:766,23
+DA:768,1
+DA:769,1
+DA:771,134
+DA:772,4
+DA:773,4
+DA:775,4
+DA:776,0
+DA:777,0
+DA:781,0
+DA:786,0
+DA:788,0
+DA:789,0
+DA:790,138
+BRDA:738,9,0,182
+BRDA:738,15,0,182
+BRDA:738,9,1,315
+BRDA:738,36,0,182
+BRDA:738,42,0,182
+BRDA:742,114,0,177
+BRDA:738,36,1,133
+BRDA:742,114,1,138
+BRDA:744,255,0,0
+BRDA:738,42,1,0
+BRDA:744,255,1,134
+BRDA:745,361,0,134
+BRDA:745,390,0,115
+BRDA:745,399,0,23
+BRDA:745,408,0,0
+BRDA:745,399,1,92
+BRDA:745,439,0,45
+BRDA:745,390,1,19
+BRDA:745,464,0,3
+BRDA:745,473,0,2
+BRDA:745,464,1,16
+BRDA:745,501,0,16
+BRDA:745,512,1,16
+BRDA:745,439,1,47
+BRDA:745,450,1,45
+BRDA:745,487,1,1
+BRDA:745,501,1,0
+BRDA:745,422,1,0
+BRDA:745,473,1,1
+BRDA:745,408,1,23
+BRDA:745,531,1,16
+BRDA:748,701,0,16
+BRDA:745,553,1,94
+BRDA:745,575,1,94
+BRDA:745,597,1,94
+BRDA:745,619,1,94
+BRDA:745,638,1,94
+BRDA:745,657,1,94
+BRDA:745,676,1,23
+BRDA:764,827,0,22
+BRDA:745,361,1,1
+BRDA:745,422,0,1
+BRDA:745,450,0,1
+BRDA:745,487,0,1
+BRDA:745,512,0,1
+BRDA:745,531,0,1
+BRDA:745,553,0,1
+BRDA:745,575,0,1
+BRDA:745,597,0,1
+BRDA:745,619,0,1
+BRDA:745,638,0,1
+BRDA:745,657,0,1
+BRDA:745,676,0,1
+BRDA:748,701,1,134
+BRDA:764,827,1,134
+BRDA:776,978,1,0
+BRDA:786,1078,0,0
+BRDA:738,15,1,0
+BRDA:786,1078,1,0
+BRDA:776,978,0,138
+FN:655,System.Void JoySoftware.HomeAssistant.Client.HassClient/<ProcessNextMessage>d__43::MoveNext()
+FNDA:182,System.Void JoySoftware.HomeAssistant.Client.HassClient/<ProcessNextMessage>d__43::MoveNext()
+DA:656,182
+DA:657,182
+DA:659,182
+DA:661,182
+DA:662,182
+DA:664,182
+DA:665,182
+DA:666,182
+DA:667,182
+DA:791,134
+BRDA:659,77,0,182
+BRDA:659,77,1,320
+BRDA:661,133,0,182
+BRDA:661,133,1,138
+FN:793,System.Void JoySoftware.HomeAssistant.Client.HassClient/<SendCommandAndWaitForResponse>d__44::MoveNext()
+FNDA:23,System.Void JoySoftware.HomeAssistant.Client.HassClient/<SendCommandAndWaitForResponse>d__44::MoveNext()
+DA:794,23
+DA:795,23
+DA:798,23
+DA:799,23
+DA:802,23
+DA:803,23
+DA:804,1
+DA:806,22
+DA:807,1
+DA:809,25
+DA:810,25
+DA:811,25
+DA:812,22
+DA:813,18
+DA:814,18
+DA:815,1
+DA:816,1
+DA:817,1
+DA:819,18
+DA:823,4
+DA:825,4
+DA:826,0
+DA:827,0
+DA:832,4
+DA:833,4
+DA:835,3
+DA:836,3
+DA:837,3
+DA:838,3
+DA:840,1
+DA:841,1
+DA:842,1
+DA:843,1
+DA:844,1
+DA:846,19
+BRDA:795,41,0,23
+BRDA:795,41,1,48
+BRDA:798,88,0,48
+BRDA:798,88,1,48
+BRDA:798,96,0,27
+BRDA:798,102,0,23
+BRDA:803,145,0,1
+BRDA:803,145,1,22
+BRDA:806,190,0,1
+BRDA:811,272,0,21
+BRDA:798,96,1,21
+BRDA:811,272,1,25
+BRDA:812,404,0,18
+BRDA:814,431,0,18
+BRDA:814,431,1,0
+BRDA:814,478,0,1
+BRDA:814,478,1,18
+BRDA:812,404,1,4
+BRDA:825,599,0,0
+BRDA:825,599,1,4
+BRDA:798,102,1,4
+BRDA:806,190,1,25
+FN:901,System.Void JoySoftware.HomeAssistant.Client.HassClient/<DoNormalClosureOfWebSocket>d__47::MoveNext()
+FNDA:2,System.Void JoySoftware.HomeAssistant.Client.HassClient/<DoNormalClosureOfWebSocket>d__47::MoveNext()
+DA:902,2
+DA:903,2
+DA:905,2
+DA:907,2
+DA:908,2
+DA:909,2
+DA:910,2
+DA:912,2
+DA:913,2
+DA:914,1
+DA:915,1
+DA:916,1
+DA:918,1
+DA:919,1
+DA:920,2
+DA:926,2
+BRDA:905,60,0,2
+BRDA:907,77,0,2
+BRDA:907,96,0,2
+BRDA:907,96,1,0
+BRDA:907,77,1,0
+BRDA:907,125,0,2
+BRDA:905,60,1,3
+BRDA:910,133,0,2
+BRDA:910,133,1,1
+BRDA:907,125,1,2
+FN:969,System.Void JoySoftware.HomeAssistant.Client.HassClient/<GetStates>d__49::MoveNext()
+FNDA:1,System.Void JoySoftware.HomeAssistant.Client.HassClient/<GetStates>d__49::MoveNext()
+DA:970,1
+DA:971,1
+DA:972,1
+DA:973,1
+DA:974,1
+DA:975,41
+DA:976,19
+DA:977,19
+DA:978,19
+DA:979,1
+DA:980,1
+BRDA:972,81,0,1
+BRDA:972,81,1,1
+BRDA:973,189,0,0
+BRDA:973,189,1,1
+BRDA:973,228,0,1
+BRDA:975,325,1,19
+BRDA:975,325,0,1
+BRDA:973,228,1,1
+FN:983,System.Void JoySoftware.HomeAssistant.Client.HassClient/<HandleConnectAndAuthenticate>d__50::MoveNext()
+FNDA:48,System.Void JoySoftware.HomeAssistant.Client.HassClient/<HandleConnectAndAuthenticate>d__50::MoveNext()
+DA:984,48
+DA:985,48
+DA:986,47
+DA:987,47
+DA:988,47
+DA:989,47
+DA:990,47
+DA:992,47
+DA:993,47
+BRDA:984,14,0,48
+BRDA:985,74,0,48
+BRDA:985,74,1,48
+BRDA:986,201,0,47
+BRDA:989,287,0,32
+BRDA:984,14,1,32
+BRDA:989,287,1,47
+BRDA:986,201,1,47
+FN:1013,System.Void JoySoftware.HomeAssistant.Client.HassClient/<ReadMessagePump>d__52::MoveNext()
+FNDA:48,System.Void JoySoftware.HomeAssistant.Client.HassClient/<ReadMessagePump>d__52::MoveNext()
+DA:1014,48
+DA:1015,48
+DA:1018,182
+DA:1019,182
+DA:1021,182
+DA:1022,182
+DA:1023,134
+DA:1024,3
+DA:1025,3
+DA:1027,3
+DA:1031,134
+DA:1033,3
+DA:1034,3
+BRDA:1018,230,1,182
+BRDA:1019,47,0,182
+BRDA:1019,47,1,138
+BRDA:1018,174,0,182
+BRDA:1018,192,0,182
+BRDA:1018,192,1,0
+BRDA:1018,174,1,0
+BRDA:1018,230,0,3
+FN:1035,System.Void JoySoftware.HomeAssistant.Client.HassClient/<WriteMessagePump>d__53::MoveNext()
+FNDA:48,System.Void JoySoftware.HomeAssistant.Client.HassClient/<WriteMessagePump>d__53::MoveNext()
+DA:1036,48
+DA:1037,48
+DA:1039,122
+DA:1040,121
+DA:1042,121
+DA:1043,121
+DA:1044,74
+DA:1045,74
+DA:1047,74
+DA:1048,74
+DA:1049,2
+DA:1050,2
+DA:1052,2
+DA:1054,74
+DA:1056,3
+DA:1057,3
+BRDA:1039,491,1,121
+BRDA:1040,51,0,121
+BRDA:1040,57,0,121
+BRDA:1043,122,0,106
+BRDA:1040,51,1,61
+BRDA:1043,122,1,76
+BRDA:1040,57,1,0
+BRDA:1039,433,0,122
+BRDA:1039,451,0,121
+BRDA:1039,451,1,1
+BRDA:1039,433,1,0
+BRDA:1039,491,0,3
+LF:469
+LH:405
+BRF:301
+BRH:248
+FNF:29
+FNH:25
+end_of_record
+SF:/workspaces/net-hassclient/src/HassClient/Client/HassWebSocket.cs
+FN:45,JoySoftware.HomeAssistant.Client.IClientWebSocket JoySoftware.HomeAssistant.Client.ClientWebSocketFactory::New()
+FNDA:0,JoySoftware.HomeAssistant.Client.IClientWebSocket JoySoftware.HomeAssistant.Client.ClientWebSocketFactory::New()
+DA:46,0
+FN:52,System.Net.WebSockets.WebSocketState JoySoftware.HomeAssistant.Client.HassWebSocket::get_State()
+FNDA:0,System.Net.WebSockets.WebSocketState JoySoftware.HomeAssistant.Client.HassWebSocket::get_State()
+DA:53,0
+FN:54,System.Nullable`1<System.Net.WebSockets.WebSocketCloseStatus> JoySoftware.HomeAssistant.Client.HassWebSocket::get_CloseStatus()
+FNDA:0,System.Nullable`1<System.Net.WebSockets.WebSocketCloseStatus> JoySoftware.HomeAssistant.Client.HassWebSocket::get_CloseStatus()
+DA:55,0
+FN:86,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket::Dispose(System.Boolean)
+FNDA:0,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket::Dispose(System.Boolean)
+DA:87,0
+DA:88,0
+DA:89,0
+DA:90,0
+DA:91,0
+DA:92,0
+DA:93,0
+DA:98,0
+DA:99,0
+DA:100,0
+BRDA:88,12,0,0
+BRDA:90,18,0,0
+BRDA:90,18,1,0
+BRDA:88,12,1,0
+FN:103,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket::Dispose()
+FNDA:0,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket::Dispose()
+DA:104,0
+DA:106,0
+DA:109,0
+FN:50,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket::.ctor()
+FNDA:0,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket::.ctor()
+DA:51,0
+FN:56,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket/<ConnectAsync>d__5::MoveNext()
+FNDA:0,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket/<ConnectAsync>d__5::MoveNext()
+DA:57,0
+FN:60,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket/<CloseAsync>d__6::MoveNext()
+FNDA:0,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket/<CloseAsync>d__6::MoveNext()
+DA:61,0
+FN:64,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket/<CloseOutputAsync>d__7::MoveNext()
+FNDA:0,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket/<CloseOutputAsync>d__7::MoveNext()
+DA:65,0
+FN:68,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket/<SendAsync>d__8::MoveNext()
+FNDA:0,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket/<SendAsync>d__8::MoveNext()
+DA:69,0
+FN:72,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket/<SendAsync>d__9::MoveNext()
+FNDA:0,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket/<SendAsync>d__9::MoveNext()
+DA:73,0
+FN:76,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket/<ReceiveAsync>d__10::MoveNext()
+FNDA:0,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket/<ReceiveAsync>d__10::MoveNext()
+DA:77,0
+FN:79,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket/<ReceiveAsync>d__11::MoveNext()
+FNDA:0,System.Void JoySoftware.HomeAssistant.Client.HassWebSocket/<ReceiveAsync>d__11::MoveNext()
+DA:80,0
+BRDA:80,58,0,0
+BRDA:80,58,1,0
+LF:24
+LH:0
+BRF:6
+BRH:0
+FNF:13
+FNH:0
+end_of_record
+SF:/workspaces/net-hassclient/src/HassClient/Client/Messages.cs
+FN:12,System.String JoySoftware.HomeAssistant.Client.HassMessageBase::get_Type()
+FNDA:854,System.String JoySoftware.HomeAssistant.Client.HassMessageBase::get_Type()
+DA:13,854
+FN:19,System.Collections.Generic.List`1<System.String> JoySoftware.HomeAssistant.Client.HassConfig::get_Components()
+FNDA:175,System.Collections.Generic.List`1<System.String> JoySoftware.HomeAssistant.Client.HassConfig::get_Components()
+DA:20,175
+FN:20,System.String JoySoftware.HomeAssistant.Client.HassConfig::get_ConfigDir()
+FNDA:5,System.String JoySoftware.HomeAssistant.Client.HassConfig::get_ConfigDir()
+DA:21,5
+FN:21,System.Nullable`1<System.Int32> JoySoftware.HomeAssistant.Client.HassConfig::get_Elevation()
+FNDA:5,System.Nullable`1<System.Int32> JoySoftware.HomeAssistant.Client.HassConfig::get_Elevation()
+DA:22,5
+FN:22,System.Nullable`1<System.Single> JoySoftware.HomeAssistant.Client.HassConfig::get_Latitude()
+FNDA:5,System.Nullable`1<System.Single> JoySoftware.HomeAssistant.Client.HassConfig::get_Latitude()
+DA:23,5
+FN:24,System.String JoySoftware.HomeAssistant.Client.HassConfig::get_LocationName()
+FNDA:5,System.String JoySoftware.HomeAssistant.Client.HassConfig::get_LocationName()
+DA:25,5
+FN:25,System.Nullable`1<System.Single> JoySoftware.HomeAssistant.Client.HassConfig::get_Longitude()
+FNDA:5,System.Nullable`1<System.Single> JoySoftware.HomeAssistant.Client.HassConfig::get_Longitude()
+DA:26,5
+FN:26,System.String JoySoftware.HomeAssistant.Client.HassConfig::get_TimeZone()
+FNDA:5,System.String JoySoftware.HomeAssistant.Client.HassConfig::get_TimeZone()
+DA:27,5
+FN:27,JoySoftware.HomeAssistant.Client.HassUnitSystem JoySoftware.HomeAssistant.Client.HassConfig::get_UnitSystem()
+FNDA:8,JoySoftware.HomeAssistant.Client.HassUnitSystem JoySoftware.HomeAssistant.Client.HassConfig::get_UnitSystem()
+DA:28,8
+FN:28,System.String JoySoftware.HomeAssistant.Client.HassConfig::get_Version()
+FNDA:5,System.String JoySoftware.HomeAssistant.Client.HassConfig::get_Version()
+DA:29,5
+FN:31,System.Collections.Generic.List`1<System.String> JoySoftware.HomeAssistant.Client.HassConfig::get_WhitelistExternalDirs()
+FNDA:7,System.Collections.Generic.List`1<System.String> JoySoftware.HomeAssistant.Client.HassConfig::get_WhitelistExternalDirs()
+DA:32,7
+FN:36,System.Object JoySoftware.HomeAssistant.Client.HassEvent::get_Data()
+FNDA:25,System.Object JoySoftware.HomeAssistant.Client.HassEvent::get_Data()
+DA:37,25
+FN:37,System.Nullable`1<System.Text.Json.JsonElement> JoySoftware.HomeAssistant.Client.HassEvent::get_DataElement()
+FNDA:65,System.Nullable`1<System.Text.Json.JsonElement> JoySoftware.HomeAssistant.Client.HassEvent::get_DataElement()
+DA:38,65
+FN:38,System.String JoySoftware.HomeAssistant.Client.HassEvent::get_EventType()
+FNDA:51,System.String JoySoftware.HomeAssistant.Client.HassEvent::get_EventType()
+DA:39,51
+FN:40,System.String JoySoftware.HomeAssistant.Client.HassEvent::get_Origin()
+FNDA:34,System.String JoySoftware.HomeAssistant.Client.HassEvent::get_Origin()
+DA:41,34
+FN:42,System.Nullable`1<System.DateTime> JoySoftware.HomeAssistant.Client.HassEvent::get_TimeFired()
+FNDA:34,System.Nullable`1<System.DateTime> JoySoftware.HomeAssistant.Client.HassEvent::get_TimeFired()
+DA:43,34
+FN:49,JoySoftware.HomeAssistant.Client.HassEvent JoySoftware.HomeAssistant.Client.HassMessage::get_Event()
+FNDA:50,JoySoftware.HomeAssistant.Client.HassEvent JoySoftware.HomeAssistant.Client.HassMessage::get_Event()
+DA:50,50
+FN:51,System.Int32 JoySoftware.HomeAssistant.Client.HassMessage::get_Id()
+FNDA:246,System.Int32 JoySoftware.HomeAssistant.Client.HassMessage::get_Id()
+DA:52,246
+FN:53,System.String JoySoftware.HomeAssistant.Client.HassMessage::get_Message()
+FNDA:0,System.String JoySoftware.HomeAssistant.Client.HassMessage::get_Message()
+DA:54,0
+FN:55,System.Object JoySoftware.HomeAssistant.Client.HassMessage::get_Result()
+FNDA:13,System.Object JoySoftware.HomeAssistant.Client.HassMessage::get_Result()
+DA:56,13
+FN:56,System.Nullable`1<System.Text.Json.JsonElement> JoySoftware.HomeAssistant.Client.HassMessage::get_ResultElement()
+FNDA:183,System.Nullable`1<System.Text.Json.JsonElement> JoySoftware.HomeAssistant.Client.HassMessage::get_ResultElement()
+DA:57,183
+FN:57,System.Nullable`1<System.Boolean> JoySoftware.HomeAssistant.Client.HassMessage::get_Success()
+FNDA:58,System.Nullable`1<System.Boolean> JoySoftware.HomeAssistant.Client.HassMessage::get_Success()
+DA:58,58
+FN:61,System.String JoySoftware.HomeAssistant.Client.HassServiceEventData::get_Domain()
+FNDA:3,System.String JoySoftware.HomeAssistant.Client.HassServiceEventData::get_Domain()
+DA:62,3
+FN:63,System.String JoySoftware.HomeAssistant.Client.HassServiceEventData::get_Service()
+FNDA:3,System.String JoySoftware.HomeAssistant.Client.HassServiceEventData::get_Service()
+DA:64,3
+FN:65,System.Nullable`1<System.Text.Json.JsonElement> JoySoftware.HomeAssistant.Client.HassServiceEventData::get_ServiceData()
+FNDA:4,System.Nullable`1<System.Text.Json.JsonElement> JoySoftware.HomeAssistant.Client.HassServiceEventData::get_ServiceData()
+DA:66,4
+FN:67,System.Object JoySoftware.HomeAssistant.Client.HassServiceEventData::get_Data()
+FNDA:3,System.Object JoySoftware.HomeAssistant.Client.HassServiceEventData::get_Data()
+DA:68,3
+FN:72,System.Collections.Generic.Dictionary`2<System.String,System.Object> JoySoftware.HomeAssistant.Client.HassState::get_Attributes()
+FNDA:310,System.Collections.Generic.Dictionary`2<System.String,System.Object> JoySoftware.HomeAssistant.Client.HassState::get_Attributes()
+DA:73,310
+FN:73,System.String JoySoftware.HomeAssistant.Client.HassState::get_EntityId()
+FNDA:116,System.String JoySoftware.HomeAssistant.Client.HassState::get_EntityId()
+DA:74,116
+FN:75,System.DateTime JoySoftware.HomeAssistant.Client.HassState::get_LastChanged()
+FNDA:96,System.DateTime JoySoftware.HomeAssistant.Client.HassState::get_LastChanged()
+DA:76,96
+FN:76,System.DateTime JoySoftware.HomeAssistant.Client.HassState::get_LastUpdated()
+FNDA:0,System.DateTime JoySoftware.HomeAssistant.Client.HassState::get_LastUpdated()
+DA:77,0
+FN:77,System.Object JoySoftware.HomeAssistant.Client.HassState::get_State()
+FNDA:195,System.Object JoySoftware.HomeAssistant.Client.HassState::get_State()
+DA:78,195
+FN:82,System.String JoySoftware.HomeAssistant.Client.HassStateChangedEventData::get_EntityId()
+FNDA:29,System.String JoySoftware.HomeAssistant.Client.HassStateChangedEventData::get_EntityId()
+DA:83,29
+FN:86,JoySoftware.HomeAssistant.Client.HassState JoySoftware.HomeAssistant.Client.HassStateChangedEventData::get_NewState()
+FNDA:32,JoySoftware.HomeAssistant.Client.HassState JoySoftware.HomeAssistant.Client.HassStateChangedEventData::get_NewState()
+DA:87,32
+FN:90,JoySoftware.HomeAssistant.Client.HassState JoySoftware.HomeAssistant.Client.HassStateChangedEventData::get_OldState()
+FNDA:37,JoySoftware.HomeAssistant.Client.HassState JoySoftware.HomeAssistant.Client.HassStateChangedEventData::get_OldState()
+DA:91,37
+FN:97,System.String JoySoftware.HomeAssistant.Client.HassUnitSystem::get_Length()
+FNDA:5,System.String JoySoftware.HomeAssistant.Client.HassUnitSystem::get_Length()
+DA:98,5
+FN:99,System.String JoySoftware.HomeAssistant.Client.HassUnitSystem::get_Mass()
+FNDA:5,System.String JoySoftware.HomeAssistant.Client.HassUnitSystem::get_Mass()
+DA:100,5
+FN:101,System.String JoySoftware.HomeAssistant.Client.HassUnitSystem::get_Temperature()
+FNDA:5,System.String JoySoftware.HomeAssistant.Client.HassUnitSystem::get_Temperature()
+DA:102,5
+FN:103,System.String JoySoftware.HomeAssistant.Client.HassUnitSystem::get_Volume()
+FNDA:5,System.String JoySoftware.HomeAssistant.Client.HassUnitSystem::get_Volume()
+DA:104,5
+FN:128,System.String JoySoftware.HomeAssistant.Client.CallServiceCommand::get_Domain()
+FNDA:17,System.String JoySoftware.HomeAssistant.Client.CallServiceCommand::get_Domain()
+DA:129,17
+FN:130,System.String JoySoftware.HomeAssistant.Client.CallServiceCommand::get_Service()
+FNDA:17,System.String JoySoftware.HomeAssistant.Client.CallServiceCommand::get_Service()
+DA:131,17
+FN:132,System.Object JoySoftware.HomeAssistant.Client.CallServiceCommand::get_ServiceData()
+FNDA:17,System.Object JoySoftware.HomeAssistant.Client.CallServiceCommand::get_ServiceData()
+DA:133,17
+FN:126,System.Void JoySoftware.HomeAssistant.Client.CallServiceCommand::.ctor()
+FNDA:12,System.Void JoySoftware.HomeAssistant.Client.CallServiceCommand::.ctor()
+DA:127,12
+FN:137,System.Int32 JoySoftware.HomeAssistant.Client.CommandMessage::get_Id()
+FNDA:105,System.Int32 JoySoftware.HomeAssistant.Client.CommandMessage::get_Id()
+DA:138,105
+FN:142,System.Void JoySoftware.HomeAssistant.Client.GetConfigCommand::.ctor()
+FNDA:10,System.Void JoySoftware.HomeAssistant.Client.GetConfigCommand::.ctor()
+DA:143,10
+FN:147,System.Void JoySoftware.HomeAssistant.Client.GetStatesCommand::.ctor()
+FNDA:2,System.Void JoySoftware.HomeAssistant.Client.GetStatesCommand::.ctor()
+DA:148,2
+FN:154,System.String JoySoftware.HomeAssistant.Client.HassAuthMessage::get_AccessToken()
+FNDA:141,System.String JoySoftware.HomeAssistant.Client.HassAuthMessage::get_AccessToken()
+DA:155,141
+FN:152,System.Void JoySoftware.HomeAssistant.Client.HassAuthMessage::.ctor()
+FNDA:94,System.Void JoySoftware.HomeAssistant.Client.HassAuthMessage::.ctor()
+DA:153,94
+FN:158,System.Void JoySoftware.HomeAssistant.Client.HassPingCommand::.ctor()
+FNDA:4,System.Void JoySoftware.HomeAssistant.Client.HassPingCommand::.ctor()
+DA:159,4
+FN:164,System.String JoySoftware.HomeAssistant.Client.SubscribeEventCommand::get_EventType()
+FNDA:34,System.String JoySoftware.HomeAssistant.Client.SubscribeEventCommand::get_EventType()
+DA:165,34
+FN:162,System.Void JoySoftware.HomeAssistant.Client.SubscribeEventCommand::.ctor()
+FNDA:26,System.Void JoySoftware.HomeAssistant.Client.SubscribeEventCommand::.ctor()
+DA:163,26
+FN:173,System.Object JoySoftware.HomeAssistant.Client.JsonExtensions::ParseDataType(System.String)
+FNDA:47,System.Object JoySoftware.HomeAssistant.Client.JsonExtensions::ParseDataType(System.String)
+DA:174,47
+DA:175,47
+DA:176,2
+DA:178,45
+DA:179,2
+DA:181,43
+DA:182,47
+BRDA:175,18,0,2
+BRDA:175,18,1,45
+BRDA:178,48,0,2
+BRDA:178,48,1,43
+FN:184,System.Object JoySoftware.HomeAssistant.Client.JsonExtensions::ToDynamic(System.Text.Json.JsonElement)
+FNDA:12,System.Object JoySoftware.HomeAssistant.Client.JsonExtensions::ToDynamic(System.Text.Json.JsonElement)
+DA:185,12
+DA:186,12
+DA:187,12
+DA:189,12
+DA:190,3
+DA:191,17
+DA:192,4
+DA:193,4
+DA:194,4
+DA:195,4
+DA:196,3
+DA:197,9
+DA:198,1
+DA:199,1
+DA:200,15
+DA:201,6
+DA:202,6
+DA:203,6
+DA:205,1
+DA:206,1
+DA:208,8
+DA:209,8
+DA:210,8
+DA:211,8
+DA:212,8
+DA:214,12
+DA:215,12
+BRDA:187,12,1,1
+BRDA:187,12,0,12
+BRDA:189,86,0,3
+BRDA:191,162,1,4
+BRDA:191,162,0,3
+BRDA:189,86,1,9
+BRDA:197,201,0,1
+BRDA:200,354,1,6
+BRDA:202,250,1,1
+BRDA:202,250,0,6
+BRDA:200,354,0,1
+BRDA:197,201,1,8
+BRDA:210,402,0,8
+BRDA:210,402,1,8
+FN:217,System.Object JoySoftware.HomeAssistant.Client.JsonExtensions::ToDynamicValue(System.Text.Json.JsonElement)
+FNDA:55,System.Object JoySoftware.HomeAssistant.Client.JsonExtensions::ToDynamicValue(System.Text.Json.JsonElement)
+DA:218,55
+DA:219,55
+DA:222,47
+DA:224,1
+DA:226,1
+DA:228,6
+DA:231,0
+DA:232,55
+BRDA:219,14,1,47
+BRDA:219,14,4,1
+BRDA:219,14,3,1
+BRDA:219,14,2,6
+BRDA:228,79,0,0
+BRDA:228,79,1,6
+BRDA:219,14,0,0
+FN:234,JoySoftware.HomeAssistant.Client.HassStates JoySoftware.HomeAssistant.Client.JsonExtensions::ToHassStates(System.Text.Json.JsonElement,System.Text.Json.JsonSerializerOptions)
+FNDA:1,JoySoftware.HomeAssistant.Client.HassStates JoySoftware.HomeAssistant.Client.JsonExtensions::ToHassStates(System.Text.Json.JsonElement,System.Text.Json.JsonSerializerOptions)
+DA:235,1
+DA:236,1
+DA:237,1
+DA:238,1
+DA:239,1
+DA:240,1
+DA:242,1
+DA:244,41
+DA:245,19
+DA:246,19
+DA:247,19
+DA:249,1
+DA:250,1
+BRDA:244,175,1,19
+BRDA:246,88,1,1
+BRDA:246,88,0,19
+BRDA:244,175,0,1
+FN:252,T JoySoftware.HomeAssistant.Client.JsonExtensions::ToObject(System.Text.Json.JsonElement,System.Text.Json.JsonSerializerOptions)
+FNDA:17,T JoySoftware.HomeAssistant.Client.JsonExtensions::ToObject(System.Text.Json.JsonElement,System.Text.Json.JsonSerializerOptions)
+DA:253,17
+DA:254,17
+DA:255,17
+DA:256,17
+DA:257,17
+DA:258,17
+DA:260,17
+DA:261,17
+FN:269,JoySoftware.HomeAssistant.Client.HassEvent JoySoftware.HomeAssistant.Client.HassEventConverter::Read(System.Text.Json.Utf8JsonReader&,System.Type,System.Text.Json.JsonSerializerOptions)
+FNDA:16,JoySoftware.HomeAssistant.Client.HassEvent JoySoftware.HomeAssistant.Client.HassEventConverter::Read(System.Text.Json.Utf8JsonReader&,System.Type,System.Text.Json.JsonSerializerOptions)
+DA:270,16
+DA:271,16
+DA:273,16
+DA:274,14
+DA:275,14
+DA:276,14
+DA:277,2
+DA:278,1
+DA:279,1
+DA:280,1
+DA:281,1
+DA:282,1
+DA:284,1
+DA:285,1
+DA:286,1
+DA:287,16
+DA:288,16
+DA:289,16
+BRDA:273,27,0,14
+BRDA:275,46,0,0
+BRDA:275,46,1,14
+BRDA:273,27,1,2
+BRDA:277,93,0,1
+BRDA:279,115,0,0
+BRDA:279,115,1,1
+BRDA:280,143,1,1
+BRDA:280,143,0,1
+BRDA:280,211,1,1
+BRDA:280,211,0,1
+BRDA:280,305,0,1
+BRDA:281,315,1,1
+BRDA:281,315,0,1
+BRDA:281,387,1,1
+BRDA:281,387,0,1
+BRDA:281,466,0,0
+BRDA:281,466,1,1
+BRDA:280,305,1,1
+BRDA:277,93,1,1
+BRDA:285,507,0,0
+BRDA:285,507,1,1
+FN:294,System.Void JoySoftware.HomeAssistant.Client.HassEventConverter::Write(System.Text.Json.Utf8JsonWriter,JoySoftware.HomeAssistant.Client.HassEvent,System.Text.Json.JsonSerializerOptions)
+FNDA:1,System.Void JoySoftware.HomeAssistant.Client.HassEventConverter::Write(System.Text.Json.Utf8JsonWriter,JoySoftware.HomeAssistant.Client.HassEvent,System.Text.Json.JsonSerializerOptions)
+DA:295,1
+FN:303,JoySoftware.HomeAssistant.Client.HassState JoySoftware.HomeAssistant.Client.HassStateConverter::Read(System.Text.Json.Utf8JsonReader&,System.Type,System.Text.Json.JsonSerializerOptions)
+FNDA:28,JoySoftware.HomeAssistant.Client.HassState JoySoftware.HomeAssistant.Client.HassStateConverter::Read(System.Text.Json.Utf8JsonReader&,System.Type,System.Text.Json.JsonSerializerOptions)
+DA:304,28
+DA:305,28
+DA:307,28
+DA:309,28
+DA:311,28
+DA:312,28
+BRDA:307,14,1,1
+BRDA:307,14,0,28
+FN:317,System.Void JoySoftware.HomeAssistant.Client.HassStateConverter::Write(System.Text.Json.Utf8JsonWriter,JoySoftware.HomeAssistant.Client.HassState,System.Text.Json.JsonSerializerOptions)
+FNDA:0,System.Void JoySoftware.HomeAssistant.Client.HassStateConverter::Write(System.Text.Json.Utf8JsonWriter,JoySoftware.HomeAssistant.Client.HassState,System.Text.Json.JsonSerializerOptions)
+DA:318,0
+LF:139
+LH:135
+BRF:53
+BRH:47
+FNF:59
+FNH:56
+end_of_record
