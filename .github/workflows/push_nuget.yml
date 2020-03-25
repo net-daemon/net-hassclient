@@ -17,6 +17,6 @@ jobs:
       - uses: olegtarasov/get-tag@v2
         name: Set tag envronment variable
       - name: pack DaemonRunner
-        run: dotnet pack src/DaemonRunner/DaemonRunner/DaemonRunner.csproj --configuration Release -p:PackageVersion=${GIT_TAG_NAME}-alpha
+        run: dotnet pack ${{github.workspace}}/src/HassClient/HassClient.csproj --configuration Release -p:PackageVersion=${GIT_TAG_NAME}-alpha
       - name: push to nuget
         run: dotnet nuget push **/*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json --no-symbols true
