@@ -1,0 +1,22 @@
+#### Build and tests all pushes, also code coverage
+name: publish nuget
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  deploy_nuget:
+    name: publish nuget packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions/setup-dotnet@v1
+        with:
+            dotnet-version: '3.1.200' # SDK Version
+      - uses: olegtarasov/get-tag@v2
+        name: Set tag envronment variable
+      - name: pack DaemonRunner
+        run: dotnet pack src/DaemonRunner/DaemonRunner/DaemonRunner.csproj --configuration Release -p:PackageVersion=${GIT_TAG_NAME}-alpha
+      - name: push to nuget
+        run: dotnet nuget push **/*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json --no-symbols true
