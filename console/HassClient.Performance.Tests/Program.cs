@@ -50,7 +50,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             });
             cmd.Handler = CommandHandler.Create<string, short, bool, string>((ip, port, events, token) =>
             {
-                _homeAssistantTask = Task.Run(() => ConnectToHomeAssistant(ip, port, events, token));
+                _homeAssistantTask = Task.Run(() => ConnectToHomeAssistant(ip.Trim(), port, events, token.Trim()));
             });
             return cmd;
         }
@@ -83,6 +83,8 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                 Console.WriteLine($"Number of states: {client.States.Count}");
             }
 
+            var services = await client.GetServices();
+
             var tempTest = client.States["sensor.frysnere_temperature"];
             if (events)
             {
@@ -90,7 +92,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                 await client.SubscribeToEvents();
             }
 
-            var test = await client.CallService("light", "toggle", new { entity_id = "light.tomas_rum" });
+            // var test = await client.CallService("light", "toggle", new { entity_id = "light.tomas_rum" });
             //var tt = await client.SetState("sensor.csharp", "cool", new {daemon = true});
 
             //var result = await client.SendEvent("test_event", new { data="hello" });

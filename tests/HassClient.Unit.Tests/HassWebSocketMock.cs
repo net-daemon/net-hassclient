@@ -75,6 +75,8 @@ namespace HassClient.Unit.Tests
         public static string EventMessageBoolean => File.ReadAllText(Path.Combine(MessageFixturePath, "event_boolean.json"));
         public static string ServiceMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "service_event.json"));
 
+        public static string GetServiceMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "result_get_services.json"));
+
         public WebSocketState State { get; set; }
 
         public WebSocketCloseStatus? CloseStatus { get; set; }
@@ -128,7 +130,7 @@ namespace HassClient.Unit.Tests
         /// <returns></returns>
         public JoySoftware.HomeAssistant.Client.HassClient GetHassClient(HttpMessageHandler httpMessageHandler = null)
         {
-            
+
             return new JoySoftware.HomeAssistant.Client.HassClient(Logger.LoggerFactory, WebSocketMockFactory.Object, httpMessageHandler ?? null);
         }
 

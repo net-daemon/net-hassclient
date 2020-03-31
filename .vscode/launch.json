@@ -15,7 +15,7 @@
                 "-i 192.168.1.7",
                 "-p 8123",
                 "-e true",
-                "-t \"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiIzY2U4ZDdmMjg5NTc0MDY4YjA5Nzk2ZGMyZmNjYWI3NCIsImlhdCI6MTU3OTY3MTA2MywiZXhwIjoxODk1MDMxMDYzfQ.MuQTEYy9HDkV62GzY6fX9ECn_U8vFd5ffashw3sz_3M\""
+                "-t eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1ODNmZjQ0M2M4ODI0NWZjYjFjNjg0NmVhZmNiMmY0NiIsImlhdCI6MTU4NTY3ODM3MCwiZXhwIjoxOTAxMDM4MzcwfQ.LWOy2afYIwCN-8E874dVtU-2aT6A17HnkkCaltl50O0"
             ],
             "cwd": "${workspaceFolder}/console/HassClient.Performance.Tests",
             "console": "internalConsole",

@@ -32,6 +32,25 @@ namespace JoySoftware.HomeAssistant.Client
         public List<string>? WhitelistExternalDirs { get; set; } = null;
     }
 
+    public class HassServiceDomain
+    {
+        public string? Domain { get; set; }
+        public IEnumerable<HassService>? Services { get; set; }
+    }
+    public class HassService
+    {
+        public string? Service { get; set; }
+        public string? Description { get; set; }
+        public IEnumerable<HassServiceField>? Fields { get; set; }
+    }
+
+    public class HassServiceField
+    {
+        public string? Field { get; set; }
+        public string? Description { get; set; }
+        public object? Example { get; set; }
+    }
+
     public class HassEvent
     {
         public dynamic? Data { get; set; }
@@ -148,6 +167,11 @@ namespace JoySoftware.HomeAssistant.Client
         public GetStatesCommand() => Type = "get_states";
     }
 
+    public class GetServicesCommand : CommandMessage
+    {
+        public GetServicesCommand() => Type = "get_services";
+    }
+
     public class HassAuthMessage : HassMessageBase
     {
         public HassAuthMessage() => Type = "auth";
@@ -259,6 +283,119 @@ namespace JoySoftware.HomeAssistant.Client
 
             return JsonSerializer.Deserialize<T>(bufferWriter.WrittenSpan, options);
         }
+
+
+        /// <summary>
+        ///     Parses all json elements to instance result from GetServices call
+        /// </summary>
+        /// <param name="element">JsonElement containing the result data</param>
+        public static IEnumerable<HassServiceDomain> ToServicesResult(this JsonElement element)
+        {
+            var result = new List<HassServiceDomain>();
+
+            if (element.ValueKind != JsonValueKind.Object)
+                throw new ApplicationException("Not expected result from the GetServices result");
+
+            foreach (var property in element.EnumerateObject())
+            {
+                var servicesList = new List<HassService>();
+                var serviceDomain = new HassServiceDomain
+                {
+                    Domain = property.Name,
+                    Services = getServices(property.Value)
+                };
+                result.Add(serviceDomain);
+            }
+
+            IEnumerable<HassService> getServices(JsonElement element)
+            {
+                var servicesList = new List<HassService>();
+                foreach (var serviceDomainProperty in element.EnumerateObject())
+                {
+                    servicesList.Add(getServiceFields(serviceDomainProperty.Name, serviceDomainProperty.Value));
+                }
+                return servicesList;
+            }
+
+            HassService getServiceFields(string service, JsonElement element)
+            {
+                var serviceFields = new List<HassServiceField>();
+
+                var hassService = new HassService
+                {
+                    Service = service,
+                    Fields = serviceFields
+                };
+
+                foreach (var serviceProperty in element.EnumerateObject())
+                {
+                    switch (serviceProperty.Name)
+                    {
+                        case "description":
+                            hassService.Description = serviceProperty.Value.GetString();
+                            break;
+                        case "fields":
+                            foreach (var fieldsProperty in serviceProperty.Value.EnumerateObject())
+                            {
+                                serviceFields.Add(getField(fieldsProperty.Name, fieldsProperty.Value));
+                            }
+
+                            break;
+                    }
+                }
+                return hassService;
+            }
+
+            HassServiceField getField(string fieldName, JsonElement element)
+            {
+
+                var field = new HassServiceField
+                {
+                    Field = fieldName
+                };
+                foreach (var fieldProperty in element.EnumerateObject())
+                {
+                    switch (fieldProperty.Name)
+                    {
+                        case "description":
+                            field.Description = fieldProperty.Value.GetString();
+                            break;
+                        case "example":
+                            switch (fieldProperty.Value.ValueKind)
+                            {
+                                case JsonValueKind.String:
+                                    field.Example = fieldProperty.Value.GetString();
+                                    break;
+                                case JsonValueKind.Number:
+                                    if (fieldProperty.Value.TryGetInt64(out Int64 longVal))
+                                        field.Example = longVal;
+                                    else
+                                        field.Example = fieldProperty.Value.GetDouble();
+                                    break;
+                                case JsonValueKind.Object:
+
+                                    field.Example = fieldProperty.Value;
+                                    break;
+                                case JsonValueKind.True:
+                                    field.Example = true;
+                                    break;
+                                case JsonValueKind.False:
+                                    field.Example = false;
+                                    break;
+                                case JsonValueKind.Array:
+                                    field.Example = fieldProperty.Value;
+                                    break;
+                                default:
+                                    break;
+                            }
+                            break;
+                    }
+                }
+                return field;
+            }
+
+            return result;
+        }
     }
 
     public class HassEventConverter : JsonConverter<HassEvent>
@@ -277,7 +414,7 @@ namespace JoySoftware.HomeAssistant.Client
             else if (m.EventType == "call_service")
             {
                 m.Data = m.DataElement?.ToObject<HassServiceEventData>(options);
-                if (m.Data!=null)
+                if (m.Data != null)
                     ((HassServiceEventData)m.Data).Data = ((HassServiceEventData)m.Data).ServiceData?.ToDynamic();
             }
             else

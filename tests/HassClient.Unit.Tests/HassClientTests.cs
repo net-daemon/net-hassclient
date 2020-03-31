@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -80,7 +82,7 @@ namespace HassClient.Unit.Tests
             // Do not add a fake service call message result
 
             // ACT
-            var callServiceTask = hassClient.CallService("light", "turn_on", new {entity_id = "light.tomas_rum"});
+            var callServiceTask = hassClient.CallService("light", "turn_on", new { entity_id = "light.tomas_rum" });
             hassClient.CancelSource.Cancel();
 
             // ASSERT
@@ -110,7 +112,7 @@ namespace HassClient.Unit.Tests
                                     }");
 
             // ACT
-            var result = await hassClient.CallService("light", "turn_on", new {entity_id = "light.tomas_rum"});
+            var result = await hassClient.CallService("light", "turn_on", new { entity_id = "light.tomas_rum" });
 
             // Assert
             Assert.True(result);
@@ -176,7 +178,7 @@ namespace HassClient.Unit.Tests
             // ACT AND ASSERT
 
             // Do not add a message and force timeout
-            Assert.False(await hassClient.CallService("light", "turn_on", new {entity_id = "light.tomas_rum"}));
+            Assert.False(await hassClient.CallService("light", "turn_on", new { entity_id = "light.tomas_rum" }));
         }
 
         [Fact]
@@ -538,7 +540,9 @@ namespace HassClient.Unit.Tests
                     .Returns(
                         new ValueTask<HassMessage>(new HassMessage
                         {
-                            Id = 2, Type = "result", Result = "Not correct type as we should test"
+                            Id = 2,
+                            Type = "result",
+                            Result = "Not correct type as we should test"
                         }));
 
             // ACT AND ASSERT
@@ -702,6 +706,37 @@ namespace HassClient.Unit.Tests
 
         }
 
+        [Fact]
+        public async Task GetServiceShouldHaveCorrectObject()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            var task = hassClient.GetServices();
+            // Add the service message fake , check service_event.json for reference
+            mock.AddResponse(HassWebSocketMock.GetServiceMessage);
+
+            // ACT
+            // HassEvent eventMsg = await hassClient.ReadEventAsync();
+            var result = await task;
+
+            var first = result.FirstOrDefault();
+
+            // ASSERT
+            Assert.NotNull(result);
+            Assert.NotNull(first);
+            Assert.Equal("homeassistant", first.Domain);
+
+            Assert.Equal(38, result.Count());
+            // Assert.Equal("light", serviceEvent.Domain);
+            // Assert.Equal("toggle", serviceEvent.Service!);
+            // Assert.Equal("light.tomas_rum", c?.GetString());
+            // Assert.Equal("light.tomas_rum", serviceEvent.Data.entity_id);
+
+        }
+
 
         [Fact]
         public async Task SubscribeToEventsReturnsCorrectEvent()
@@ -860,7 +895,7 @@ namespace HassClient.Unit.Tests
             // Get the default state hass client
             var hassClient = await mock.GetHassConnectedClient(false, httpMessageHandlerMock.Object);
 
-            await hassClient.SetState("sensor.my_sensor", "new_state", new {attr1 = "hello"});
+            await hassClient.SetState("sensor.my_sensor", "new_state", new { attr1 = "hello" });
 
             // ACT and ASSERT
             // Calls connect without getting the states initially
@@ -898,24 +933,24 @@ namespace HassClient.Unit.Tests
             // Get the default state hass client
             var hassClient = await mock.GetHassConnectedClient(false, httpMessageHandlerMock.Object);
 
-            var result = await hassClient.SetState("sensor.my_sensor", "new_state", new {attr1 = "hello"});
+            var result = await hassClient.SetState("sensor.my_sensor", "new_state", new { attr1 = "hello" });
 
             // ACT and ASSERT
             Assert.Null(result);
 
         }
 
-        [Fact]
-        public async Task SetStateTimeOutReturnNull()
-        {
-            //Todo: Implement SetStateTimeOutReturnNull
-        }
+        // [Fact]
+        // public async Task SetStateTimeOutReturnNull()
+        // {
+        //     //Todo: Implement SetStateTimeOutReturnNull
+        // }
 
-        [Fact]
-        public async Task SetStateExceptionLogsErrorAndReturnNull()
-        {
-            //Todo: Implement SetStateExceptionLogsErrorAndReturnNull
-        }
+        // [Fact]
+        // public async Task SetStateExceptionLogsErrorAndReturnNull()
+        // {
+        //     //Todo: Implement SetStateExceptionLogsErrorAndReturnNull
+        // }
 
         [Fact]
         public async Task SendEventHttpClientShouldCallCorrectHttpMessageHandler()
