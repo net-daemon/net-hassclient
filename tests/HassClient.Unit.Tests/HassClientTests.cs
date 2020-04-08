@@ -825,6 +825,38 @@ namespace HassClient.Unit.Tests
         }
 
         [Fact]
+        public async Task ErrorCommandMessageShouldBeLogged()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            hassClient.SendMessage(new CallServiceCommand { Domain = "light", Service = "some_service" });
+            mock.AddResponse(@"{""id"": 2, ""type"": ""result"", ""success"": false, ""result"": null, ""error"":{""code"": ""no_service"", ""message"": ""message""}}");
+
+            await Task.Delay(20);
+
+            mock.Logger.AssertLogged(LogLevel.Warning, Times.Once());
+        }
+
+        [Fact]
+        public async Task ErrorCommandMessageCodeNonStringShouldBeLogged()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+
+            hassClient.SendMessage(new CallServiceCommand { Domain = "light", Service = "some_service" });
+            mock.AddResponse(@"{""id"": 2, ""type"": ""result"", ""success"": false, ""result"": null, ""error"":{""code"": 20, ""message"": ""message""}}");
+
+            await Task.Delay(20);
+
+            mock.Logger.AssertLogged(LogLevel.Warning, Times.Once());
+        }
+
+        [Fact]
         public async Task UnsupportedMessageReceivedShouldBeDebugLogged()
         {
             // ARRANGE

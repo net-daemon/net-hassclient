@@ -24,6 +24,7 @@
 	"extensions": [
 		"formulahendry.dotnet-test-explorer",
 		"k--kato.docomment",
-		"ms-dotnettools.csharp"
+		"ms-dotnettools.csharp",
+		"eamodio.gitlens"
 	]
 }

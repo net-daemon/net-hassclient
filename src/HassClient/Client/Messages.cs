@@ -67,15 +67,20 @@ namespace JoySoftware.HomeAssistant.Client
         [JsonPropertyName("event")]
         [JsonConverter(typeof(HassEventConverter))]
         public HassEvent? Event { get; set; }
-
         [JsonPropertyName("id")] public int Id { get; set; } = 0;
-
         [JsonPropertyName("message")] public string? Message { get; set; }
-
         public object? Result { get; set; }
         [JsonPropertyName("result")] public JsonElement? ResultElement { get; set; } = null;
         [JsonPropertyName("success")] public bool? Success { get; set; }
+        [JsonPropertyName("error")] public HassError? Error { get; set; }
     }
+
+    public class HassError
+    {
+        [JsonPropertyName("code")] public object? Code { get; set; }
+        [JsonPropertyName("message")] public string? Message { get; set; }
+    }
+
     public class HassServiceEventData
     {
         [JsonPropertyName("domain")] public string Domain { get; set; } = "";
