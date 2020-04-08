@@ -951,17 +951,19 @@ namespace JoySoftware.HomeAssistant.Client
         {
             if (m.Id > 0)
             {
+
                 // It is an command response, get command
                 if (_commandsSent.TryRemove(m.Id, out string? command))
                 {
+                    if (m.Success == false)
+                    {
+                        _logger.LogWarning($"Non successful result for command {command}: code({m.Error?.Code}), message: {m.Error?.Message}");
+                    }
                     switch (command)
                     {
                         case "get_states":
-                            //var options = new JsonSerializerOptions();
-                            //options.Converters.Add(new HassStateConverter());
                             m.Result = m.ResultElement?.ToHassStates(_defaultSerializerOptions);
                             break;
-
                         case "get_config":
                             m.Result = m.ResultElement?.ToObject<HassConfig>(_defaultSerializerOptions);
                             break;
@@ -980,8 +982,15 @@ namespace JoySoftware.HomeAssistant.Client
                 }
                 else
                 {
+                    string? originalCommand;
+                    var resultMsg = _commandsSentAndResponseShouldBeDisregarded.TryRemove(m.Id, out originalCommand) ? null : m;
+
+                    if (m.Success == false)
+                    {
+                        _logger.LogWarning($"Non successful unwaited result for command {originalCommand}: code({m.Error?.Code}), message: {m.Error?.Message}");
+                    }
                     // Make sure we discard messages that no one is waiting for
-                    return _commandsSentAndResponseShouldBeDisregarded.TryRemove(m.Id, out string? _) ? null : m;
+                    return resultMsg;
                 }
             }
 
