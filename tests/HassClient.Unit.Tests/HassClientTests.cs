@@ -207,13 +207,13 @@ namespace HassClient.Unit.Tests
             // ARRANGE
             var mock = new HassWebSocketMock();
             // Get the connected hass client
-            var hassClient = await mock.GetHassConnectedClient();
+            await using IHassClient hassClient = await mock.GetHassConnectedClient();
 
             await hassClient.CloseAsync();
 
             // ASSERT
             mock.Verify(
-                x => x.CloseAsync(It.IsAny<WebSocketCloseStatus>(),
+                x => x.CloseOutputAsync(It.IsAny<WebSocketCloseStatus>(),
                     It.IsAny<string>(), It.IsAny<CancellationToken>()),
                 Times.Once);
         }

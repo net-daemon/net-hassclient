@@ -67,7 +67,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                     .SetMinimumLevel(LogLevel.Trace);
             });
 
-            client = new HassClient(factory);
+            await using IHassClient client = new HassClient(factory);
             var token_env = Environment.GetEnvironmentVariable("HASS_TOKEN");
             if (token_env != null)
                 token = token_env;
@@ -94,18 +94,24 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                 await client.SubscribeToEvents();
             }
 
-            await client.CallService("light", "toggle", new { entity_id = "light.tomas_rum" });
+            // await client.CallService("light", "toggle", new { entity_id = "light.tomas_rum" });
             await client.CallService("light", "no_exist", new { entity_id = "light.tomas_rum_not_exist" });
             //var tt = await client.SetState("sensor.csharp", "cool", new {daemon = true});
 
             //var result = await client.SendEvent("test_event", new { data="hello" });
-
+            var nrOfTimes = 0;
             while (true)
             {
                 try
                 {
                     HassEvent eventMsg = await client.ReadEventAsync();
 
+                    // if (nrOfTimes++ > 8)
+                    // {
+                    //     await client.DisposeAsync();
+                    //     System.Console.WriteLine("Closing and returning...");
+                    //     return;
+                    // }
                     //Console.WriteLine($"Eventtype: {eventMsg.EventType}");
                     if (eventMsg.EventType == "state_changed")
                     {
