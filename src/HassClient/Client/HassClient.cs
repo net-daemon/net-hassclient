@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Web;
-using System.Xml.XPath;
 using Microsoft.Extensions.Logging;
 
 [assembly: InternalsVisibleTo("HassClientIntegrationTests")]
@@ -194,6 +193,14 @@ namespace JoySoftware.HomeAssistant.Client
         private readonly ILogger _logger;
 
         /// <summary>
+        ///     Set loglevel om messages when tracing is enabled
+        ///     - Default, logs but state chages
+        ///     - None, do not log messages
+        ///     - All, logs all but security challanges
+        /// </summary>
+        private readonly string _messageLogLevel;
+
+        /// <summary>
         ///     Channel used as a async thread safe way to wite messages to the websocket
         /// </summary>
         private readonly Channel<HassMessageBase> _writeChannel =
@@ -266,6 +273,7 @@ namespace JoySoftware.HomeAssistant.Client
 
             _wsFactory = wsFactory;
             _logger = logFactory.CreateLogger<HassClient>();
+            _messageLogLevel = Environment.GetEnvironmentVariable("HASSCLIENT_MSGLOGLEVEL") ?? "Default";
         }
 
         /// <summary>
@@ -718,6 +726,20 @@ namespace JoySoftware.HomeAssistant.Client
                             throw new WebSocketException("Socket closed");
                         }
 
+                        // Log incoming messages for correct loglevel and tracing is enabled
+                        if (_messageLogLevel != "None" && _logger.IsEnabled(LogLevel.Trace) && result.Count > 0)
+                        {
+                            var strMessageReceived = UTF8Encoding.UTF8.GetString(memory.Slice(0, result.Count).ToArray());
+                            if (_messageLogLevel == "All")
+                                _logger.LogTrace("ReadClientSocket, message: {strMessageReceived}", strMessageReceived);
+                            else if (_messageLogLevel == "Default")
+                            {
+                                // Log all but events
+                                if (strMessageReceived.Contains("\"type\": \"event\"") == false)
+                                    _logger.LogTrace("ReadClientSocket, message: {strMessageReceived}", strMessageReceived);
+                            }
+
+                        }
                         // Advance writer to the read ne of bytes
                         pipe.Writer.Advance(result.Count);
 
@@ -760,6 +782,7 @@ namespace JoySoftware.HomeAssistant.Client
                     // ReSharper disable once AccessToDisposedClosure
                     HassMessage m = await JsonSerializer.DeserializeAsync<HassMessage>(pipe.Reader.AsStream(),
                         cancellationToken: cancelTokenSource.Token);
+
                     await pipe.Reader.CompleteAsync();
                     switch (m.Type)
                     {
@@ -830,11 +853,6 @@ namespace JoySoftware.HomeAssistant.Client
                     HassMessage result = await _messageChannel.Reader.ReadAsync(sendCommandTokenSource.Token);
                     if (result.Id == message.Id)
                     {
-                        if (result.Type != "result" || result.Success != true)
-                        {
-                            _logger.LogError($"Unexpected response from command ({result.Type}, {result.Success})");
-                        }
-
                         return result;
                     }
 
@@ -1076,6 +1094,18 @@ namespace JoySoftware.HomeAssistant.Client
                         _defaultSerializerOptions);
 
                     await _ws.SendAsync(result, WebSocketMessageType.Text, true, CancelSource.Token);
+
+                    if (_logger.IsEnabled(LogLevel.Trace))
+                    {
+                        if (nextMessage is HassAuthMessage == false)
+                        {
+                            // We log everything but AuthMessage due to security reasons
+                            _logger.LogTrace("SendAsync, message: {result}", UTF8Encoding.UTF8.GetString(result));
+                        }
+                        {
+                            _logger.LogTrace("Sending auth message, not shown for security reasons");
+                        }
+                    }
                 }
                 catch (OperationCanceledException)
                 {

@@ -61,8 +61,10 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             {
                 builder
                     .ClearProviders()
-                    .AddFilter("HassClient.HassClient", LogLevel.Trace)
-                    .AddConsole();
+                    // .AddFilter("HassClient.HassClient", LogLevel.Trace)
+                    .AddConsole()
+                    .AddDebug()
+                    .SetMinimumLevel(LogLevel.Trace);
             });
 
             client = new HassClient(factory);
@@ -92,7 +94,8 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                 await client.SubscribeToEvents();
             }
 
-            // var test = await client.CallService("light", "toggle", new { entity_id = "light.tomas_rum" });
+            await client.CallService("light", "toggle", new { entity_id = "light.tomas_rum" });
+            await client.CallService("light", "no_exist", new { entity_id = "light.tomas_rum_not_exist" });
             //var tt = await client.SetState("sensor.csharp", "cool", new {daemon = true});
 
             //var result = await client.SendEvent("test_event", new { data="hello" });
