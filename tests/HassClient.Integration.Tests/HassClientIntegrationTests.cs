@@ -46,11 +46,11 @@ namespace HassClientIntegrationTests
         [Fact]
         public async void RemoteCloseThrowsException()
         {
-            using var wscli = new HassClient();
+            await using var wscli = new HassClient();
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
                 false);
             var eventTask = wscli.ReadEventAsync();
-            wscli.SendMessage(new CommandMessage {Id = 2, Type = "fake_disconnect_test"});
+            wscli.SendMessage(new CommandMessage { Id = 2, Type = "fake_disconnect_test" });
 
             await Assert.ThrowsAsync<OperationCanceledException>(async () => await eventTask);
         }
@@ -58,7 +58,7 @@ namespace HassClientIntegrationTests
         [Fact]
         public async void TestBasicLoginFail()
         {
-            using var wscli = new HassClient();
+            await using var wscli = new HassClient();
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "WRONG PASSWORD",
                 false);
             Assert.False(result);
@@ -71,7 +71,7 @@ namespace HassClientIntegrationTests
         [Fact]
         public async void TestBasicLoginOK()
         {
-            using var wscli = new HassClient();
+            await using var wscli = new HassClient();
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
                 false);
             Assert.True(result);
@@ -83,7 +83,7 @@ namespace HassClientIntegrationTests
         [Fact]
         public async void TestClose()
         {
-            using var wscli = new HassClient();
+            await using var wscli = new HassClient();
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
                 false);
             Assert.True(result);
@@ -98,7 +98,7 @@ namespace HassClientIntegrationTests
         [Fact]
         public async void TestFetchStates()
         {
-            using var wscli = new HassClient();
+            await using var wscli = new HassClient();
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ");
             Assert.True(result);
             Assert.True(wscli.States.Count == 19);
@@ -109,7 +109,7 @@ namespace HassClientIntegrationTests
         [Fact]
         public async void TestPingPong()
         {
-            using var wscli = new HassClient();
+            await using var wscli = new HassClient();
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
                 false);
             Assert.True(result);
@@ -123,7 +123,7 @@ namespace HassClientIntegrationTests
         public async void TestServerFailedConnect()
         {
             var loggerFactoryMock = new LoggerFactoryMock();
-            using var wscli = new HassClient(loggerFactoryMock);
+            await using var wscli = new HassClient(loggerFactoryMock);
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket_not_exist"),
                 "ABCDEFGHIJKLMNOPQ");
             Assert.False(result);
@@ -136,7 +136,7 @@ namespace HassClientIntegrationTests
         [Fact]
         public async void TestSubscribeEvents()
         {
-            using var wscli = new HassClient();
+            await using var wscli = new HassClient();
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
                 false);
             Assert.True(result);

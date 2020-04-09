@@ -39,8 +39,16 @@ namespace HassClient.Unit.Tests
                 .Returns(() =>
                 {
                     CloseStatus = WebSocketCloseStatus.NormalClosure;
-                    State = WebSocketState.Closed;
+                    SetupGet(x => x.State).Returns(WebSocketState.Closed);
+                    return Task.Delay(2);
+                });
 
+            Setup(x =>
+                    x.CloseOutputAsync(It.IsAny<WebSocketCloseStatus>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(() =>
+                {
+                    CloseStatus = WebSocketCloseStatus.NormalClosure;
+                    SetupGet(x => x.State).Returns(WebSocketState.Closed);
                     return Task.Delay(2);
                 });
 

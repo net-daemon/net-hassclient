@@ -24,7 +24,7 @@ namespace JoySoftware.HomeAssistant.Client
     /// <summary>
     ///     The interface for ws client
     /// </summary>
-    public interface IHassClient
+    public interface IHassClient : IAsyncDisposable
     {
         /// <summary>
         ///     The current states of the entities.
@@ -130,7 +130,7 @@ namespace JoySoftware.HomeAssistant.Client
     ///     to connect, send and receive json messages
     ///     This class is threadsafe
     /// </summary>
-    public class HassClient : IHassClient, IDisposable
+    public class HassClient : IHassClient
     {
         /// <summary>
         ///     Used to cancel all asynchronous work, is internal so we can test
@@ -359,7 +359,21 @@ namespace JoySoftware.HomeAssistant.Client
                 _logger.LogTrace("Async close websocket");
 
                 // First do websocket close management
-                await DoNormalClosureOfWebSocket();
+                var timeout = new CancellationTokenSource(MaxWaitTimeSocketClose);
+
+                try
+                {
+                    // after this, the socket state which change to CloseSent
+                    await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
+                    // now we wait for the server response, which will close the socket
+                    while (_ws.State != WebSocketState.Closed && !timeout.Token.IsCancellationRequested)
+                        await Task.Delay(100).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // normal upon task/token cancellation, disregard
+                }
+
                 // Cancel all async stuff
                 CancelSource.Cancel();
 
@@ -379,6 +393,9 @@ namespace JoySoftware.HomeAssistant.Client
                 if (_ws != null)
                     _ws.Dispose();
                 _ws = null;
+
+                if (CancelSource != null)
+                    CancelSource.Dispose();
 
                 CancelSource = new CancellationTokenSource();
 
@@ -495,15 +512,6 @@ namespace JoySoftware.HomeAssistant.Client
             return false;
         }
 
-        /// <summary>
-        ///     Dispose the WSClient
-        /// </summary>
-        public void Dispose()
-        {
-            Dispose(true);
-            // This object will be cleaned up by the Dispose method.
-            GC.SuppressFinalize(this);
-        }
         /// <summary>
         ///     Gets the configuration of the connected Home Assistant instance
         /// </summary>
@@ -704,52 +712,43 @@ namespace JoySoftware.HomeAssistant.Client
 
                         // ReSharper disable once AccessToDisposedClosure
                         ValueWebSocketReceiveResult result = await _ws.ReceiveAsync(memory, cancelTokenSource.Token);
-
-                        if (result.MessageType == WebSocketMessageType.Close || result.Count == 0)
+                        if (!CancelSource.Token.IsCancellationRequested)
                         {
-                            //await CloseAsync();
-                            // Remote disconnected just leave the readpump
-                            if (_isClosing)
+                            if (_ws.State == WebSocketState.CloseReceived && result.MessageType == WebSocketMessageType.Close)
                             {
-                                // We are closing, just cancel the process message
-                                // ReSharper disable once AccessToDisposedClosure
-                                cancelProcessNextMessage.Cancel();
+                                await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Acknowledge Close frame", CancellationToken.None);
+                                CancelSource.Cancel();
                             }
                             else
                             {
-                                // We did not make the close call
-                                await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Remote closed",
-                                    CancelSource.Token);
-                                CancelSource.Cancel();
+                                if (_ws.State == WebSocketState.Open && result.MessageType != WebSocketMessageType.Close)
+                                {
+                                    // Log incoming messages for correct loglevel and tracing is enabled
+                                    if (_messageLogLevel != "None" && _logger.IsEnabled(LogLevel.Trace) && result.Count > 0)
+                                    {
+                                        var strMessageReceived = UTF8Encoding.UTF8.GetString(memory.Slice(0, result.Count).ToArray());
+                                        if (_messageLogLevel == "All")
+                                            _logger.LogTrace("ReadClientSocket, message: {strMessageReceived}", strMessageReceived);
+                                        else if (_messageLogLevel == "Default")
+                                        {
+                                            // Log all but events
+                                            if (strMessageReceived.Contains("\"type\": \"event\"") == false)
+                                                _logger.LogTrace("ReadClientSocket, message: {strMessageReceived}", strMessageReceived);
+                                        }
+                                    }
+                                    // Advance writer to the read ne of bytes
+                                    pipe.Writer.Advance(result.Count);
+
+                                    await pipe.Writer.FlushAsync();
+
+                                    if (result.EndOfMessage)
+                                    {
+                                        // We have successfully read the whole message, make available to reader
+                                        await pipe.Writer.CompleteAsync();
+                                        break;
+                                    }
+                                }
                             }
-
-                            throw new WebSocketException("Socket closed");
-                        }
-
-                        // Log incoming messages for correct loglevel and tracing is enabled
-                        if (_messageLogLevel != "None" && _logger.IsEnabled(LogLevel.Trace) && result.Count > 0)
-                        {
-                            var strMessageReceived = UTF8Encoding.UTF8.GetString(memory.Slice(0, result.Count).ToArray());
-                            if (_messageLogLevel == "All")
-                                _logger.LogTrace("ReadClientSocket, message: {strMessageReceived}", strMessageReceived);
-                            else if (_messageLogLevel == "Default")
-                            {
-                                // Log all but events
-                                if (strMessageReceived.Contains("\"type\": \"event\"") == false)
-                                    _logger.LogTrace("ReadClientSocket, message: {strMessageReceived}", strMessageReceived);
-                            }
-
-                        }
-                        // Advance writer to the read ne of bytes
-                        pipe.Writer.Advance(result.Count);
-
-                        await pipe.Writer.FlushAsync();
-
-                        if (result.EndOfMessage)
-                        {
-                            // We have successfully read the whole message, make available to reader
-                            await pipe.Writer.CompleteAsync();
-                            break;
                         }
                     }
                 }
@@ -757,12 +756,6 @@ namespace JoySoftware.HomeAssistant.Client
                 {
                     // Canceled the thread just leave
                     throw;
-                }
-                catch (WebSocketException)
-                {
-                    // Make sure we always cancel the other task of any reason
-                    // ReSharper disable once AccessToDisposedClosure
-                    cancelProcessNextMessage.Cancel();
                 }
                 catch (Exception e)
                 {
@@ -772,6 +765,7 @@ namespace JoySoftware.HomeAssistant.Client
                     cancelProcessNextMessage.Cancel(true);
                     throw;
                 }
+
             }
 
             // Task that deserializes the message and write the finished message to a channel
@@ -906,60 +900,6 @@ namespace JoySoftware.HomeAssistant.Client
             }
 
             return _writeChannel.Writer.TryWrite(message);
-        }
-        protected virtual void Dispose(bool disposing)
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            // If disposing equals true, dispose all managed
-            // and unmanaged resources.
-            //
-            if (disposing)
-            {
-                _ws?.Dispose();
-                CancelSource.Dispose();
-            }
-
-            _disposed = true;
-        }
-
-        /// <summary>
-        ///     Close the websocket gracefully
-        /// </summary>
-        /// <remarks>
-        ///     The code waits for the server to return closed state.
-        ///     There was problems using the CloseAsync only. It did not properly work as expected
-        ///     The code is using CloseOutputAsync instead and wait for status closed
-        /// </remarks>
-        /// <returns></returns>
-        private async Task DoNormalClosureOfWebSocket()
-        {
-            _logger.LogTrace("Do normal close of websocket");
-
-            using var timeout = new CancellationTokenSource(MaxWaitTimeSocketClose);
-
-            if (_ws != null &&
-                (_ws.State == WebSocketState.CloseReceived ||
-                 _ws.State == WebSocketState.Open))
-            {
-                try
-                {
-                    await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
-                }
-                catch (OperationCanceledException)
-                {
-                    // normal upon task/token cancellation, disregard
-                    _logger.LogTrace("Close operations took more than 5 seconds.. closing hard!");
-                }
-            }
-
-            //_readMessagePumpTask.Wait();
-
-            // Wait for read pump finishing when receiving the close message
-            //if (_readMessagePumpTask != null) await Task.WhenAll(_readMessagePumpTask).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1117,6 +1057,18 @@ namespace JoySoftware.HomeAssistant.Client
             _logger.LogTrace("Exit WriteMessagePump");
         }
 
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                await CloseAsync();
+            }
+            catch
+            {
+                // Ignore errors
+            }
 
+
+        }
     }
 }
