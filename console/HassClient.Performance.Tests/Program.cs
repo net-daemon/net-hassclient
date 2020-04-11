@@ -11,21 +11,14 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
     internal class Program
     {
         private static Task _homeAssistantTask;
-        private static HassClient client;
 
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
             var cmd = new RootCommand();
             cmd.AddCommand(connectHass());
             int result = cmd.InvokeAsync(args).Result;
 
             Console.ReadLine();
-
-            if (client != null)
-            {
-                Console.WriteLine("Closing connection...");
-                await client.CloseAsync();
-            }
         }
 
         private static Command connectHass()
@@ -99,7 +92,6 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             //var tt = await client.SetState("sensor.csharp", "cool", new {daemon = true});
 
             //var result = await client.SendEvent("test_event", new { data="hello" });
-            var nrOfTimes = 0;
             while (true)
             {
                 try

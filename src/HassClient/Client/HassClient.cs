@@ -363,11 +363,19 @@ namespace JoySoftware.HomeAssistant.Client
 
                 try
                 {
-                    // after this, the socket state which change to CloseSent
-                    await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
-                    // now we wait for the server response, which will close the socket
-                    while (_ws.State != WebSocketState.Closed && !timeout.Token.IsCancellationRequested)
-                        await Task.Delay(100).ConfigureAwait(false);
+                    if (
+                        _ws.State == WebSocketState.Open ||
+                        _ws.State == WebSocketState.CloseReceived ||
+                        _ws.State == WebSocketState.CloseSent
+                        )
+                    {
+                        // after this, the socket state which change to CloseSent
+                        await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
+                        // now we wait for the server response, which will close the socket
+                        while (_ws.State != WebSocketState.Closed && !timeout.Token.IsCancellationRequested)
+                            await Task.Delay(100).ConfigureAwait(false);
+                    }
+
                 }
                 catch (OperationCanceledException)
                 {
