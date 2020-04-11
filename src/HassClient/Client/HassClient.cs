@@ -212,7 +212,6 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Base url to the API (non socket)
         /// </summary>
         private string _apiUrl = "";
-        private bool _disposed;
 
         /// <summary>
         ///     Channel used as a async thread safe way to read messages from the websocket
@@ -1038,6 +1037,13 @@ namespace JoySoftware.HomeAssistant.Client
                 try
                 {
                     HassMessageBase nextMessage = await _writeChannel.Reader.ReadAsync(CancelSource.Token);
+
+                    if (_ws.State != WebSocketState.Open && _ws.State != WebSocketState.CloseReceived)
+                    {
+                        _logger.LogTrace("WriteMessagePump, state not Open or CloseReceived, exiting WriteMessagePump: {socketState}", _ws.State.ToString());
+                        return;
+                    }
+
                     byte[] result = JsonSerializer.SerializeToUtf8Bytes(nextMessage, nextMessage.GetType(),
                         _defaultSerializerOptions);
 
