@@ -199,13 +199,17 @@ namespace JoySoftware.HomeAssistant.Client
 
     public static class JsonExtensions
     {
-        public static object ParseDataType(string state)
+        public static object? ParseDataType(string state)
         {
             if (Int64.TryParse(state, NumberStyles.Number, CultureInfo.InvariantCulture, out Int64 intValue))
                 return intValue;
 
             if (Double.TryParse(state, NumberStyles.Number, CultureInfo.InvariantCulture, out Double doubleValue))
                 return doubleValue;
+
+
+            if (state == "unavailable")
+                return null;
 
             return state;
         }
@@ -446,11 +450,16 @@ namespace JoySoftware.HomeAssistant.Client
         {
             HassState m = JsonSerializer.Deserialize<HassState>(ref reader, options);
 
-            JsonElement elem = m.State;
+            if (m != null)
+            {
+                JsonElement elem = m.State;
 
-            m.State = elem.ToDynamicValue();
+                m.State = elem.ToDynamicValue();
 
-            return m;
+                return m;
+            }
+            throw new NullReferenceException("Failed to deserialize HassState");
+
         }
 
         public override void Write(
