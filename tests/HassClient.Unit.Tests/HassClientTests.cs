@@ -1082,5 +1082,16 @@ namespace HassClient.Unit.Tests
                     ItExpr.IsAny<CancellationToken>()
                 );
         }
+
+        [Fact]
+        public async Task ReadEventShouldCancel()
+        {
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+            var cancelSoon = new CancellationTokenSource(50);
+            // ACT & ASSERT
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await hassClient.ReadEventAsync(cancelSoon.Token));
+        }
     }
 }
