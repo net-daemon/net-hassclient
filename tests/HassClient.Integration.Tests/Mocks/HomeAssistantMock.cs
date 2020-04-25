@@ -59,6 +59,8 @@ namespace HassClientIntegrationTests.Mocks
     /// </summary>
     public class HassMockStartup
     {
+        private CancellationTokenSource cancelSource = new CancellationTokenSource();
+
         // Home Assistant will always prettyprint responses so so do the mock
         private readonly byte[] _authOkMessage =
             File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Mocks", "testdata", "auth_ok.json"));
@@ -69,7 +71,7 @@ namespace HassClientIntegrationTests.Mocks
         private readonly byte[] _pongMessage =
             File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Mocks", "testdata", "pong.json"));
 
-        private readonly JsonSerializerOptions serializeOptions = new JsonSerializerOptions {WriteIndented = true};
+        private readonly JsonSerializerOptions serializeOptions = new JsonSerializerOptions { WriteIndented = true };
 
         public HassMockStartup(IConfiguration configuration) => Configuration = configuration;
 
@@ -117,11 +119,11 @@ namespace HassClientIntegrationTests.Mocks
                 // First send auth required to the client
                 byte[] authRequiredMessage = File.ReadAllBytes(Path.Combine(_mockTestdataPath, "auth_required.json"));
                 await webSocket.SendAsync(new ArraySegment<byte>(authRequiredMessage, 0, authRequiredMessage.Length),
-                    WebSocketMessageType.Text, true, CancellationToken.None);
+                    WebSocketMessageType.Text, true, cancelSource.Token);
 
                 // Wait for incoming messages
                 WebSocketReceiveResult result =
-                    await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancelSource.Token);
                 while (!result.CloseStatus.HasValue)
                 {
                     HassMessage hassMessage =
@@ -162,7 +164,7 @@ namespace HassClientIntegrationTests.Mocks
                             SendCommandMessage subscribeEventMessage =
                                 JsonSerializer.Deserialize<SendCommandMessage>(
                                     new ReadOnlySpan<byte>(buffer, 0, result.Count));
-                            var response = new ResultMessage {Id = subscribeEventMessage.Id};
+                            var response = new ResultMessage { Id = subscribeEventMessage.Id };
                             // First send normal ok response
                             byte[] responseString =
                                 JsonSerializer.SerializeToUtf8Bytes(response, typeof(ResultMessage), serializeOptions);
@@ -216,7 +218,7 @@ namespace HassClientIntegrationTests.Mocks
             }
             catch (OperationCanceledException)
             {
-                // Normal when server is stopped
+                await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Normal", CancellationToken.None);
             }
             catch (Exception e)
             {
