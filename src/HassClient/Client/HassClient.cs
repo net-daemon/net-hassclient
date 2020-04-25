@@ -102,6 +102,15 @@ namespace JoySoftware.HomeAssistant.Client
         Task<HassEvent> ReadEventAsync();
 
         /// <summary>
+        ///     Returns next incoming event and completes async operation
+        /// </summary>
+        /// <remarks>Set subscribeEvents=true on ConnectAsync to use.</remarks>
+        /// <exception>OperationCanceledException if the operation is canceled.</exception>
+        /// <param name="token">Cancellation token to provide cancellation</param>
+        /// <returns>Returns next event</returns>
+        Task<HassEvent> ReadEventAsync(CancellationToken token);
+
+        /// <summary>
         ///     Sends custom event on Home Assistant eventbus
         /// </summary>
         /// <param name="eventId">Event identifier</param>
@@ -574,6 +583,18 @@ namespace JoySoftware.HomeAssistant.Client
         /// <exception>OperationCanceledException if the operation is canceled.</exception>
         /// <returns>Returns next event</returns>
         public async Task<HassEvent> ReadEventAsync() => await _eventChannel.Reader.ReadAsync(CancelSource.Token);
+
+        /// <summary>
+        ///     Returns next incoming event and completes async operation
+        /// </summary>
+        /// <remarks>Set subscribeEvents=true on ConnectAsync to use.</remarks>
+        /// <exception>OperationCanceledException if the operation is canceled.</exception>
+        /// <returns>Returns next event</returns>
+        public async Task<HassEvent> ReadEventAsync(CancellationToken token)
+        {
+            using var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(CancelSource.Token, token);
+            return await _eventChannel.Reader.ReadAsync(cancelSource.Token);
+        }
 
         public async Task<bool> SendEvent(string eventId, object? data = null)
         {

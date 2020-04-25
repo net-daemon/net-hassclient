@@ -596,7 +596,7 @@ namespace HassClient.Unit.Tests
 
 
             // ACT AND ASSERT
-            var subscribeTask = hassClient.SubscribeToEvents();
+
 
             // Service call successful
             mock.AddResponse(@"{
@@ -611,8 +611,7 @@ namespace HassClient.Unit.Tests
                                         }
                                       }
                                     }");
-            await Task.Delay(20);
-            await subscribeTask;
+            var subscribeTask = await hassClient.SubscribeToEvents();
 
             mock.Logger.AssertLogged(LogLevel.Error, Times.Once());
         }
@@ -1081,6 +1080,17 @@ namespace HassClient.Unit.Tests
                     ),
                     ItExpr.IsAny<CancellationToken>()
                 );
+        }
+
+        [Fact]
+        public async Task ReadEventShouldCancel()
+        {
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            var hassClient = await mock.GetHassConnectedClient();
+            var cancelSoon = new CancellationTokenSource(50);
+            // ACT & ASSERT
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await hassClient.ReadEventAsync(cancelSoon.Token));
         }
     }
 }
