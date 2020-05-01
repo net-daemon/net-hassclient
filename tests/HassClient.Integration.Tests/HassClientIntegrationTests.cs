@@ -1,62 +1,47 @@
 using System;
+using System.Net.WebSockets;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using HassClientIntegrationTests.Mocks;
 using JoySoftware.HomeAssistant.Client;
 using Xunit;
 
 namespace HassClientIntegrationTests
 {
-    public class TestWSClient : IDisposable
+    public class TestWSClient : IAsyncLifetime
     {
-        public TestWSClient()
+        // public TestWSClient()
+        // {
+
+        // }
+        public Task InitializeAsync()
         {
             _mock = new HomeAssistantMock();
+            return Task.CompletedTask;
         }
 
-
-        // This code added to correctly implement the disposable pattern.
-        public void Dispose()
+        public async Task DisposeAsync()
         {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
+            await _mock.DisposeAsync().ConfigureAwait(false);
         }
-
-        private readonly HomeAssistantMock _mock;
-        private bool disposedValue; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    _mock.Stop();
-                    _mock.Dispose();
-                }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
-
-                disposedValue = true;
-            }
-        }
+        private HomeAssistantMock _mock;
 
         [Fact]
-        public async void RemoteCloseThrowsException()
+        public async Task RemoteCloseThrowsException()
         {
             await using var wscli = new HassClient();
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
-                false);
-            var eventTask = wscli.ReadEventAsync();
-            wscli.SendMessage(new CommandMessage { Id = 2, Type = "fake_disconnect_test" });
+                false).ConfigureAwait(false);
 
-            await Assert.ThrowsAsync<OperationCanceledException>(async () => await eventTask);
+            // Skip first authorize message
+            var eventTask = wscli.ReadEventAsync();
+            await wscli.SendMessage(new CommandMessage { Id = 2, Type = "fake_disconnect_test" }).ConfigureAwait(false);
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await eventTask.ConfigureAwait(false)).ConfigureAwait(false);
         }
 
         [Fact]
-        public async void TestBasicLoginFail()
+        public async Task TestBasicLoginFail()
         {
             await using var wscli = new HassClient();
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "WRONG PASSWORD",
@@ -69,7 +54,7 @@ namespace HassClientIntegrationTests
 
 
         [Fact]
-        public async void TestBasicLoginOK()
+        public async Task TestBasicLoginOK()
         {
             await using var wscli = new HassClient();
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
@@ -81,7 +66,7 @@ namespace HassClientIntegrationTests
         }
 
         [Fact]
-        public async void TestClose()
+        public async Task TestClose()
         {
             await using var wscli = new HassClient();
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
@@ -96,7 +81,7 @@ namespace HassClientIntegrationTests
         }
 
         [Fact]
-        public async void TestFetchStates()
+        public async Task TestFetchStates()
         {
             await using var wscli = new HassClient();
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ");
@@ -107,7 +92,7 @@ namespace HassClientIntegrationTests
         }
 
         [Fact]
-        public async void TestPingPong()
+        public async Task TestPingPong()
         {
             await using var wscli = new HassClient();
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
@@ -120,7 +105,7 @@ namespace HassClientIntegrationTests
         }
 
         [Fact]
-        public async void TestServerFailedConnect()
+        public async Task TestServerFailedConnect()
         {
             var loggerFactoryMock = new LoggerFactoryMock();
             await using var wscli = new HassClient(loggerFactoryMock);
@@ -134,7 +119,7 @@ namespace HassClientIntegrationTests
         }
 
         [Fact]
-        public async void TestSubscribeEvents()
+        public async Task TestSubscribeEvents()
         {
             await using var wscli = new HassClient();
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
@@ -180,5 +165,113 @@ namespace HassClientIntegrationTests
             Assert.True(lastUpdated.Value.Second == targetUpdated.Second);
             await wscli.CloseAsync();
         }
+
+        [Fact]
+        public async Task ProcessMessageGetCorrectResult()
+        {
+            //ARRANGE
+            var wsFactory = new ClientWebSocketFactory();
+            var ws = wsFactory.New();
+
+            // DisposeAsync will close websocket
+            await ws.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), CancellationToken.None).ConfigureAwait(false);
+
+            // ACT
+            await using var pipe = WebSocketMessagePipeline<HassMessageBase>.CreateWebSocketMessagePipeline(ws);
+            var x = await pipe.GetNextMessageAsync(CancellationToken.None).ConfigureAwait(false);
+
+            // await ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Close", CancellationToken.None).ConfigureAwait(false);
+
+            // ASSERT
+            Assert.Equal("auth_required", x.Type);
+        }
+
+        [Fact]
+        public async Task ProcessBigMessageGetCorrectResult()
+        {
+            //ARRANGE
+            var wsFactory = new ClientWebSocketFactory();
+            var ws = wsFactory.New();
+            var cancelSource = new CancellationTokenSource();
+
+            // DisposeAsync will close websocket
+            await ws.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), CancellationToken.None).ConfigureAwait(false);
+
+            // ACT
+            await using var pipe = WebSocketMessagePipeline<HassMessageBase>.CreateWebSocketMessagePipeline(ws);
+            _ = await pipe.GetNextMessageAsync(CancellationToken.None).ConfigureAwait(false);
+
+
+            await pipe.SendMessageAsync(new HassMessageBase { Type = "get_states" }, cancelSource.Token);
+
+            var msg = await pipe.GetNextMessageAsync(CancellationToken.None).ConfigureAwait(false);
+
+            // ASSERT
+            Assert.Equal("result", msg.Type);
+
+        }
+
+        [Fact]
+        public async Task ProcessMessageReturnWhenClosed()
+        {
+            //ARRANGE
+            var wsFactory = new ClientWebSocketFactory();
+            var ws = wsFactory.New();
+            var cancelSource = new CancellationTokenSource();
+
+            // DisposeAsync will close websocket
+            await ws.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), CancellationToken.None).ConfigureAwait(false);
+
+            // ACT
+            await using var pipe = WebSocketMessagePipeline<HassMessageBase>.CreateWebSocketMessagePipeline(ws);
+
+            // First read the first sent
+            var msg = await pipe.GetNextMessageAsync(cancelSource.Token).ConfigureAwait(false);
+            Assert.Equal("auth_required", msg.Type);
+
+            var task = pipe.GetNextMessageAsync(cancelSource.Token).ConfigureAwait(false);
+
+            await pipe.CloseAsync();
+
+            var x = await Assert.ThrowsAsync<OperationCanceledException>(async () => await task);
+
+            Assert.True(x is object);
+            Assert.False(pipe.IsValid);
+
+        }
+
+        [Fact]
+        public async Task ProcessMessageReturnWhenRemoteClosed()
+        {
+            //ARRANGE
+            var wsFactory = new ClientWebSocketFactory();
+            var ws = wsFactory.New();
+            var cancelSource = new CancellationTokenSource();
+
+            // DisposeAsync will close websocket
+            await ws.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), CancellationToken.None).ConfigureAwait(false);
+
+            // ACT
+            await using var pipe = WebSocketMessagePipeline<HassMessageBase>.CreateWebSocketMessagePipeline(ws);
+
+            // First read the first sent
+            var msg = await pipe.GetNextMessageAsync(cancelSource.Token).ConfigureAwait(false);
+            Assert.Equal("auth_required", msg.Type);
+
+
+            var task = pipe.GetNextMessageAsync(cancelSource.Token).ConfigureAwait(false);
+
+            await Task.Delay(100);
+
+            await pipe.SendMessageAsync(new HassMessageBase { Type = "fake_disconnect_test" }, cancelSource.Token);
+
+            var x = await Assert.ThrowsAsync<OperationCanceledException>(async () => await task);
+
+            Assert.True(x is object);
+            Assert.False(pipe.IsValid);
+
+        }
+
+
     }
 }
