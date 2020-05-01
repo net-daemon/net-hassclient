@@ -54,30 +54,30 @@ namespace JoySoftware.HomeAssistant.Client
 
         public WebSocketCloseStatus? CloseStatus => _ws.CloseStatus;
 
-        public async Task ConnectAsync(Uri uri, CancellationToken cancel) => await _ws.ConnectAsync(uri, cancel);
+        public Task ConnectAsync(Uri uri, CancellationToken cancel) => _ws.ConnectAsync(uri, cancel);
 
-        public async Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription,
+        public Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription,
             CancellationToken cancellationToken) =>
-            await _ws.CloseAsync(closeStatus, statusDescription, cancellationToken);
+            _ws.CloseAsync(closeStatus, statusDescription, cancellationToken);
 
-        public async Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription,
+        public Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription,
             CancellationToken cancellationToken) =>
-            await _ws.CloseAsync(closeStatus, statusDescription, cancellationToken);
+            _ws.CloseAsync(closeStatus, statusDescription, cancellationToken);
 
-        public async Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage,
+        public Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage,
             CancellationToken cancellationToken) =>
-            await _ws.SendAsync(buffer, messageType, endOfMessage, cancellationToken);
+            _ws.SendAsync(buffer, messageType, endOfMessage, cancellationToken);
 
         public async ValueTask SendAsync(ReadOnlyMemory<byte> buffer, WebSocketMessageType messageType,
             bool endOfMessage, CancellationToken cancellationToken) =>
             await Task.FromException(new NotImplementedException());
 
-        public async Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer,
+        public Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer,
             CancellationToken cancellationToken) =>
-            await Task.FromException<WebSocketReceiveResult>(new NotImplementedException());
+             Task.FromException<WebSocketReceiveResult>(new NotImplementedException());
 
-        public async ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer,
-            CancellationToken cancellationToken) => await _ws.ReceiveAsync(buffer, cancellationToken);
+        public ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer,
+            CancellationToken cancellationToken) => _ws.ReceiveAsync(buffer, cancellationToken);
 
         #region IDisposable Support
 

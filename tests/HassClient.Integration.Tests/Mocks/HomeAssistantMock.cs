@@ -19,7 +19,7 @@ namespace HassClientIntegrationTests.Mocks
     ///     The Home Assistant Mock class implements a fake Home Assistant server by
     ///     exposing the websocket api and fakes responses to requests.
     /// </summary>
-    public class HomeAssistantMock : IDisposable
+    public class HomeAssistantMock : IAsyncDisposable
     {
         public static readonly int RecieiveBufferSize = 1024 * 4;
         private readonly IHost _host;
@@ -29,8 +29,6 @@ namespace HassClientIntegrationTests.Mocks
             _host = CreateHostBuilder().Build();
             _host.Start();
         }
-
-        public void Dispose() => _host?.Dispose();
 
         /// <summary>
         ///     Starts a websocket server in a generic host
@@ -47,10 +45,15 @@ namespace HassClientIntegrationTests.Mocks
         /// <summary>
         ///     Stops the fake Home Assistant server
         /// </summary>
-        public void Stop()
+        public async Task Stop()
         {
-            _host.StopAsync();
+            await _host.StopAsync().ConfigureAwait(false);
             _host.WaitForShutdown();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await Stop().ConfigureAwait(false);
         }
     }
 
@@ -119,11 +122,13 @@ namespace HassClientIntegrationTests.Mocks
                 // First send auth required to the client
                 byte[] authRequiredMessage = File.ReadAllBytes(Path.Combine(_mockTestdataPath, "auth_required.json"));
                 await webSocket.SendAsync(new ArraySegment<byte>(authRequiredMessage, 0, authRequiredMessage.Length),
-                    WebSocketMessageType.Text, true, cancelSource.Token);
+                    WebSocketMessageType.Text, true, cancelSource.Token).ConfigureAwait(false);
 
                 // Wait for incoming messages
                 WebSocketReceiveResult result =
-                    await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancelSource.Token);
+                    await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancelSource.Token).ConfigureAwait(false);
+
+                // Console.WriteLine($"SERVER: WebSocketState = {webSocket.State}, MessageType = {result.MessageType}");
                 while (!result.CloseStatus.HasValue)
                 {
                     HassMessage hassMessage =
@@ -141,7 +146,7 @@ namespace HassClientIntegrationTests.Mocks
                                 // byte[] authOkMessage = File.ReadAllBytes (Path.Combine (this.mockTestdataPath, "auth_ok.json"));
                                 await webSocket.SendAsync(
                                     new ArraySegment<byte>(_authOkMessage, 0, _authOkMessage.Length),
-                                    WebSocketMessageType.Text, true, CancellationToken.None);
+                                    WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
                             }
                             else
                             {
@@ -150,7 +155,7 @@ namespace HassClientIntegrationTests.Mocks
                                     File.ReadAllBytes(Path.Combine(_mockTestdataPath, "auth_notok.json"));
                                 await webSocket.SendAsync(
                                     new ArraySegment<byte>(authNotOkMessage, 0, authNotOkMessage.Length),
-                                    WebSocketMessageType.Text, true, CancellationToken.None);
+                                    WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
                                 // Hass will normally close session here but for the sake of testing it wont
                             }
 
@@ -158,7 +163,7 @@ namespace HassClientIntegrationTests.Mocks
                         case "ping":
                             // Hardcoded to be correct for performance tests
                             await webSocket.SendAsync(new ArraySegment<byte>(_pongMessage, 0, _pongMessage.Length),
-                                WebSocketMessageType.Text, true, CancellationToken.None);
+                                WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
                             break;
                         case "subscribe_events":
                             SendCommandMessage subscribeEventMessage =
@@ -169,12 +174,12 @@ namespace HassClientIntegrationTests.Mocks
                             byte[] responseString =
                                 JsonSerializer.SerializeToUtf8Bytes(response, typeof(ResultMessage), serializeOptions);
                             await webSocket.SendAsync(new ArraySegment<byte>(responseString, 0, responseString.Length),
-                                WebSocketMessageType.Text, true, CancellationToken.None);
+                                WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
                             // For tests send a event message
                             byte[] newEventMessage = File.ReadAllBytes(Path.Combine(_mockTestdataPath, "event.json"));
                             await webSocket.SendAsync(
                                 new ArraySegment<byte>(newEventMessage, 0, newEventMessage.Length),
-                                WebSocketMessageType.Text, true, CancellationToken.None);
+                                WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
                             // Hass will normally close session here but for the sake of testing it wont
 
                             break;
@@ -186,7 +191,7 @@ namespace HassClientIntegrationTests.Mocks
                                 File.ReadAllBytes(Path.Combine(_mockTestdataPath, "result_states.json"));
                             await webSocket.SendAsync(
                                 new ArraySegment<byte>(stateReusultMessage, 0, stateReusultMessage.Length),
-                                WebSocketMessageType.Text, true, CancellationToken.None);
+                                WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
 
                             break;
 
@@ -198,7 +203,7 @@ namespace HassClientIntegrationTests.Mocks
                             {
                                 // Send close message (some bug n CloseAsync makes we have to do it this way)
                                 await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing",
-                                    timeout.Token);
+                                    timeout.Token).ConfigureAwait(false);
                                 // Wait for close message
                                 //await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), timeout.Token);
                             }
@@ -210,15 +215,15 @@ namespace HassClientIntegrationTests.Mocks
                     }
 
                     // Wait for incoming messages
-                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None).ConfigureAwait(false);
                 }
 
                 await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription,
-                    CancellationToken.None);
+                    CancellationToken.None).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
-                await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Normal", CancellationToken.None);
+                await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Normal", CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception e)
             {

@@ -139,7 +139,10 @@ namespace HassClient.Unit.Tests
         public JoySoftware.HomeAssistant.Client.HassClient GetHassClient(HttpMessageHandler httpMessageHandler = null)
         {
 
-            return new JoySoftware.HomeAssistant.Client.HassClient(Logger.LoggerFactory, WebSocketMockFactory.Object, httpMessageHandler ?? null);
+            return new JoySoftware.HomeAssistant.Client.HassClient(
+                Logger.LoggerFactory,
+                new WebSocketMessagePipelineFactory<HassMessage>(),
+            WebSocketMockFactory.Object, httpMessageHandler ?? null);
         }
 
         /// <summary>
