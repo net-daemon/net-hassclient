@@ -66,6 +66,11 @@ namespace JoySoftware.HomeAssistant.Client
         private readonly Pipe _pipe = new Pipe();
 
         /// <summary>
+        ///     The max time we will wait for the socket to gracefully close
+        /// </summary>
+        private const int MaxWaitTimeSocketClose = 5000; // 5 seconds
+
+        /// <summary>
         ///     Default size for channel
         /// </summary>
         private const int DefaultChannelSize = 200;
@@ -200,6 +205,32 @@ namespace JoySoftware.HomeAssistant.Client
             }
         }
 
+        private async Task SendCloseFrameToWebSocket()
+        {
+            var timeout = new CancellationTokenSource(MaxWaitTimeSocketClose);
+
+            try
+            {
+                if (
+                    _ws.State == WebSocketState.Open ||
+                    _ws.State == WebSocketState.CloseReceived ||
+                    _ws.State == WebSocketState.CloseSent
+                    )
+                {
+                    // after this, the socket state which change to CloseSent
+                    await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token).ConfigureAwait(false);
+                    // now we wait for the server response, which will close the socket
+                    while (_ws.State != WebSocketState.Closed && !timeout.Token.IsCancellationRequested)
+                        await Task.Delay(100).ConfigureAwait(false);
+                }
+
+            }
+            catch (OperationCanceledException)
+            {
+                // normal upon task/token cancellation, disregard
+            }
+        }
+
         /// <summary>
         ///     Reads and process next message from the websocket
         /// </summary>
@@ -241,10 +272,7 @@ namespace JoySoftware.HomeAssistant.Client
                         {
                             // We got a close message from server or if it still open we got canceled
                             // in both cases it is important to send back the close message
-                            await _ws.CloseOutputAsync(
-                                WebSocketCloseStatus.NormalClosure,
-                                "Acknowledge Close frame",
-                                CancellationToken.None).ConfigureAwait(false);
+                            await SendCloseFrameToWebSocket().ConfigureAwait(false);
 
                             // Cancel so the write thread is canceled before pipe is complete
                             _internalCancellationSource.Cancel();
@@ -309,10 +337,7 @@ namespace JoySoftware.HomeAssistant.Client
             if (_ws.State == WebSocketState.CloseReceived || _ws.State == WebSocketState.Open)
             {
                 // Maske sure we send back to acknowledge the close message to server
-                await _ws.CloseOutputAsync(
-                    WebSocketCloseStatus.NormalClosure,
-                    "Close",
-                    CancellationToken.None).ConfigureAwait(false);
+                await SendCloseFrameToWebSocket().ConfigureAwait(false);
             }
 
             // Cancel all activity and wait for complete
