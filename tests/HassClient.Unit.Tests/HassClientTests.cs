@@ -596,7 +596,7 @@ namespace HassClient.Unit.Tests
 
 
             // ACT AND ASSERT
-
+            var subscribeTask = hassClient.SubscribeToEvents();
 
             // Service call successful
             mock.AddResponse(@"{
@@ -611,8 +611,8 @@ namespace HassClient.Unit.Tests
                                         }
                                       }
                                     }");
-            var subscribeTask = await hassClient.SubscribeToEvents().ConfigureAwait(false);
 
+            await subscribeTask.ConfigureAwait(false);
             mock.Logger.AssertLogged(LogLevel.Error, Times.Once());
         }
 
