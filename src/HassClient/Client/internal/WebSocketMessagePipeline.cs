@@ -213,8 +213,7 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 if (
                     _ws.State == WebSocketState.Open ||
-                    _ws.State == WebSocketState.CloseReceived ||
-                    _ws.State == WebSocketState.CloseSent
+                    _ws.State == WebSocketState.CloseReceived
                     )
                 {
                     // after this, the socket state which change to CloseSent
