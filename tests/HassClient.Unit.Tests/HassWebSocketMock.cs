@@ -84,6 +84,9 @@ namespace HassClient.Unit.Tests
         public static string ServiceMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "service_event.json"));
 
         public static string GetServiceMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "result_get_services.json"));
+        public static string GetAreasMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "result_get_areas.json"));
+        public static string GetDevicesMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "result_get_devices.json"));
+        public static string GetEntitiesMessage => File.ReadAllText(Path.Combine(MessageFixturePath, "result_get_entities.json"));
 
         public WebSocketState State { get; set; }
 

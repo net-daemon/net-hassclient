@@ -128,6 +128,40 @@ namespace JoySoftware.HomeAssistant.Client
         [JsonPropertyName("volume")] public string? Volume { get; set; } = null;
     }
 
+
+    public class HassAreas : List<HassArea>
+    {
+    }
+
+    public class HassArea
+    {
+        [JsonPropertyName("name")] public string? Name { get; set; } = null;
+        [JsonPropertyName("area_id")] public string? Id { get; set; } = null;
+    }
+
+    public class HassDevices : List<HassDevice>
+    {
+    }
+    public class HassDevice
+    {
+        [JsonPropertyName("manufacturer")] public string? Manufacturer { get; set; } = null;
+        [JsonPropertyName("model")] public string? Model { get; set; } = null;
+        [JsonPropertyName("id")] public string? Id { get; set; } = null;
+        [JsonPropertyName("area_id")] public string? AreaId { get; set; } = null;
+        [JsonPropertyName("name_by_user")] public string? NameByUser { get; set; } = null;
+    }
+
+    public class HassEntities : List<HassEntity>
+    {
+    }
+    public class HassEntity
+    {
+        [JsonPropertyName("device_id")] public string? DeviceId { get; set; } = null;
+        [JsonPropertyName("entity_id")] public string? EntityId { get; set; } = null;
+        [JsonPropertyName("name")] public string? Name { get; set; } = null;
+        [JsonPropertyName("icon")] public string? Icon { get; set; } = null;
+        [JsonPropertyName("platform")] public string? Platform { get; set; } = null;
+    }
     #endregion
 
     #region -- Sending messages --
@@ -175,6 +209,23 @@ namespace JoySoftware.HomeAssistant.Client
     public class GetServicesCommand : CommandMessage
     {
         public GetServicesCommand() => Type = "get_services";
+    }
+
+    //{"type":"config/area_registry/list","id":24}
+    public class GetAreasCommand : CommandMessage
+    {
+        public GetAreasCommand() => Type = "config/area_registry/list";
+    }
+    //{"type":"config/device_registry/list","id":25}
+    public class GetDevicesCommand : CommandMessage
+    {
+        public GetDevicesCommand() => Type = "config/device_registry/list";
+    }
+
+    //{"type":"config/entity_registry/list","id":29}
+    public class GetEntitiesCommand : CommandMessage
+    {
+        public GetEntitiesCommand() => Type = "config/entity_registry/list";
     }
 
     public class HassAuthMessage : HassMessageBase
