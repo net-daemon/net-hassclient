@@ -87,6 +87,21 @@ namespace JoySoftware.HomeAssistant.Client
         Task<IEnumerable<HassServiceDomain>> GetServices();
 
         /// <summary>
+        ///     Gets all registered Areas from Home Assistant
+        /// </summary>
+        Task<HassAreas> GetAreas();
+
+        /// <summary>
+        ///     Gets all registered Devices from Home Assistant
+        /// </summary>
+        Task<HassDevices> GetDevices();
+
+        /// <summary>
+        ///     Gets all registered Entities from entity registry from Home Assistant
+        /// </summary>
+        Task<HassEntities> GetEntities();
+
+        /// <summary>
         ///     Pings Home Assistant to check if connection is alive
         /// </summary>
         /// <param name="timeout">The timeout to wait for Home Assistant to return pong message</param>
