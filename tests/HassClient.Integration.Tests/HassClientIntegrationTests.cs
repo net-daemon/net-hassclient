@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading;
@@ -89,6 +90,74 @@ namespace HassClientIntegrationTests
             Assert.True(wscli.States.Count == 19);
             Assert.True(wscli.States["binary_sensor.vardagsrum_pir"].State == "on");
             await wscli.CloseAsync();
+        }
+
+        [Fact]
+        public async Task TestGetAreas()
+        {
+            await using var wscli = new HassClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
+
+
+            // ACT
+            // HassEvent eventMsg = await hassClient.ReadEventAsync();
+            var areas = await wscli.GetAreas().ConfigureAwait(false);
+            var first = areas.FirstOrDefault();
+
+            // ASSERT
+            Assert.NotNull(areas);
+            Assert.NotNull(first);
+            Assert.Equal("Bedroom", first.Name);
+            Assert.Equal("5a30cdc2fd7f44d5a77f2d6f6d2ccd76", first.Id);
+
+            Assert.Equal(3, areas.Count());
+        }
+
+        [Fact]
+        public async Task TestGetDevices()
+        {
+            // ARRANGE
+            await using var wscli = new HassClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
+
+
+            // ACT
+            var devices = await wscli.GetDevices().ConfigureAwait(false);
+            var first = devices.FirstOrDefault();
+
+            // ASSERT
+            Assert.NotNull(devices);
+            Assert.NotNull(first);
+            Assert.Null(first.NameByUser);
+            Assert.Null(first.AreaId);
+            Assert.Equal("Google Inc.", first.Manufacturer);
+            Assert.Equal("42cdda32a2a3428e86c2e27699d79ead", first.Id);
+            Assert.Equal("Chromecast", first.Model);
+            Assert.Equal("My TV", first.Name);
+
+            Assert.Equal(2, devices.Count());
+        }
+        [Fact]
+        public async Task TestGetEntities()
+        {
+            // ARRANGE
+            await using var wscli = new HassClient();
+            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ", false);
+
+            // ACT
+
+            var entities = await wscli.GetEntities().ConfigureAwait(false);
+            var first = entities.FirstOrDefault();
+
+            // ASSERT
+            Assert.NotNull(entities);
+            Assert.NotNull(first);
+            Assert.Null(first.Name);
+            Assert.Null(first.Icon);
+            Assert.Equal("42cdda32a2a3428e86c2e27699d79ead", first.DeviceId);
+            Assert.Equal("media_player.tv_uppe2", first.EntityId);
+
+            Assert.Equal(2, entities.Count());
         }
 
         [Fact]

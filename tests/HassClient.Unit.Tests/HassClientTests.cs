@@ -1094,5 +1094,87 @@ namespace HassClient.Unit.Tests
             // ACT & ASSERT
             await Assert.ThrowsAsync<OperationCanceledException>(async () => await hassClient.ReadEventAsync(cancelSoon.Token).ConfigureAwait(false)).ConfigureAwait(false);
         }
+
+        [Fact]
+        public async Task GetAreasShouldHaveCorrectObject()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            await using var hassClient = await mock.GetHassConnectedClient().ConfigureAwait(false);
+
+            var task = hassClient.GetAreas();
+            // Add the service message fake , check service_event.json for reference
+            mock.AddResponse(HassWebSocketMock.GetAreasMessage);
+
+            // ACT
+            // HassEvent eventMsg = await hassClient.ReadEventAsync();
+            var result = await task.ConfigureAwait(false);
+
+            var first = result.FirstOrDefault();
+
+            // ASSERT
+            Assert.NotNull(result);
+            Assert.NotNull(first);
+            Assert.Equal("Bedroom", first.Name);
+            Assert.Equal("5a30cdc2fd7f44d5a77f2d6f6d2ccd76", first.Id);
+
+            Assert.Equal(3, result.Count());
+        }
+
+
+        [Fact]
+        public async Task GetDevicesShouldHaveCorrectObject()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            await using var hassClient = await mock.GetHassConnectedClient().ConfigureAwait(false);
+
+            var task = hassClient.GetDevices();
+            // Add the service message fake , check service_event.json for reference
+            mock.AddResponse(HassWebSocketMock.GetDevicesMessage);
+
+            // ACT
+            // HassEvent eventMsg = await hassClient.ReadEventAsync();
+            var result = await task.ConfigureAwait(false);
+
+            var first = result.FirstOrDefault();
+
+            // ASSERT
+            Assert.NotNull(result);
+            Assert.NotNull(first);
+            Assert.Equal("Google Inc.", first.Manufacturer);
+            Assert.Equal("42cdda32a2a3428e86c2e27699d79ead", first.Id);
+
+            Assert.Equal(2, result.Count());
+        }
+
+        [Fact]
+        public async Task GetEntitiesShouldHaveCorrectObject()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            // Get the connected hass client
+            await using var hassClient = await mock.GetHassConnectedClient().ConfigureAwait(false);
+
+            var task = hassClient.GetEntities();
+            // Add the service message fake , check service_event.json for reference
+            mock.AddResponse(HassWebSocketMock.GetEntitiesMessage);
+
+            // ACT
+            // HassEvent eventMsg = await hassClient.ReadEventAsync();
+            var result = await task.ConfigureAwait(false);
+
+            var first = result.FirstOrDefault();
+
+            // ASSERT
+            Assert.NotNull(result);
+            Assert.NotNull(first);
+            Assert.Equal("42cdda32a2a3428e86c2e27699d79ead", first.DeviceId);
+            Assert.Equal("media_player.tv_uppe2", first.EntityId);
+
+            Assert.Equal(2, result.Count());
+        }
     }
 }

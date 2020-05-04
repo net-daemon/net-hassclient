@@ -709,6 +709,42 @@ namespace JoySoftware.HomeAssistant.Client
             return resultMessage;
         }
 
+        public async Task<HassAreas> GetAreas()
+        {
+
+            HassMessage servicesResult = await SendCommandAndWaitForResponse(new GetAreasCommand()).ConfigureAwait(false);
+
+            var resultMessage =
+                servicesResult.Result as HassAreas
+                    ?? throw new ApplicationException("Unexpected response from GetServices command");
+
+            return resultMessage;
+        }
+
+        public async Task<HassDevices> GetDevices()
+        {
+
+            HassMessage devicesResult = await SendCommandAndWaitForResponse(new GetDevicesCommand()).ConfigureAwait(false);
+
+            var resultMessage =
+                devicesResult.Result as HassDevices
+                    ?? throw new ApplicationException("Unexpected response from GetDevices command");
+
+            return resultMessage;
+        }
+
+        public async Task<HassEntities> GetEntities()
+        {
+
+            HassMessage servicesResult = await SendCommandAndWaitForResponse(new GetEntitiesCommand()).ConfigureAwait(false);
+
+            var resultMessage =
+                servicesResult.Result as HassEntities
+                    ?? throw new ApplicationException("Unexpected response from GetServices command");
+
+            return resultMessage;
+        }
+
         /// <summary>
         ///     Process next message from Home Assistant
         /// </summary>
@@ -880,6 +916,15 @@ namespace JoySoftware.HomeAssistant.Client
                             break; // Do nothing
                         case "call_service":
                             break; // Do nothing
+                        case "config/area_registry/list":
+                            m.Result = m.ResultElement?.ToObject<HassAreas>(_defaultSerializerOptions);
+                            break;
+                        case "config/device_registry/list":
+                            m.Result = m.ResultElement?.ToObject<HassDevices>(_defaultSerializerOptions);
+                            break;
+                        case "config/entity_registry/list":
+                            m.Result = m.ResultElement?.ToObject<HassEntities>(_defaultSerializerOptions);
+                            break;
                         default:
                             _logger.LogError($"The command message {command} is not supported");
                             break;
