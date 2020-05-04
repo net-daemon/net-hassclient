@@ -598,6 +598,8 @@ namespace HassClient.Unit.Tests
             // ACT AND ASSERT
             var subscribeTask = hassClient.SubscribeToEvents();
 
+            await Task.Delay(100).ConfigureAwait(false);
+
             // Service call successful
             mock.AddResponse(@"{
                                       ""id"": 2,
@@ -613,6 +615,8 @@ namespace HassClient.Unit.Tests
                                     }");
 
             await subscribeTask.ConfigureAwait(false);
+            await Task.Delay(100).ConfigureAwait(false);
+
             mock.Logger.AssertLogged(LogLevel.Error, Times.Once());
         }
 
