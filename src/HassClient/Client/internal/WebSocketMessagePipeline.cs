@@ -153,7 +153,7 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 try
                 {
-                    while (!_internalCancelToken.IsCancellationRequested)
+                    while (!_internalCancelToken.IsCancellationRequested && _ws.State == WebSocketState.Open)
                     {
 
                         var messageToSend = await _outChannel.Reader.ReadAsync(_internalCancelToken).ConfigureAwait(false);
@@ -178,7 +178,14 @@ namespace JoySoftware.HomeAssistant.Client
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, "Major failure in WriteMessagePumpWriteMessagePump, exit...");
+                    if (_ws.State == WebSocketState.Open)
+                    {
+                        _logger.LogError(e, "Major failure in WriteMessagePumpWriteMessagePump, exit...");
+                    }
+                    else
+                    {
+                        _logger.LogTrace(e, "WriteMessagePumpClosing, probably remote closure");
+                    }
                     break;
                 }
             }
@@ -316,7 +323,8 @@ namespace JoySoftware.HomeAssistant.Client
                 }
                 catch (JsonException jex)
                 {
-                    _logger.LogDebug(jex, "Error deserializing json ");
+                    if (_ws.State == WebSocketState.Open)
+                        _logger.LogDebug(jex, "Error deserializing json ");
                 }
                 catch (Exception e)
                 {

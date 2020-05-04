@@ -194,6 +194,36 @@ namespace HassClientIntegrationTests.Mocks
                                 WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
 
                             break;
+                        case "config/area_registry/list":
+                            JsonSerializer.Deserialize<SendCommandMessage>(
+                                new ReadOnlySpan<byte>(buffer, 0, result.Count));
+                            byte[] areasReusultMessage =
+                                File.ReadAllBytes(Path.Combine(_mockTestdataPath, "result_get_areas.json"));
+                            await webSocket.SendAsync(
+                                new ArraySegment<byte>(areasReusultMessage, 0, areasReusultMessage.Length),
+                                WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
+
+                            break;
+                        case "config/device_registry/list":
+                            JsonSerializer.Deserialize<SendCommandMessage>(
+                                new ReadOnlySpan<byte>(buffer, 0, result.Count));
+                            byte[] devicesReusultMessage =
+                                File.ReadAllBytes(Path.Combine(_mockTestdataPath, "result_get_devices.json"));
+                            await webSocket.SendAsync(
+                                new ArraySegment<byte>(devicesReusultMessage, 0, devicesReusultMessage.Length),
+                                WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
+
+                            break;
+                        case "config/entity_registry/list":
+                            JsonSerializer.Deserialize<SendCommandMessage>(
+                                new ReadOnlySpan<byte>(buffer, 0, result.Count));
+                            byte[] entitiesReusultMessage =
+                                File.ReadAllBytes(Path.Combine(_mockTestdataPath, "result_get_entities.json"));
+                            await webSocket.SendAsync(
+                                new ArraySegment<byte>(entitiesReusultMessage, 0, entitiesReusultMessage.Length),
+                                WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
+
+                            break;
 
                         case "fake_disconnect_test":
                             // This is not a real home assistant message, just used to test disconnect from socket.

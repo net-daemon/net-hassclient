@@ -148,6 +148,7 @@ namespace JoySoftware.HomeAssistant.Client
         [JsonPropertyName("model")] public string? Model { get; set; } = null;
         [JsonPropertyName("id")] public string? Id { get; set; } = null;
         [JsonPropertyName("area_id")] public string? AreaId { get; set; } = null;
+        [JsonPropertyName("name")] public string? Name { get; set; } = null;
         [JsonPropertyName("name_by_user")] public string? NameByUser { get; set; } = null;
     }
 
