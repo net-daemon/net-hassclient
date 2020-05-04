@@ -248,7 +248,7 @@ namespace HassClientIntegrationTests.Mocks
                     result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None).ConfigureAwait(false);
                 }
 
-                await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription,
+                await webSocket.CloseOutputAsync(result.CloseStatus.Value, result.CloseStatusDescription,
                     CancellationToken.None).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
