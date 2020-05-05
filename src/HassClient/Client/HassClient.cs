@@ -29,7 +29,10 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     The current states of the entities.
         /// </summary>
-        /// <remarks>Can be fully loaded when connecting by setting getStatesOnConnect=true</remarks>
+        /// <remarks>
+        /// Can be fully loaded when connecting by setting getStatesOnConnect=true,
+        /// beware that it is not maintained after that initial load
+        /// </remarks>
         ConcurrentDictionary<string, HassState> States { get; }
 
         /// <summary>
@@ -147,6 +150,12 @@ namespace JoySoftware.HomeAssistant.Client
         /// <param name="eventType">The type of event subscribed to</param>
         /// <returns>Returns true if successful</returns>
         Task<bool> SubscribeToEvents(EventType eventType = EventType.All);
+
+        /// <summary>
+        ///     Get all state for all entities in Home Assistant
+        /// </summary>
+        /// <param name="token">Provided token</param>
+        Task<IEnumerable<HassState>> GetAllStates(CancellationToken? token = null);
     }
 
     /// <summary>
@@ -517,7 +526,11 @@ namespace JoySoftware.HomeAssistant.Client
                         case "auth_ok":
                             if (getStatesOnConnect)
                             {
-                                await GetStates(connectTokenSource).ConfigureAwait(false);
+                                var currentStates = await GetAllStates(connectTokenSource.Token).ConfigureAwait(false);
+                                foreach (var state in currentStates)
+                                {
+                                    States[state.EntityId] = state;
+                                }
                             }
 
                             _logger.LogTrace($"Connected to websocket ({url}) on host {url.Host} and the api ({_apiUrl})");
@@ -962,18 +975,18 @@ namespace JoySoftware.HomeAssistant.Client
 
             return m;
         }
-
-        private async Task GetStates(CancellationTokenSource connectTokenSource)
+        public async Task<IEnumerable<HassState>> GetAllStates(CancellationToken? token = null)
         {
+            var tokenToUse = token ?? CancelSource.Token;
+
             await SendMessage(new GetStatesCommand()).ConfigureAwait(false);
-            HassMessage result = await _messageChannel.Reader.ReadAsync(connectTokenSource.Token).ConfigureAwait(false);
-            if (result?.Result is List<HassState> wsResult)
+            HassMessage result = await _messageChannel.Reader.ReadAsync(tokenToUse).ConfigureAwait(false);
+            if (result.Result is object && result.Result is List<HassState> wsResult)
             {
-                foreach (HassState state in wsResult)
-                {
-                    States[state.EntityId] = state;
-                }
+                return (List<HassState>)result.Result;
             }
+
+            return new List<HassState>();
         }
 
         private async Task<HassMessage> HandleConnectAndAuthenticate(string token,
