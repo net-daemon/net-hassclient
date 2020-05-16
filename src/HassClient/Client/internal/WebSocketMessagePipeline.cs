@@ -1,6 +1,7 @@
 using System;
 using System.IO.Pipelines;
 using System.Net.WebSockets;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
@@ -88,6 +89,14 @@ namespace JoySoftware.HomeAssistant.Client
             Channel.CreateBounded<object>(DefaultChannelSize);
 
         /// <summary>
+        ///     Set loglevel om messages when tracing is enabled
+        ///     - Default, logs but state chages
+        ///     - None, do not log messages
+        ///     - All, logs all but security challanges
+        /// </summary>
+        private readonly string _messageLogLevel = Environment.GetEnvironmentVariable("HASSCLIENT_MSGLOGLEVEL") ?? "None";
+
+        /// <summary>
         ///     Default Json serialization options, Hass expects intended
         /// </summary>
         private readonly JsonSerializerOptions _defaultSerializerOptions = new JsonSerializerOptions
@@ -167,6 +176,17 @@ namespace JoySoftware.HomeAssistant.Client
                         byte[] result = JsonSerializer.SerializeToUtf8Bytes(messageToSend, messageToSend.GetType(),
                             _defaultSerializerOptions);
 
+                        if (_logger.IsEnabled(LogLevel.Trace) && _messageLogLevel != "None")
+                        {
+                            if (messageToSend is HassAuthMessage == false)
+                            {
+                                // We log everything but AuthMessage due to security reasons
+                                _logger.LogTrace("SendAsync, message: {result}", UTF8Encoding.UTF8.GetString(result));
+                            }
+                            {
+                                _logger.LogTrace("Sending auth message, not shown for security reasons");
+                            }
+                        }
                         await _ws.SendAsync(result, WebSocketMessageType.Text, true, _internalCancelToken).ConfigureAwait(false);
 
                     }
@@ -264,6 +284,20 @@ namespace JoySoftware.HomeAssistant.Client
                             _ws.State == WebSocketState.Open &&
                             result.MessageType != WebSocketMessageType.Close)
                         {
+                            // Log incoming messages for correct loglevel and tracing is enabled
+                            if (_messageLogLevel != "None" && _logger.IsEnabled(LogLevel.Trace) && result.Count > 0)
+                            {
+                                var strMessageReceived = UTF8Encoding.UTF8.GetString(memory.Slice(0, result.Count).ToArray());
+                                if (_messageLogLevel == "All")
+                                    _logger.LogTrace("ReadClientSocket, message: {strMessageReceived}", strMessageReceived);
+                                else if (_messageLogLevel == "Default")
+                                {
+                                    // Log all but events
+                                    if (strMessageReceived.Contains("\"type\": \"event\"") == false)
+                                        _logger.LogTrace("ReadClientSocket, message: {strMessageReceived}", strMessageReceived);
+                                }
+                            }
+
                             _pipe.Writer.Advance(result.Count);
 
                             await _pipe.Writer.FlushAsync(_internalCancelToken).ConfigureAwait(false);
