@@ -907,11 +907,20 @@ namespace JoySoftware.HomeAssistant.Client
                 }
                 else
                 {
-                    _commandsSentAndResponseShouldBeDisregarded[_messageId] = commandMessage.Type; ;
+                    _commandsSentAndResponseShouldBeDisregarded[_messageId] = FormatCommand(commandMessage);
                 }
             }
 
             return _messagePipeline.SendMessageAsync(message, CancelSource.Token);
+        }
+
+        private string FormatCommand(CommandMessage message)
+        {
+            return message switch
+            {
+                CallServiceCommand cc => $"call_service: {cc.Domain}.{cc.Service} ({cc.ServiceData})",
+                _ => message.Type
+            };
         }
 
         /// <summary>
