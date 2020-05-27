@@ -190,15 +190,15 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Thread safe dicitionary that holds information about all command and command id:s
         ///     Is used to correclty deserialize the result messages from commands.
         /// </summary>
-        private readonly ConcurrentDictionary<int, string> _commandsSent =
-            new ConcurrentDictionary<int, string>(32, 200);
+        private readonly ConcurrentDictionary<int, CommandMessage> _commandsSent =
+            new ConcurrentDictionary<int, CommandMessage>(32, 200);
 
         /// <summary>
         ///     Thread safe dicitionary that holds information about all command and command id:s
         ///     Is used to correclty deserialize the result messages from commands.
         /// </summary>
-        private readonly ConcurrentDictionary<int, string> _commandsSentAndResponseShouldBeDisregarded =
-            new ConcurrentDictionary<int, string>(32, 200);
+        private readonly ConcurrentDictionary<int, CommandMessage> _commandsSentAndResponseShouldBeDisregarded =
+            new ConcurrentDictionary<int, CommandMessage>(32, 200);
 
 
         /// <summary>
@@ -903,11 +903,11 @@ namespace JoySoftware.HomeAssistant.Client
                 if (waitForResponse)
                 {
                     //We save the type of command so we can deserialize the correct message later
-                    _commandsSent[_messageId] = commandMessage.Type;
+                    _commandsSent[_messageId] = commandMessage;
                 }
                 else
                 {
-                    _commandsSentAndResponseShouldBeDisregarded[_messageId] = FormatCommand(commandMessage);
+                    _commandsSentAndResponseShouldBeDisregarded[_messageId] = commandMessage;
                 }
             }
 
@@ -932,13 +932,13 @@ namespace JoySoftware.HomeAssistant.Client
             {
 
                 // It is an command response, get command
-                if (_commandsSent.TryRemove(m.Id, out string? command))
+                if (_commandsSent.TryRemove(m.Id, out CommandMessage? command))
                 {
-                    if (m.Success == false)
+                    if (m.Success == false && command is object)
                     {
-                        _logger.LogWarning($"Non successful result for command {command}: code({m.Error?.Code}), message: {m.Error?.Message}");
+                        _logger.LogWarning($"Non successful result for command {FormatCommand(command)}: code({m.Error?.Code}), message: {m.Error?.Message}");
                     }
-                    switch (command)
+                    switch (command?.Type)
                     {
                         case "get_states":
                             m.Result = m.ResultElement?.ToHassStates(_defaultSerializerOptions);
@@ -963,19 +963,19 @@ namespace JoySoftware.HomeAssistant.Client
                             m.Result = m.ResultElement?.ToObject<HassEntities>(_defaultSerializerOptions);
                             break;
                         default:
-                            _logger.LogError($"The command message {command} is not supported");
+                            _logger.LogError($"The command message {command?.Type} is not supported");
                             break;
                     }
                     m.ResultElement = null;
                 }
                 else
                 {
-                    string? originalCommand;
+                    CommandMessage? originalCommand;
                     var resultMsg = _commandsSentAndResponseShouldBeDisregarded.TryRemove(m.Id, out originalCommand) ? null : m;
 
-                    if (m.Success == false)
+                    if (m.Success == false && resultMsg is object && originalCommand is object)
                     {
-                        _logger.LogWarning($"Non successful unwaited result for command {originalCommand}: code({m.Error?.Code}), message: {m.Error?.Message}");
+                        _logger.LogWarning($"Non successful unwaited result for command {FormatCommand(originalCommand)}: code({m.Error?.Code}), message: {m.Error?.Message}");
                     }
                     // Make sure we discard messages that no one is waiting for
                     return resultMsg;
