@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Security;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,7 +49,7 @@ namespace JoySoftware.HomeAssistant.Client
 
     internal class HassWebSocket : IClientWebSocket
     {
-        private readonly ClientWebSocket _ws = new ClientWebSocket();
+        private readonly ClientWebSocket _ws;
 
         public WebSocketState State => _ws.State;
 
@@ -82,6 +83,33 @@ namespace JoySoftware.HomeAssistant.Client
         #region IDisposable Support
 
         private bool disposedValue; // To detect redundant calls
+
+        /// <summary>
+        ///    Default constructor
+        /// </summary>
+        public HassWebSocket()
+        {
+            _ws = new ClientWebSocket();
+
+            var bypassCertificateErrorsForHash = Environment.GetEnvironmentVariable("HASSCLIENT_BYPASS_CERT_ERR");
+
+            if (bypassCertificateErrorsForHash is object)
+            {
+                _ws.Options.RemoteCertificateValidationCallback = (message, cert, chain, sslPolicyErrors) =>
+                {
+                    if (sslPolicyErrors == SslPolicyErrors.None)
+                    {
+                        return true;   //Is valid
+                    }
+
+                    if (cert.GetCertHashString() == bypassCertificateErrorsForHash)
+                    {
+                        return true;
+                    }
+                    return false;
+                };
+            }
+        }
 
         protected virtual void Dispose(bool disposing)
         {
