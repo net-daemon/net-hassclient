@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Security;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -215,6 +216,11 @@ namespace JoySoftware.HomeAssistant.Client
         private readonly HttpClient _httpClient;
 
         /// <summary>
+        ///     Used when special management of self-signed certificates are ignored
+        /// </summary>
+        private readonly HttpClientHandler? _httpClientHandler;
+
+        /// <summary>
         ///     The logger to use
         /// </summary>
         private readonly ILogger _logger;
@@ -291,6 +297,29 @@ namespace JoySoftware.HomeAssistant.Client
         {
             logFactory ??= _getDefaultLoggerFactory;
             wsFactory ??= new ClientWebSocketFactory();
+
+            var bypassCertificateErrorsForHash = Environment.GetEnvironmentVariable("HASSCLIENT_BYPASS_CERT_ERR");
+
+            if (httpMessageHandler is null && bypassCertificateErrorsForHash is object)
+            {
+                _httpClientHandler = new HttpClientHandler();
+                _httpClientHandler.ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) =>
+               {
+                   if (sslPolicyErrors == SslPolicyErrors.None)
+                   {
+                       return true;   //Is valid
+                   }
+
+                   if (cert.GetCertHashString() == bypassCertificateErrorsForHash.ToUpperInvariant())
+                   {
+                       return true;
+                   }
+                   return false;
+               };
+
+                httpMessageHandler = _httpClientHandler;
+            }
+
             _httpClient = httpMessageHandler != null ?
                 new HttpClient(httpMessageHandler) : new HttpClient();
 
@@ -1060,7 +1089,12 @@ namespace JoySoftware.HomeAssistant.Client
         {
             try
             {
+
                 await CloseAsync().ConfigureAwait(false);
+                if (_httpClientHandler is object)
+                {
+                    _httpClientHandler.Dispose();
+                }
             }
             catch
             {
