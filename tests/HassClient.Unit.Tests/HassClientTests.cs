@@ -1,9 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -791,6 +789,9 @@ namespace HassClient.Unit.Tests
 
             // Just test one of the NewStateOne
             Assert.True(stateMessage.NewState?.EntityId == "binary_sensor.vardagsrum_pir");
+
+            Assert.NotNull(stateMessage.OldState.Context);
+            Assert.NotNull(stateMessage.NewState.Context);
         }
 
         [Fact]
