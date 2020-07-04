@@ -283,7 +283,6 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 foreach (var obj in element.EnumerateObject())
                 {
-                    var jsonElem = obj.Value;
                     dictResult[obj.Name] = obj.Value.ToDynamic();
                 }
             }
@@ -367,7 +366,6 @@ namespace JoySoftware.HomeAssistant.Client
 
             foreach (var property in element.EnumerateObject())
             {
-                var servicesList = new List<HassService>();
                 var serviceDomain = new HassServiceDomain
                 {
                     Domain = property.Name,
