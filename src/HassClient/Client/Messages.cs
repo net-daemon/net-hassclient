@@ -105,9 +105,9 @@ namespace JoySoftware.HomeAssistant.Client
 
     public class HassContext
     {
-        [JsonPropertyName("id")] public string Id { get; set; }
-        [JsonPropertyName("parent_id")] public string ParentId { get; set; }
-        [JsonPropertyName("user_id")] public string UserId { get; set; }
+        [JsonPropertyName("id")] public string Id { get; set; } = "";
+        [JsonPropertyName("parent_id")] public string? ParentId { get; set; } = null;
+        [JsonPropertyName("user_id")] public string? UserId { get; set; } = null;
     }
 
     public class HassStateChangedEventData

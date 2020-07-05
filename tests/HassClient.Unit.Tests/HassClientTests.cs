@@ -791,7 +791,12 @@ namespace HassClient.Unit.Tests
             Assert.True(stateMessage.NewState?.EntityId == "binary_sensor.vardagsrum_pir");
 
             Assert.NotNull(stateMessage.OldState.Context);
+            Assert.Equal("09c2e2ed8eef43e7885f478084e61d80", stateMessage.OldState.Context.Id);
+
             Assert.NotNull(stateMessage.NewState.Context);
+            Assert.Equal("849ebede7b294a019c724a07dac43f9c", stateMessage.NewState.Context.Id);
+            Assert.Equal("f294ec587df349198a15927699c5ec8c", stateMessage.NewState.Context.ParentId);
+            Assert.Equal("0d1833ddbaba4f21b31fb0bc79ad1bc7", stateMessage.NewState.Context.UserId);
         }
 
         [Fact]
