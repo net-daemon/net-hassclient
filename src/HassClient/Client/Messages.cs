@@ -100,6 +100,14 @@ namespace JoySoftware.HomeAssistant.Client
         [JsonPropertyName("last_changed")] public DateTime LastChanged { get; set; } = DateTime.MinValue;
         [JsonPropertyName("last_updated")] public DateTime LastUpdated { get; set; } = DateTime.MinValue;
         [JsonPropertyName("state")] public dynamic? State { get; set; } = "";
+        [JsonPropertyName("context")] public HassContext? Context { get; set; } = null;
+    }
+
+    public class HassContext
+    {
+        [JsonPropertyName("id")] public string Id { get; set; } = "";
+        [JsonPropertyName("parent_id")] public string? ParentId { get; set; } = null;
+        [JsonPropertyName("user_id")] public string? UserId { get; set; } = null;
     }
 
     public class HassStateChangedEventData
@@ -275,7 +283,6 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 foreach (var obj in element.EnumerateObject())
                 {
-                    var jsonElem = obj.Value;
                     dictResult[obj.Name] = obj.Value.ToDynamic();
                 }
             }
@@ -359,7 +366,6 @@ namespace JoySoftware.HomeAssistant.Client
 
             foreach (var property in element.EnumerateObject())
             {
-                var servicesList = new List<HassService>();
                 var serviceDomain = new HassServiceDomain
                 {
                     Domain = property.Name,
