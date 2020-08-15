@@ -61,7 +61,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             });
 
             await using IHassClient client = new HassClient(factory);
-            var token_env = Environment.GetEnvironmentVariable("HASS_TOKEN");
+            var token_env = Environment.GetEnvironmentVariable("HOMEASSISTANT__TOKEN");
             if (token_env != null)
                 token = token_env;
 
@@ -80,6 +80,8 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
 
             var services = await client.GetServices();
 
+            var config = await client.GetConfig();
+            System.Console.WriteLine(config.State);
             var tempTest = client.States["sensor.frysnere_temperature"];
             if (events)
             {

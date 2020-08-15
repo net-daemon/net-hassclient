@@ -21,13 +21,12 @@ namespace JoySoftware.HomeAssistant.Client
         [JsonPropertyName("config_dir")] public string? ConfigDir { get; set; } = null;
         [JsonPropertyName("elevation")] public int? Elevation { get; set; } = null;
         [JsonPropertyName("latitude")] public float? Latitude { get; set; } = null;
-
         [JsonPropertyName("location_name")] public string? LocationName { get; set; } = null;
         [JsonPropertyName("longitude")] public float? Longitude { get; set; } = null;
         [JsonPropertyName("time_zone")] public string? TimeZone { get; set; } = null;
         [JsonPropertyName("unit_system")] public HassUnitSystem? UnitSystem { get; set; } = null;
         [JsonPropertyName("version")] public string? Version { get; set; } = null;
-
+        [JsonPropertyName("state")] public string? State { get; set; } = null;
         [JsonPropertyName("whitelist_external_dirs")]
         public List<string>? WhitelistExternalDirs { get; set; } = null;
     }

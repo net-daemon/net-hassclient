@@ -15,7 +15,7 @@
                 "-i 192.168.1.7",
                 "-p 8123",
                 "-e true",
-                "-t eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI5MmU2ODJmMWQzYjE0Y2Q4ODI5ZjMwNGQ5YzY5OGM3ZSIsImlhdCI6MTU4NjM0ODExNiwiZXhwIjoxOTAxNzA4MTE2fQ.nxaTjlvmRShXCLR2FgW6PZPOOcyVTGaolxMZb2cERFY"
+                "-t none"
             ],
             "cwd": "${workspaceFolder}/console/HassClient.Performance.Tests",
             "console": "internalConsole",
