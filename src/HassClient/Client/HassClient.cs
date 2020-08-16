@@ -581,7 +581,6 @@ namespace JoySoftware.HomeAssistant.Client
             }
             catch (Exception e)
             {
-                _logger.LogError($"Failed to connect to Home Assistant on {url}");
                 _logger.LogDebug(e, $"Failed to connect to Home Assistant on {url}");
             }
 

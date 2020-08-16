@@ -181,7 +181,7 @@ namespace HassClientIntegrationTests
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket_not_exist"),
                 "ABCDEFGHIJKLMNOPQ");
             Assert.False(result);
-            Assert.True(loggerFactoryMock.LoggedError);
+            Assert.False(loggerFactoryMock.LoggedError);
             Assert.True(loggerFactoryMock.LoggedDebug);
             Assert.False(loggerFactoryMock.LoggedTrace);
             await wscli.CloseAsync();
