@@ -16,5 +16,5 @@ jobs:
             dotnet-version: '5.0.100' # SDK Version
       - name: pack DaemonRunner
         run: dotnet pack ${{github.workspace}}/src/HassClient/HassClient.csproj --configuration Release -p:PackageVersion=${GITHUB_REF#refs/tags/}-beta
-      # - name: push to nuget
-      #   run: dotnet nuget push **/*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json --no-symbols true
+      - name: push to nuget
+        run: dotnet nuget push **/*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json --no-symbols true
