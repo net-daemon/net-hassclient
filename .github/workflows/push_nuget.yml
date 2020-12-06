@@ -14,9 +14,9 @@ jobs:
       - uses: actions/setup-dotnet@v1
         with:
             dotnet-version: '5.0.100' # SDK Version
-      - uses: olegtarasov/get-tag@v2
-        name: Set tag envronment variable
+      # - uses: olegtarasov/get-tag@v2
+      #   name: Set tag envronment variable
       - name: pack DaemonRunner
-        run: dotnet pack ${{github.workspace}}/src/HassClient/HassClient.csproj --configuration Release -p:PackageVersion=${GIT_TAG_NAME}-beta
-      - name: push to nuget
-        run: dotnet nuget push **/*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json --no-symbols true
+        run: dotnet pack ${{github.workspace}}/src/HassClient/HassClient.csproj --configuration Release -p:PackageVersion=${{ github.event.release.tag_name }}-beta
+      # - name: push to nuget
+      #   run: dotnet nuget push **/*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json --no-symbols true
