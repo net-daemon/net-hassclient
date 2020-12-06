@@ -897,7 +897,7 @@ namespace HassClient.Unit.Tests
             // ACT and ASSERT
             // Calls returns false and logs error
             Assert.False(await hassClient.ConnectAsync(new Uri("ws://anyurldoesntmatter.org"), "FAKETOKEN", false).ConfigureAwait(false));
-            loggerMock.AssertLogged(LogLevel.Error, Times.Once());
+            loggerMock.AssertLogged(LogLevel.Debug, Times.Once());
         }
 
         [Fact]

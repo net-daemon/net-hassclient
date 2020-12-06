@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Globalization;
 using System.Text.Json;
@@ -258,7 +259,7 @@ namespace JoySoftware.HomeAssistant.Client
 
     public static class JsonExtensions
     {
-        public static object? ParseDataType(string state)
+        public static object? ParseDataType(string? state)
         {
             if (Int64.TryParse(state, NumberStyles.Number, CultureInfo.InvariantCulture, out Int64 intValue))
                 return intValue;
@@ -330,7 +331,8 @@ namespace JoySoftware.HomeAssistant.Client
                 element.WriteTo(writer);
             }
 
-            var hassStates = JsonSerializer.Deserialize<HassStates>(bufferWriter.WrittenSpan, options);
+            var hassStates = JsonSerializer.Deserialize<HassStates>(bufferWriter.WrittenSpan, options)
+                ?? throw new ApplicationException("Hass states desrialization resulted in empty result");
 
             foreach (var hassState in hassStates)
             {
@@ -340,6 +342,7 @@ namespace JoySoftware.HomeAssistant.Client
             return hassStates;
         }
 
+        [return: MaybeNull]
         public static T ToObject<T>(this JsonElement element, JsonSerializerOptions? options = null)
         {
             var bufferWriter = new ArrayBufferWriter<byte>();
@@ -348,7 +351,7 @@ namespace JoySoftware.HomeAssistant.Client
                 element.WriteTo(writer);
             }
 
-            return JsonSerializer.Deserialize<T>(bufferWriter.WrittenSpan, options);
+            return JsonSerializer.Deserialize<T>(bufferWriter.WrittenSpan, options) ?? default!;
         }
 
 
@@ -466,12 +469,13 @@ namespace JoySoftware.HomeAssistant.Client
 
     public class HassEventConverter : JsonConverter<HassEvent>
     {
-        public override HassEvent Read(
+        public override HassEvent? Read(
             ref Utf8JsonReader reader,
             Type typeToConvert,
             JsonSerializerOptions options)
         {
-            HassEvent m = JsonSerializer.Deserialize<HassEvent>(ref reader, options);
+            HassEvent m = JsonSerializer.Deserialize<HassEvent>(ref reader, options)
+                ?? throw new ApplicationException("HassEvent is empty!");
 
             if (m.EventType == "state_changed")
             {
@@ -505,7 +509,8 @@ namespace JoySoftware.HomeAssistant.Client
             Type typeToConvert,
             JsonSerializerOptions options)
         {
-            HassState m = JsonSerializer.Deserialize<HassState>(ref reader, options);
+            HassState m = JsonSerializer.Deserialize<HassState>(ref reader, options)
+                ?? throw new ApplicationException("HassState is empty");
 
             if (m != null)
             {

@@ -12,8 +12,8 @@
             "program": "${workspaceFolder}/console/HassClient.Performance.Tests/bin/Debug/netcoreapp3.1/HassClient.Performance.Tests",
             "args": [
                 "-c",
-                "-i 192.168.1.7",
-                "-p 8123",
+                "-i tandenkore.mooo.com",
+                "-p 11323",
                 "-e true",
                 "-t none"
             ],

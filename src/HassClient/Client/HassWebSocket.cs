@@ -102,7 +102,7 @@ namespace JoySoftware.HomeAssistant.Client
                         return true;   //Is valid
                     }
 
-                    if (cert.GetCertHashString() == bypassCertificateErrorsForHash.ToUpperInvariant())
+                    if (cert?.GetCertHashString() == bypassCertificateErrorsForHash.ToUpperInvariant())
                     {
                         return true;
                     }
