@@ -345,8 +345,9 @@ namespace JoySoftware.HomeAssistant.Client
                 try
                 {
                     // ReSharper disable once AccessToDisposedClosure
-                    T m = await JsonSerializer.DeserializeAsync<T>(_pipe.Reader.AsStream(),
-                        cancellationToken: _internalCancelToken).ConfigureAwait(false);
+                    T? m = await JsonSerializer.DeserializeAsync<T>(_pipe.Reader.AsStream(),
+                        cancellationToken: _internalCancelToken).ConfigureAwait(false)
+                            ?? throw new ApplicationException("Deserialization of websocket returned empty result (null)");
 
                     if (!_inChannel.Writer.TryWrite(m))
                         throw new ApplicationException($"Failed to write to {nameof(_inChannel)}");

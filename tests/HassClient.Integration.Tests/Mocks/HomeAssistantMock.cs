@@ -88,8 +88,8 @@ namespace HassClientIntegrationTests.Mocks
         {
             var webSocketOptions = new WebSocketOptions
             {
-                KeepAliveInterval = TimeSpan.FromSeconds(120),
-                ReceiveBufferSize = HomeAssistantMock.RecieiveBufferSize
+                KeepAliveInterval = TimeSpan.FromSeconds(120)
+                // ReceiveBufferSize = HomeAssistantMock.RecieiveBufferSize
             };
             app.UseWebSockets(webSocketOptions);
             app.Map("/api/websocket", builder =>
