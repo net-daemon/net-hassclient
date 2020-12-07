@@ -957,7 +957,6 @@ namespace JoySoftware.HomeAssistant.Client
         {
             if (m.Id > 0)
             {
-
                 // It is an command response, get command
                 if (_commandsSent.TryRemove(m.Id, out CommandMessage? command))
                 {
@@ -993,7 +992,6 @@ namespace JoySoftware.HomeAssistant.Client
                             _logger.LogError($"The command message {command?.Type} is not supported");
                             break;
                     }
-                    m.ResultElement = null;
                 }
                 else
                 {

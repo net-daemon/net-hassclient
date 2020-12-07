@@ -64,7 +64,7 @@ namespace HassClient.Unit.Tests
             Assert.False(await hassClient.ConnectAsync(new Uri("ws://anyurldoesntmatter.org"), "FAKETOKEN", false).ConfigureAwait(false));
         }
 
-        public class UnknownCommand : CommandMessage
+        public record UnknownCommand : CommandMessage
         {
             public UnknownCommand() => Type = "unknown_command";
         }

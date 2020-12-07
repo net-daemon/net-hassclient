@@ -9,79 +9,80 @@ using System.Text.Json.Serialization;
 
 namespace JoySoftware.HomeAssistant.Client
 {
-    public class HassMessageBase
+    public record HassMessageBase
     {
-        [JsonPropertyName("type")] public string Type { get; set; } = "";
+        [JsonPropertyName("type")] public string Type { get; init; } = "";
     }
 
     #region -- Receiving messages --
 
-    public class HassConfig
+    public record HassConfig
     {
-        [JsonPropertyName("components")] public List<string>? Components { get; set; } = null;
-        [JsonPropertyName("config_dir")] public string? ConfigDir { get; set; } = null;
-        [JsonPropertyName("elevation")] public int? Elevation { get; set; } = null;
-        [JsonPropertyName("latitude")] public float? Latitude { get; set; } = null;
-        [JsonPropertyName("location_name")] public string? LocationName { get; set; } = null;
-        [JsonPropertyName("longitude")] public float? Longitude { get; set; } = null;
-        [JsonPropertyName("time_zone")] public string? TimeZone { get; set; } = null;
-        [JsonPropertyName("unit_system")] public HassUnitSystem? UnitSystem { get; set; } = null;
-        [JsonPropertyName("version")] public string? Version { get; set; } = null;
-        [JsonPropertyName("state")] public string? State { get; set; } = null;
+        [JsonPropertyName("components")] public List<string>? Components { get; init; }
+        [JsonPropertyName("config_dir")] public string? ConfigDir { get; init; }
+        [JsonPropertyName("elevation")] public int? Elevation { get; init; }
+        [JsonPropertyName("latitude")] public float? Latitude { get; init; }
+        [JsonPropertyName("location_name")] public string? LocationName { get; init; }
+        [JsonPropertyName("longitude")] public float? Longitude { get; init; }
+        [JsonPropertyName("time_zone")] public string? TimeZone { get; init; }
+        [JsonPropertyName("unit_system")] public HassUnitSystem? UnitSystem { get; init; }
+        [JsonPropertyName("version")] public string? Version { get; init; }
+        [JsonPropertyName("state")] public string? State { get; init; }
         [JsonPropertyName("whitelist_external_dirs")]
-        public List<string>? WhitelistExternalDirs { get; set; } = null;
+        public List<string>? WhitelistExternalDirs { get; init; }
     }
 
-    public class HassServiceDomain
+    public record HassServiceDomain
     {
-        public string? Domain { get; set; }
-        public IEnumerable<HassService>? Services { get; set; }
+        public string? Domain { get; init; }
+        public IEnumerable<HassService>? Services { get; init; }
     }
-    public class HassService
+    public record HassService
     {
-        public string? Service { get; set; }
-        public string? Description { get; set; }
-        public IEnumerable<HassServiceField>? Fields { get; set; }
-    }
-
-    public class HassServiceField
-    {
-        public string? Field { get; set; }
-        public string? Description { get; set; }
-        public object? Example { get; set; }
+        public string? Service { get; init; }
+        public string? Description { get; init; }
+        public IEnumerable<HassServiceField>? Fields { get; init; }
     }
 
-    public class HassEvent
+    public record HassServiceField
+    {
+        public string? Field { get; init; }
+        public string? Description { get; init; }
+        public object? Example { get; init; }
+    }
+
+    public record HassEvent
     {
         public dynamic? Data { get; set; }
-        [JsonPropertyName("data")] public JsonElement? DataElement { get; set; } = null;
-        [JsonPropertyName("event_type")] public string EventType { get; set; } = "";
+        [JsonPropertyName("data")] public JsonElement? DataElement { get; init; }
+        [JsonPropertyName("event_type")]
+        public string EventType { get; init; } = "";
 
-        [JsonPropertyName("origin")] public string Origin { get; set; } = "";
+        [JsonPropertyName("origin")] public string Origin { get; init; } = "";
 
-        [JsonPropertyName("time_fired")] public DateTime? TimeFired { get; set; } = null;
+        [JsonPropertyName("time_fired")] public DateTime? TimeFired { get; init; }
     }
 
-    public class HassMessage : HassMessageBase
+    public record HassMessage : HassMessageBase
     {
         [JsonPropertyName("event")]
         [JsonConverter(typeof(HassEventConverter))]
-        public HassEvent? Event { get; set; }
-        [JsonPropertyName("id")] public int Id { get; set; } = 0;
-        [JsonPropertyName("message")] public string? Message { get; set; }
+        public HassEvent? Event { get; init; }
+        [JsonPropertyName("id")] public int Id { get; init; }
+        [JsonPropertyName("message")] public string? Message { get; init; }
         public object? Result { get; set; }
-        [JsonPropertyName("result")] public JsonElement? ResultElement { get; set; } = null;
-        [JsonPropertyName("success")] public bool? Success { get; set; }
-        [JsonPropertyName("error")] public HassError? Error { get; set; }
+        [JsonPropertyName("result")] public JsonElement? ResultElement { get; init; }
+        [JsonPropertyName("success")] public bool? Success { get; init; }
+        [JsonPropertyName("error")] public HassError? Error { get; init; }
     }
 
-    public class HassError
+    public record HassError
     {
         [JsonPropertyName("code")] public object? Code { get; set; }
         [JsonPropertyName("message")] public string? Message { get; set; }
     }
 
-    public class HassServiceEventData
+    public record HassServiceEventData
     {
         [JsonPropertyName("domain")] public string Domain { get; set; } = "";
 
@@ -92,7 +93,7 @@ namespace JoySoftware.HomeAssistant.Client
         public dynamic? Data { get; set; } = null;
     }
 
-    public class HassState
+    public record HassState
     {
         [JsonPropertyName("attributes")] public Dictionary<string, object>? Attributes { get; set; } = null;
         [JsonPropertyName("entity_id")] public string EntityId { get; set; } = "";
@@ -103,14 +104,14 @@ namespace JoySoftware.HomeAssistant.Client
         [JsonPropertyName("context")] public HassContext? Context { get; set; } = null;
     }
 
-    public class HassContext
+    public record HassContext
     {
         [JsonPropertyName("id")] public string Id { get; set; } = "";
         [JsonPropertyName("parent_id")] public string? ParentId { get; set; } = null;
         [JsonPropertyName("user_id")] public string? UserId { get; set; } = null;
     }
 
-    public class HassStateChangedEventData
+    public record HassStateChangedEventData
     {
         [JsonPropertyName("entity_id")] public string EntityId { get; set; } = "";
 
@@ -125,7 +126,7 @@ namespace JoySoftware.HomeAssistant.Client
     public class HassStates : List<HassState>
     {
     }
-    public class HassUnitSystem
+    public record HassUnitSystem
     {
         [JsonPropertyName("length")] public string? Length { get; set; } = null;
 
@@ -136,12 +137,11 @@ namespace JoySoftware.HomeAssistant.Client
         [JsonPropertyName("volume")] public string? Volume { get; set; } = null;
     }
 
-
     public class HassAreas : List<HassArea>
     {
     }
 
-    public class HassArea
+    public record HassArea
     {
         [JsonPropertyName("name")] public string? Name { get; set; } = null;
         [JsonPropertyName("area_id")] public string? Id { get; set; } = null;
@@ -150,7 +150,7 @@ namespace JoySoftware.HomeAssistant.Client
     public class HassDevices : List<HassDevice>
     {
     }
-    public class HassDevice
+    public record HassDevice
     {
         [JsonPropertyName("manufacturer")] public string? Manufacturer { get; set; } = null;
         [JsonPropertyName("model")] public string? Model { get; set; } = null;
@@ -163,7 +163,8 @@ namespace JoySoftware.HomeAssistant.Client
     public class HassEntities : List<HassEntity>
     {
     }
-    public class HassEntity
+
+    public record HassEntity
     {
         [JsonPropertyName("device_id")] public string? DeviceId { get; set; } = null;
         [JsonPropertyName("entity_id")] public string? EntityId { get; set; } = null;
@@ -189,7 +190,7 @@ namespace JoySoftware.HomeAssistant.Client
         ComponentLoaded = 9
     }
 
-    public class CallServiceCommand : CommandMessage
+    public record CallServiceCommand : CommandMessage
     {
         public CallServiceCommand() => Type = "call_service";
 
@@ -200,54 +201,54 @@ namespace JoySoftware.HomeAssistant.Client
         [JsonPropertyName("service_data")] public object? ServiceData { get; set; } = null;
     }
 
-    public class CommandMessage : HassMessageBase
+    public record CommandMessage : HassMessageBase
     {
         [JsonPropertyName("id")] public int Id { get; set; } = 0;
     }
 
-    public class GetConfigCommand : CommandMessage
+    public record GetConfigCommand : CommandMessage
     {
         public GetConfigCommand() => Type = "get_config";
     }
 
-    public class GetStatesCommand : CommandMessage
+    public record GetStatesCommand : CommandMessage
     {
         public GetStatesCommand() => Type = "get_states";
     }
 
-    public class GetServicesCommand : CommandMessage
+    public record GetServicesCommand : CommandMessage
     {
         public GetServicesCommand() => Type = "get_services";
     }
 
     //{"type":"config/area_registry/list","id":24}
-    public class GetAreasCommand : CommandMessage
+    public record GetAreasCommand : CommandMessage
     {
         public GetAreasCommand() => Type = "config/area_registry/list";
     }
     //{"type":"config/device_registry/list","id":25}
-    public class GetDevicesCommand : CommandMessage
+    public record GetDevicesCommand : CommandMessage
     {
         public GetDevicesCommand() => Type = "config/device_registry/list";
     }
 
     //{"type":"config/entity_registry/list","id":29}
-    public class GetEntitiesCommand : CommandMessage
+    public record GetEntitiesCommand : CommandMessage
     {
         public GetEntitiesCommand() => Type = "config/entity_registry/list";
     }
 
-    public class HassAuthMessage : HassMessageBase
+    public record HassAuthMessage : HassMessageBase
     {
         public HassAuthMessage() => Type = "auth";
 
         [JsonPropertyName("access_token")] public string AccessToken { get; set; } = "";
     }
-    public class HassPingCommand : CommandMessage
+    public record HassPingCommand : CommandMessage
     {
         public HassPingCommand() => Type = "ping";
     }
-    public class SubscribeEventCommand : CommandMessage
+    public record SubscribeEventCommand : CommandMessage
     {
         public SubscribeEventCommand() => Type = "subscribe_events";
 
@@ -390,18 +391,14 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 var serviceFields = new List<HassServiceField>();
 
-                var hassService = new HassService
-                {
-                    Service = service,
-                    Fields = serviceFields
-                };
+                string? serviceDescription = null;
 
                 foreach (var serviceProperty in element.EnumerateObject())
                 {
                     switch (serviceProperty.Name)
                     {
                         case "description":
-                            hassService.Description = serviceProperty.Value.GetString();
+                            serviceDescription = serviceProperty.Value.GetString();
                             break;
                         case "fields":
                             foreach (var fieldsProperty in serviceProperty.Value.EnumerateObject())
@@ -412,47 +409,49 @@ namespace JoySoftware.HomeAssistant.Client
                             break;
                     }
                 }
-                return hassService;
+                return new HassService
+                {
+                    Service = service,
+                    Fields = serviceFields,
+                    Description = serviceDescription
+                };
             }
 
             HassServiceField getField(string fieldName, JsonElement element)
             {
-
-                var field = new HassServiceField
-                {
-                    Field = fieldName
-                };
+                object? example = null;
+                string? fieldDescription = null;
                 foreach (var fieldProperty in element.EnumerateObject())
                 {
                     switch (fieldProperty.Name)
                     {
                         case "description":
-                            field.Description = fieldProperty.Value.GetString();
+                            fieldDescription = fieldProperty.Value.GetString();
                             break;
                         case "example":
                             switch (fieldProperty.Value.ValueKind)
                             {
                                 case JsonValueKind.String:
-                                    field.Example = fieldProperty.Value.GetString();
+                                    example = fieldProperty.Value.GetString();
                                     break;
                                 case JsonValueKind.Number:
                                     if (fieldProperty.Value.TryGetInt64(out Int64 longVal))
-                                        field.Example = longVal;
+                                        example = longVal;
                                     else
-                                        field.Example = fieldProperty.Value.GetDouble();
+                                        example = fieldProperty.Value.GetDouble();
                                     break;
                                 case JsonValueKind.Object:
 
-                                    field.Example = fieldProperty.Value;
+                                    example = fieldProperty.Value;
                                     break;
                                 case JsonValueKind.True:
-                                    field.Example = true;
+                                    example = true;
                                     break;
                                 case JsonValueKind.False:
-                                    field.Example = false;
+                                    example = false;
                                     break;
                                 case JsonValueKind.Array:
-                                    field.Example = fieldProperty.Value;
+                                    example = fieldProperty.Value;
                                     break;
                                 default:
                                     break;
@@ -460,7 +459,13 @@ namespace JoySoftware.HomeAssistant.Client
                             break;
                     }
                 }
-                return field;
+                return new HassServiceField
+                {
+                    Field = fieldName,
+                    Example = example,
+                    Description = fieldDescription,
+
+                };
             }
 
             return result;
@@ -491,7 +496,6 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 m.Data = m.DataElement?.ToDynamic();
             }
-            m.DataElement = null;
             return m;
         }
 
