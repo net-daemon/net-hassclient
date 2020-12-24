@@ -50,7 +50,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
 
         private static async Task ConnectToHomeAssistant(string ip, short port, bool events, string token)
         {
-            Environment.SetEnvironmentVariable("HASSCLIENT_BYPASS_CERT_ERR", "BFCC28167558E74CD0AA3045719E158D2B21F79E");
+            // Environment.SetEnvironmentVariable("HASSCLIENT_BYPASS_CERT_ERR", "BFCC28167558E74CD0AA3045719E158D2B21F79E");
             ILoggerFactory factory = LoggerFactory.Create(builder =>
             {
                 builder
@@ -66,7 +66,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             if (token_env != null)
                 token = token_env;
 
-            bool connected = await client.ConnectAsync(ip, port, true, token, true);
+            bool connected = await client.ConnectAsync(ip, port, false, token, true);
             if (!connected)
             {
                 Console.WriteLine("Failed to connect to Home assistant.. bailing...");
@@ -83,7 +83,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
 
             var config = await client.GetConfig();
             System.Console.WriteLine(config.State);
-            var tempTest = client.States["sensor.frysnere_temperature"];
+            var test = client.States["group.chromecasts"];
             if (events)
             {
                 // Subscribe to all events

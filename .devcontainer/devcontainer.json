@@ -12,7 +12,6 @@
 	"remoteEnv": {
 		"HOMEASSISTANT__TOKEN": "${localEnv:HOMEASSISTANT__TOKEN}"
 	},
-	"postCreateCommand": "dotnet restore src/HassClient && dotnet restore tests/HassClient.Tests",
 	// Uncomment the next line if you want to publish any ports.
 	// "appPort": [
 	// 	5001
