@@ -708,7 +708,7 @@ namespace JoySoftware.HomeAssistant.Client
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Failed to set state on {entity} with state {state}");
+                _logger.LogError(e, "Failed to set state on {entity} with state {state}", entityId, state);
             }
             return null;
         }
