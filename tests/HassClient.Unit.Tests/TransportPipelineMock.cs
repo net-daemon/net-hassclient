@@ -11,13 +11,11 @@ namespace HassClient.Unit.Tests
 
     public class TransportPipelineFactoryMock : Mock<ITransportPipelineFactory<HassMessage>>
     {
-        TransportPipelineMock pipeline = new TransportPipelineMock();
-        HassWebSocketMock wsMock = new HassWebSocketMock();
-
-        LoggerMock loggerMock = new LoggerMock();
+        readonly HassWebSocketMock wsMock = new();
+        readonly LoggerMock loggerMock = new();
         public TransportPipelineFactoryMock(IClientWebSocket client = null)
         {
-            client = client ?? wsMock.Object;
+            client ??= wsMock.Object;
             Setup(n => n.CreateWebSocketMessagePipeline(client, loggerMock.LoggerFactory));
         }
 

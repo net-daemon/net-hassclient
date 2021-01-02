@@ -62,7 +62,7 @@ namespace HassClientIntegrationTests.Mocks
     /// </summary>
     public class HassMockStartup
     {
-        private CancellationTokenSource cancelSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource cancelSource = new CancellationTokenSource();
 
         // Home Assistant will always prettyprint responses so so do the mock
         private readonly byte[] _authOkMessage =
@@ -80,11 +80,11 @@ namespace HassClientIntegrationTests.Mocks
 
         public IConfiguration Configuration { get; }
 
-        public void ConfigureServices(IServiceCollection services)
+        public void ConfigureServices(IServiceCollection _)
         {
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment _)
         {
             var webSocketOptions = new WebSocketOptions
             {

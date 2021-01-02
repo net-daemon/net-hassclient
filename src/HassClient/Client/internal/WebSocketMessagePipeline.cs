@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net.WebSockets;
 using System.Text;
@@ -40,8 +41,6 @@ namespace JoySoftware.HomeAssistant.Client
         ITransportPipeline<T> CreateWebSocketMessagePipeline(
             IClientWebSocket webSocketClient,
             ILoggerFactory? loggerFactory = null);
-
-
     }
 
     internal class WebSocketMessagePipelineFactory<T> : ITransportPipelineFactory<T> where T : class
@@ -61,10 +60,10 @@ namespace JoySoftware.HomeAssistant.Client
         private readonly Task _writeMessagePumpTask;
 
         // Used on DisposeAsync to make sure the tasks are ended
-        private readonly CancellationTokenSource _internalCancellationSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _internalCancellationSource = new();
         private readonly CancellationToken _internalCancelToken;
 
-        private readonly Pipe _pipe = new Pipe();
+        private readonly Pipe _pipe = new();
 
         /// <summary>
         ///     The max time we will wait for the socket to gracefully close
@@ -99,7 +98,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     Default Json serialization options, Hass expects intended
         /// </summary>
-        private readonly JsonSerializerOptions _defaultSerializerOptions = new JsonSerializerOptions
+        private readonly JsonSerializerOptions _defaultSerializerOptions = new()
         {
             WriteIndented = false,
             IgnoreNullValues = true
@@ -149,22 +148,22 @@ namespace JoySoftware.HomeAssistant.Client
 
             _internalCancelToken = _internalCancellationSource.Token;
 
-            loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+            loggerFactory ??= NullLoggerFactory.Instance;
             _logger = loggerFactory.CreateLogger<WebSocketMessagePipeline<T>>();
 
             _readMessagePumpTask = ReadMessagePump();
             _writeMessagePumpTask = WriteMessagePump();
         }
 
+        [SuppressMessage("", "CA1508")]
         private async Task WriteMessagePump()
         {
-            while (_ws != null && (!_internalCancelToken.IsCancellationRequested && !_ws.CloseStatus.HasValue))
+            while (_ws != null && !_internalCancelToken.IsCancellationRequested && !_ws.CloseStatus.HasValue)
             {
                 try
                 {
                     while (!_internalCancelToken.IsCancellationRequested && _ws.State == WebSocketState.Open)
                     {
-
                         var messageToSend = await _outChannel.Reader.ReadAsync(_internalCancelToken).ConfigureAwait(false);
 
                         if (_ws.State != WebSocketState.Open && _ws.State != WebSocketState.CloseReceived)
@@ -178,17 +177,16 @@ namespace JoySoftware.HomeAssistant.Client
 
                         if (_logger.IsEnabled(LogLevel.Trace) && _messageLogLevel != "None")
                         {
-                            if (messageToSend is HassAuthMessage == false)
+                            if (!(messageToSend is HassAuthMessage))
                             {
                                 // We log everything but AuthMessage due to security reasons
-                                _logger.LogTrace("SendAsync, message: {result}", UTF8Encoding.UTF8.GetString(result));
+                                _logger.LogTrace("SendAsync, message: {result}", Encoding.UTF8.GetString(result));
                             }
                             {
                                 _logger.LogTrace("Sending auth message, not shown for security reasons");
                             }
                         }
                         await _ws.SendAsync(result, WebSocketMessageType.Text, true, _internalCancelToken).ConfigureAwait(false);
-
                     }
                 }
                 catch (OperationCanceledException)
@@ -213,7 +211,7 @@ namespace JoySoftware.HomeAssistant.Client
 
         private async Task ReadMessagePump()
         {
-            while (_ws != null && (!_internalCancelToken.IsCancellationRequested && !_ws.CloseStatus.HasValue))
+            while (_ws != null && !_internalCancelToken.IsCancellationRequested && !_ws.CloseStatus.HasValue)
             {
                 try
                 {
@@ -234,7 +232,7 @@ namespace JoySoftware.HomeAssistant.Client
 
         private async Task SendCloseFrameToWebSocket()
         {
-            var timeout = new CancellationTokenSource(MaxWaitTimeSocketClose);
+            using var timeout = new CancellationTokenSource(MaxWaitTimeSocketClose);
 
             try
             {
@@ -249,7 +247,6 @@ namespace JoySoftware.HomeAssistant.Client
                     while (_ws.State != WebSocketState.Closed && !timeout.Token.IsCancellationRequested)
                         await Task.Delay(100).ConfigureAwait(false);
                 }
-
             }
             catch (OperationCanceledException)
             {
@@ -260,7 +257,6 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     Reads and process next message from the websocket
         /// </summary>
-        /// <returns></returns>
         private async Task ProcessNextMessage()
         {
             await Task.WhenAll(
@@ -272,7 +268,7 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 try
                 {
-                    while (_ws != null && (!_internalCancelToken.IsCancellationRequested && !_ws.CloseStatus.HasValue))
+                    while (_ws != null && !_internalCancelToken.IsCancellationRequested && !_ws.CloseStatus.HasValue)
                     {
                         Memory<byte> memory = _pipe.Writer.GetMemory();
 
@@ -287,13 +283,15 @@ namespace JoySoftware.HomeAssistant.Client
                             // Log incoming messages for correct loglevel and tracing is enabled
                             if (_messageLogLevel != "None" && _logger.IsEnabled(LogLevel.Trace) && result.Count > 0)
                             {
-                                var strMessageReceived = UTF8Encoding.UTF8.GetString(memory.Slice(0, result.Count).ToArray());
+                                var strMessageReceived = Encoding.UTF8.GetString(memory.Slice(0, result.Count).ToArray());
                                 if (_messageLogLevel == "All")
+                                {
                                     _logger.LogTrace("ReadClientSocket, message: {strMessageReceived}", strMessageReceived);
+                                }
                                 else if (_messageLogLevel == "Default")
                                 {
                                     // Log all but events
-                                    if (strMessageReceived.Contains("\"type\": \"event\"") == false)
+                                    if (!strMessageReceived.Contains("\"type\": \"event\"", StringComparison.InvariantCultureIgnoreCase))
                                         _logger.LogTrace("ReadClientSocket, message: {strMessageReceived}", strMessageReceived);
                                 }
                             }
@@ -336,7 +334,6 @@ namespace JoySoftware.HomeAssistant.Client
                     // Make sure the writer is completed so the Pipe can be reset even if fail
                     await _pipe.Writer.CompleteAsync().ConfigureAwait(false);
                 }
-
             }
 
             // Task that deserializes the message and write the finished message to a channel
@@ -384,7 +381,7 @@ namespace JoySoftware.HomeAssistant.Client
 
             // Cancel all activity and wait for complete
             _internalCancellationSource.Cancel();
-
+            _internalCancellationSource.Dispose();
             // Wait for the messagepumps to end
             await Task.WhenAll(
                _readMessagePumpTask,
@@ -411,5 +408,4 @@ namespace JoySoftware.HomeAssistant.Client
             return new WebSocketMessagePipeline<T>(webSocketClient, loggerFactory);
         }
     }
-
 }

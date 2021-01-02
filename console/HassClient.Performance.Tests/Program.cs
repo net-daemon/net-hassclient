@@ -10,18 +10,16 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
 {
     internal class Program
     {
-        private static Task _homeAssistantTask;
-
         public static void Main(string[] args)
         {
             var cmd = new RootCommand();
-            cmd.AddCommand(connectHass());
-            int result = cmd.InvokeAsync(args).Result;
+            cmd.AddCommand(ConnectToHomeAssistant());
+            _ = cmd.InvokeAsync(args).Result;
 
             Console.ReadLine();
         }
 
-        private static Command connectHass()
+        private static Command ConnectToHomeAssistant()
         {
             var cmd = new Command("-c", "Connects to home assistant");
 
@@ -43,7 +41,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             });
             cmd.Handler = CommandHandler.Create<string, short, bool, string>((ip, port, events, token) =>
             {
-                _homeAssistantTask = Task.Run(() => ConnectToHomeAssistant(ip.Trim(), port, events, token.Trim()));
+                _ = Task.Run(() => ConnectToHomeAssistant(ip.Trim(), port, events, token.Trim()));
             });
             return cmd;
         }
@@ -78,6 +76,8 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             {
                 Console.WriteLine($"Number of states: {client.States.Count}");
             }
+
+            var x = await client.GetApiCall<Discovery>("discovery_info");
 
             var services = await client.GetServices();
 
@@ -133,157 +133,131 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Error", e);
+                    Console.WriteLine($"Error {e}");
                     return;
                 }
             }
         }
-
+        public class Discovery
+        {
+            public string base_url { get; set; }
+            public string location_name { get; set; }
+        }
         public static int SayHello()
         {
             Console.WriteLine("Hello!");
             return 0;
         }
 
-        private static void printUsage()
-        {
-            string usage = @"
-Please use following commands:
-    -p      Runs the internal performance test
-    -c      Connects to home assistant with the provided ip address, port and key
-            Example:
-            -c ip:192.168.1.10 port:8123 token:myhasstoken
-";
+        //         private static void printUsage()
+        //         {
+        //             string usage = @"
+        // Please use following commands:
+        //     -p      Runs the internal performance test
+        //     -c      Connects to home assistant with the provided ip address, port and key
+        //             Example:
+        //             -c ip:192.168.1.10 port:8123 token:myhasstoken
+        // ";
 
-            Console.WriteLine(usage);
-        }
+        //             Console.WriteLine(usage);
+        //         }
 
-        private static async Task DoPerformanceTest()
-        {
-            using var mock = new HomeAssistantMockHandler();
-            int NR_OF_REQUESTS = 200000;
-            var wscli = new HassClient();
-            bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
-                false);
+        //     private static async Task DoPerformanceTest()
+        //     {
+        //         await using var mock = new HomeAssistantMockHandler();
+        //         int NR_OF_REQUESTS = 200000;
+        //         var wscli = new HassClient();
+        //         bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+        //             false);
 
-            var wscli2 = new HassClient();
-            bool result2 = await wscli2.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
-                false);
+        //         var wscli2 = new HassClient();
+        //         bool result2 = await wscli2.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+        //             false);
 
-            var wscli3 = new HassClient();
-            bool result3 = await wscli3.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
-                false);
+        //         var wscli3 = new HassClient();
+        //         bool result3 = await wscli3.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+        //             false);
 
-            var wscli4 = new HassClient();
-            bool result4 = await wscli4.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
-                false);
+        //         var wscli4 = new HassClient();
+        //         bool result4 = await wscli4.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+        //             false);
 
-            var wscli5 = new HassClient();
-            bool result5 = await wscli5.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
-                false);
+        //         var wscli5 = new HassClient();
+        //         bool result5 = await wscli5.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+        //             false);
 
-            var wscli6 = new HassClient();
-            bool result6 = await wscli6.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
-                false);
+        //         var wscli6 = new HassClient();
+        //         bool result6 = await wscli6.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
+        //             false);
 
-            var stopWatch = Stopwatch.StartNew();
-            var first = Task.Run(async () =>
-            {
-                for (int i = 0; i < NR_OF_REQUESTS; i++)
-                {
-                    await wscli.PingAsync(1000);
-                }
-            });
-            var second = Task.Run(async () =>
-            {
-                for (int i = 0; i < NR_OF_REQUESTS; i++)
-                {
-                    await wscli2.PingAsync(1000);
-                }
-            });
+        //         var stopWatch = Stopwatch.StartNew();
+        //         var first = Task.Run(async () =>
+        //         {
+        //             for (int i = 0; i < NR_OF_REQUESTS; i++)
+        //             {
+        //                 await wscli.PingAsync(1000);
+        //             }
+        //         });
+        //         var second = Task.Run(async () =>
+        //         {
+        //             for (int i = 0; i < NR_OF_REQUESTS; i++)
+        //             {
+        //                 await wscli2.PingAsync(1000);
+        //             }
+        //         });
 
-            var third = Task.Run(async () =>
-            {
-                for (int i = 0; i < NR_OF_REQUESTS; i++)
-                {
-                    await wscli3.PingAsync(1000);
-                }
-            });
+        //         var third = Task.Run(async () =>
+        //         {
+        //             for (int i = 0; i < NR_OF_REQUESTS; i++)
+        //             {
+        //                 await wscli3.PingAsync(1000);
+        //             }
+        //         });
 
-            var fourth = Task.Run(async () =>
-            {
-                for (int i = 0; i < NR_OF_REQUESTS; i++)
-                {
-                    await wscli4.PingAsync(1000);
-                }
-            });
+        //         var fourth = Task.Run(async () =>
+        //         {
+        //             for (int i = 0; i < NR_OF_REQUESTS; i++)
+        //             {
+        //                 await wscli4.PingAsync(1000);
+        //             }
+        //         });
 
-            var fifth = Task.Run(async () =>
-            {
-                for (int i = 0; i < NR_OF_REQUESTS; i++)
-                {
-                    await wscli5.PingAsync(1000);
-                }
-            });
+        //         var fifth = Task.Run(async () =>
+        //         {
+        //             for (int i = 0; i < NR_OF_REQUESTS; i++)
+        //             {
+        //                 await wscli5.PingAsync(1000);
+        //             }
+        //         });
 
-            var sixth = Task.Run(async () =>
-            {
-                for (int i = 0; i < NR_OF_REQUESTS; i++)
-                {
-                    await wscli6.PingAsync(1000);
-                }
-            });
+        //         var sixth = Task.Run(async () =>
+        //         {
+        //             for (int i = 0; i < NR_OF_REQUESTS; i++)
+        //             {
+        //                 await wscli6.PingAsync(1000);
+        //             }
+        //         });
 
-            Console.WriteLine("WAIT ALL");
-            Task.WaitAll(first); //, second, third, fourth, fifth, sixth
-            stopWatch.Stop();
-            Console.WriteLine(stopWatch.ElapsedMilliseconds);
-            Console.WriteLine("Took {0} seconds with performance of {1} roundtrips/s",
-                stopWatch.ElapsedMilliseconds / 1000, NR_OF_REQUESTS * 6 / (stopWatch.ElapsedMilliseconds / 1000));
-            Console.WriteLine("DISCONNECTS!");
-            await wscli.CloseAsync();
-            await wscli2.CloseAsync();
-            await wscli3.CloseAsync();
-            await wscli4.CloseAsync();
-            await wscli5.CloseAsync();
-            await wscli6.CloseAsync();
-        }
+        //         Console.WriteLine("WAIT ALL");
+        //         Task.WaitAll(first); //, second, third, fourth, fifth, sixth
+        //         stopWatch.Stop();
+        //         Console.WriteLine(stopWatch.ElapsedMilliseconds);
+        //         Console.WriteLine("Took {0} seconds with performance of {1} roundtrips/s",
+        //             stopWatch.ElapsedMilliseconds / 1000, NR_OF_REQUESTS * 6 / (stopWatch.ElapsedMilliseconds / 1000));
+        //         Console.WriteLine("DISCONNECTS!");
+        //         await wscli.CloseAsync();
+        //         await wscli2.CloseAsync();
+        //         await wscli3.CloseAsync();
+        //         await wscli4.CloseAsync();
+        //         await wscli5.CloseAsync();
+        //         await wscli6.CloseAsync();
+        //     }
     }
 
-    public class HomeAssistantMockHandler : IDisposable
+    public class HomeAssistantMockHandler : IAsyncDisposable
     {
         private readonly HomeAssistantMock mock;
         public HomeAssistantMockHandler() => mock = new HomeAssistantMock();
-
-        #region IDisposable Support
-
-        private bool disposedValue; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    mock.Stop();
-                }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
-
-                disposedValue = true;
-            }
-        }
-
-        // This code added to correctly implement the disposable pattern.
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
-        }
-
-        #endregion
+        public async ValueTask DisposeAsync() => await mock.Stop();
     }
 }
