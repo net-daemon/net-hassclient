@@ -1,21 +1,23 @@
 #### Build and tests all pushes, also code coverage
-name: CI build
+name: 🛠️ CI build check
 on: [push, pull_request]
 jobs:
   build:
-    name: Build sources
+    name: 🔨 Build sources (CI)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@main
-      - uses: actions/setup-dotnet@v1
+      - name: 📤 Checkout the repository 
+        uses: actions/checkout@main
+      - name: 🥅 Install .Net 5
+        uses: actions/setup-dotnet@v1
         with:
           dotnet-version: '5.0.100' # SDK Version
-      - name: Build code
+      - name: 🛠️ Build code
         run: dotnet build
-      - name: Test code
+      - name: 👀 Test code
         run: dotnet test -v minimal /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=${{github.workspace}}/codecover/lcov.info
 
-      - name: Publish coverage report to coveralls.io
+      - name: 📨 Publish coverage report to coveralls.io
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

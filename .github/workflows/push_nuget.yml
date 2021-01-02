@@ -1,20 +1,31 @@
 #### Build and tests all pushes, also code coverage
-name: publish nuget
+name: 📦 Publish nuget
 on:
-  push:
-    tags:
-      - '*'
+  release:
+    types: 
+      - released
+      - prereleased
 
 jobs:
   deploy_nuget:
-    name: publish nuget packages
+    name: 📦 publish nuget packages
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@main
-      - uses: actions/setup-dotnet@v1
+      - name: 📤 Checkout the repository 
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+      - name: ⏭️ Get next version
+        id: version
+        run: |
+          latest=$(git describe --tags $(git rev-list --tags --max-count=1))
+          echo Current version:    $latest
+          echo "::set-output name=version::$latest"
+      - name: 🥅 Install .Net 5
+        uses: actions/setup-dotnet@v1
         with:
             dotnet-version: '5.0.100' # SDK Version
-      - name: pack DaemonRunner
-        run: dotnet pack ${{github.workspace}}/src/HassClient/HassClient.csproj --configuration Release -p:PackageVersion=${GITHUB_REF#refs/tags/}-beta
-      - name: push to nuget
+      - name: 🎁 pack DaemonRunner
+        run: dotnet pack ${{github.workspace}}/src/HassClient/HassClient.csproj --configuration Release -p:PackageVersion=${{ steps.version.outputs.version }}-beta
+      - name: 📨 push to nuget
         run: dotnet nuget push **/*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json --no-symbols true
