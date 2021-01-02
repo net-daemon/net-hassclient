@@ -48,7 +48,7 @@ namespace HassClientIntegrationTests
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "WRONG PASSWORD",
                 false);
             Assert.False(result);
-            Assert.True(wscli.States.Count == 0);
+            Assert.True(wscli.States.IsEmpty);
 
             await wscli.CloseAsync();
         }
@@ -61,7 +61,7 @@ namespace HassClientIntegrationTests
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
                 false);
             Assert.True(result);
-            Assert.True(wscli.States.Count == 0);
+            Assert.True(wscli.States.IsEmpty);
 
             await wscli.CloseAsync();
         }
@@ -73,7 +73,7 @@ namespace HassClientIntegrationTests
             bool result = await wscli.ConnectAsync(new Uri("ws://127.0.0.1:5001/api/websocket"), "ABCDEFGHIJKLMNOPQ",
                 false);
             Assert.True(result);
-            Assert.True(wscli.States.Count == 0);
+            Assert.True(wscli.States.IsEmpty);
             // Wait for event that never comes
             var eventTask = wscli.ReadEventAsync();
             // Do close
@@ -110,7 +110,7 @@ namespace HassClientIntegrationTests
             Assert.Equal("Bedroom", first.Name);
             Assert.Equal("5a30cdc2fd7f44d5a77f2d6f6d2ccd76", first.Id);
 
-            Assert.Equal(3, areas.Count());
+            Assert.Equal(3, areas.Count);
         }
 
         [Fact]
@@ -135,7 +135,7 @@ namespace HassClientIntegrationTests
             Assert.Equal("Chromecast", first.Model);
             Assert.Equal("My TV", first.Name);
 
-            Assert.Equal(2, devices.Count());
+            Assert.Equal(2, devices.Count);
         }
         [Fact]
         public async Task TestGetEntities()
@@ -157,7 +157,7 @@ namespace HassClientIntegrationTests
             Assert.Equal("42cdda32a2a3428e86c2e27699d79ead", first.DeviceId);
             Assert.Equal("media_player.tv_uppe2", first.EntityId);
 
-            Assert.Equal(2, entities.Count());
+            Assert.Equal(2, entities.Count);
         }
 
         [Fact]

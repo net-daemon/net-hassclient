@@ -520,10 +520,10 @@ namespace HassClient.Unit.Tests
             var mock = new HassWebSocketMock();
             var mockHassClient =
                 new Mock<JoySoftware.HomeAssistant.Client.HassClient>(mock.Logger.LoggerFactory, new TransportPipelineFactoryMock().Object,
-                    mock.WebSocketMockFactory.Object, null);
-
-
-            mockHassClient.CallBase = true;
+                    mock.WebSocketMockFactory.Object, null)
+                {
+                    CallBase = true
+                };
 
             // First message from Home Assistant is auth required
             mock.AddResponse(@"{""type"": ""auth_required""}");
@@ -663,10 +663,10 @@ namespace HassClient.Unit.Tests
             var mock = new HassWebSocketMock();
             var mockHassClient =
                 new Mock<JoySoftware.HomeAssistant.Client.HassClient>(mock.Logger.LoggerFactory, new TransportPipelineFactoryMock().Object,
-                    mock.WebSocketMockFactory.Object, null);
-
-
-            mockHassClient.CallBase = true;
+                    mock.WebSocketMockFactory.Object, null)
+                {
+                    CallBase = true
+                };
 
             // First message from Home Assistant is auth required
             mock.AddResponse(@"{""type"": ""auth_required""}");
@@ -731,10 +731,6 @@ namespace HassClient.Unit.Tests
             Assert.Equal("homeassistant", first.Domain);
 
             Assert.Equal(38, result.Count());
-            // Assert.Equal("light", serviceEvent.Domain);
-            // Assert.Equal("toggle", serviceEvent.Service!);
-            // Assert.Equal("light.tomas_rum", c?.GetString());
-            // Assert.Equal("light.tomas_rum", serviceEvent.Data.entity_id);
 
         }
 
@@ -983,18 +979,6 @@ namespace HassClient.Unit.Tests
 
         }
 
-        // [Fact]
-        // public async Task SetStateTimeOutReturnNull()
-        // {
-        //     //Todo: Implement SetStateTimeOutReturnNull
-        // }
-
-        // [Fact]
-        // public async Task SetStateExceptionLogsErrorAndReturnNull()
-        // {
-        //     //Todo: Implement SetStateExceptionLogsErrorAndReturnNull
-        // }
-
         [Fact]
         public async Task SendEventHttpClientShouldCallCorrectHttpMessageHandler()
         {
@@ -1129,7 +1113,7 @@ namespace HassClient.Unit.Tests
             Assert.Equal("Bedroom", first.Name);
             Assert.Equal("5a30cdc2fd7f44d5a77f2d6f6d2ccd76", first.Id);
 
-            Assert.Equal(3, result.Count());
+            Assert.Equal(3, result.Count);
         }
 
 
@@ -1157,7 +1141,7 @@ namespace HassClient.Unit.Tests
             Assert.Equal("Google Inc.", first.Manufacturer);
             Assert.Equal("42cdda32a2a3428e86c2e27699d79ead", first.Id);
 
-            Assert.Equal(2, result.Count());
+            Assert.Equal(2, result.Count);
         }
 
         [Fact]
@@ -1184,7 +1168,7 @@ namespace HassClient.Unit.Tests
             Assert.Equal("42cdda32a2a3428e86c2e27699d79ead", first.DeviceId);
             Assert.Equal("media_player.tv_uppe2", first.EntityId);
 
-            Assert.Equal(2, result.Count());
+            Assert.Equal(2, result.Count);
         }
     }
 }

@@ -39,7 +39,6 @@ namespace JoySoftware.HomeAssistant.Client
 
         Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken);
         ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken);
-
     }
 
     internal class ClientWebSocketFactory : IClientWebSocketFactory
@@ -71,7 +70,7 @@ namespace JoySoftware.HomeAssistant.Client
 
         public async ValueTask SendAsync(ReadOnlyMemory<byte> buffer, WebSocketMessageType messageType,
             bool endOfMessage, CancellationToken cancellationToken) =>
-            await Task.FromException(new NotImplementedException());
+            await Task.FromException(new NotImplementedException()).ConfigureAwait(false);
 
         public Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer,
             CancellationToken cancellationToken) =>
@@ -95,7 +94,7 @@ namespace JoySoftware.HomeAssistant.Client
 
             if (bypassCertificateErrorsForHash is object)
             {
-                _ws.Options.RemoteCertificateValidationCallback = (message, cert, chain, sslPolicyErrors) =>
+                _ws.Options.RemoteCertificateValidationCallback = (_, cert, _, sslPolicyErrors) =>
                 {
                     if (sslPolicyErrors == SslPolicyErrors.None)
                     {

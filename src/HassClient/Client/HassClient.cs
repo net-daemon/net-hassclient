@@ -100,6 +100,21 @@ namespace JoySoftware.HomeAssistant.Client
         Task<HassDevices> GetDevices();
 
         /// <summary>
+        ///     Get to Home Assistant API
+        /// </summary>
+        /// <param name="apiPath">relative path</param>
+        /// <typeparam name="T">Return type (json serializable)</typeparam>
+        Task<T?> GetApiCall<T>(string apiPath);
+
+        /// <summary>
+        ///     Post to Home Assistant API
+        /// </summary>
+        /// <param name="apiPath">relative path</param>
+        /// <param name="data">data being sent</param>
+        /// <typeparam name="T">Return type (json serializable)</typeparam>
+        public Task<T?> PostApiCall<T>(string apiPath, object? data = null);
+
+        /// <summary>
         ///     Gets all registered Entities from entity registry from Home Assistant
         /// </summary>
         Task<HassEntities> GetEntities();
@@ -168,7 +183,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     Used to cancel all asynchronous work, is internal so we can test
         /// </summary>
-        internal CancellationTokenSource CancelSource = new CancellationTokenSource();
+        internal CancellationTokenSource CancelSource = new();
 
         /// <summary>
         ///     Default size for channel
@@ -190,21 +205,19 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Thread safe dicitionary that holds information about all command and command id:s
         ///     Is used to correclty deserialize the result messages from commands.
         /// </summary>
-        private readonly ConcurrentDictionary<int, CommandMessage> _commandsSent =
-            new ConcurrentDictionary<int, CommandMessage>(32, 200);
+        private readonly ConcurrentDictionary<int, CommandMessage> _commandsSent = new(32, 200);
 
         /// <summary>
         ///     Thread safe dicitionary that holds information about all command and command id:s
         ///     Is used to correclty deserialize the result messages from commands.
         /// </summary>
         private readonly ConcurrentDictionary<int, CommandMessage> _commandsSentAndResponseShouldBeDisregarded =
-            new ConcurrentDictionary<int, CommandMessage>(32, 200);
-
+            new(32, 200);
 
         /// <summary>
         ///     Default Json serialization options, Hass expects intended
         /// </summary>
-        private readonly JsonSerializerOptions _defaultSerializerOptions = new JsonSerializerOptions
+        private readonly JsonSerializerOptions _defaultSerializerOptions = new()
         {
             WriteIndented = false,
             IgnoreNullValues = true
@@ -224,15 +237,6 @@ namespace JoySoftware.HomeAssistant.Client
         ///     The logger to use
         /// </summary>
         private readonly ILogger _logger;
-
-        /// <summary>
-        ///     Set loglevel om messages when tracing is enabled
-        ///     - Default, logs but state chages
-        ///     - None, do not log messages
-        ///     - All, logs all but security challanges
-        /// </summary>
-        private readonly string _messageLogLevel;
-
         private readonly IClientWebSocketFactory _wsFactory;
         private readonly ITransportPipelineFactory<HassMessage>? _pipelineFactory;
         private readonly ILoggerFactory _loggerFactory;
@@ -273,7 +277,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     The underlying currently connected socket or null if not connected
         /// </summary>
-        private IClientWebSocket? _ws = null;
+        private IClientWebSocket? _ws;
 
         /// <summary>
         ///     Instance a new HassClient
@@ -295,27 +299,29 @@ namespace JoySoftware.HomeAssistant.Client
             IClientWebSocketFactory? wsFactory,
             HttpMessageHandler? httpMessageHandler)
         {
-            logFactory ??= _getDefaultLoggerFactory;
+            logFactory ??= DefaultLoggerFactory;
             wsFactory ??= new ClientWebSocketFactory();
 
             var bypassCertificateErrorsForHash = Environment.GetEnvironmentVariable("HASSCLIENT_BYPASS_CERT_ERR");
 
             if (httpMessageHandler is null && bypassCertificateErrorsForHash is object)
             {
-                _httpClientHandler = new HttpClientHandler();
-                _httpClientHandler.ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) =>
-               {
-                   if (sslPolicyErrors == SslPolicyErrors.None)
+                _httpClientHandler = new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = (_, cert, __, sslPolicyErrors) =>
                    {
-                       return true;   //Is valid
-                   }
+                       if (sslPolicyErrors == SslPolicyErrors.None)
+                       {
+                           return true;   //Is valid
+                       }
 
-                   if (cert?.GetCertHashString() == bypassCertificateErrorsForHash.ToUpperInvariant())
-                   {
-                       return true;
+                       if (cert?.GetCertHashString() == bypassCertificateErrorsForHash.ToUpperInvariant())
+                       {
+                           return true;
+                       }
+                       return false;
                    }
-                   return false;
-               };
+                };
 
                 httpMessageHandler = _httpClientHandler;
             }
@@ -328,8 +334,6 @@ namespace JoySoftware.HomeAssistant.Client
 
             _loggerFactory = logFactory;
             _logger = logFactory.CreateLogger<HassClient>();
-
-            _messageLogLevel = Environment.GetEnvironmentVariable("HASSCLIENT_MSGLOGLEVEL") ?? "Default";
         }
 
         /// <summary>
@@ -346,7 +350,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     The default logger
         /// </summary>
-        private static ILoggerFactory _getDefaultLoggerFactory => LoggerFactory.Create(builder =>
+        private static ILoggerFactory DefaultLoggerFactory => LoggerFactory.Create(builder =>
         {
             builder
                 .ClearProviders()
@@ -383,13 +387,8 @@ namespace JoySoftware.HomeAssistant.Client
                 }, waitForResponse).ConfigureAwait(false);
                 return result.Success ?? false;
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (!CancelSource.IsCancellationRequested)
             {
-                if (CancelSource.IsCancellationRequested)
-                {
-                    throw;
-                }
-
                 return false; // Just timeout not canceled
             }
         }
@@ -399,7 +398,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         public async Task CloseAsync()
         {
-            lock (this)
+            lock (States)
             {
                 if (_isClosing || _ws == null)
                 {
@@ -415,7 +414,7 @@ namespace JoySoftware.HomeAssistant.Client
                 _logger.LogTrace("Async close websocket");
 
                 // First do websocket close management
-                var timeout = new CancellationTokenSource(MaxWaitTimeSocketClose);
+                using var timeout = new CancellationTokenSource(MaxWaitTimeSocketClose);
 
                 try
                 {
@@ -431,7 +430,6 @@ namespace JoySoftware.HomeAssistant.Client
                         while (_ws.State != WebSocketState.Closed && !timeout.Token.IsCancellationRequested)
                             await Task.Delay(100).ConfigureAwait(false);
                     }
-
                 }
                 catch (OperationCanceledException)
                 {
@@ -452,13 +450,11 @@ namespace JoySoftware.HomeAssistant.Client
             }
             catch
             {
-
                 throw;
             }
             finally
             {
-                if (_ws != null)
-                    _ws.Dispose();
+                _ws?.Dispose();
                 _ws = null;
 
                 if (_messagePipeline is object)
@@ -466,8 +462,7 @@ namespace JoySoftware.HomeAssistant.Client
 
                 _messagePipeline = null;
 
-                if (CancelSource != null)
-                    CancelSource.Dispose();
+                CancelSource?.Dispose();
 
                 CancelSource = new CancellationTokenSource();
 
@@ -514,7 +509,6 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 _apiUrl = $"{httpScheme}://{url.Host}:{url.Port}/api";
             }
-
 
             // Check if we already have a websocket running
             if (_ws != null)
@@ -576,7 +570,6 @@ namespace JoySoftware.HomeAssistant.Client
 
                 _logger.LogDebug($"Failed to connect to websocket socket state: {ws.State}");
 
-
                 return false;
             }
             catch (Exception e)
@@ -597,8 +590,7 @@ namespace JoySoftware.HomeAssistant.Client
             object resultMessage =
                 hassResult.Result ?? throw new ApplicationException("Unexpected response from command");
 
-            var result = resultMessage as HassConfig;
-            if (result != null)
+            if (resultMessage is HassConfig result)
             {
                 return result;
             }
@@ -660,13 +652,16 @@ namespace JoySoftware.HomeAssistant.Client
 
             if (data != null)
             {
-                content = JsonSerializer.Serialize<object>(data, _defaultSerializerOptions);
+                content = JsonSerializer.Serialize(data, _defaultSerializerOptions);
             }
+
             try
             {
+                using var sc = new StringContent(content, Encoding.UTF8);
+
                 var result = await _httpClient.PostAsync(new Uri(apiUrl),
-                    new StringContent(content, Encoding.UTF8),
-                    CancelSource.Token);
+                    sc,
+                    CancelSource.Token).ConfigureAwait(false);
 
                 if (result.IsSuccessStatusCode)
                 {
@@ -680,30 +675,77 @@ namespace JoySoftware.HomeAssistant.Client
             return false;
         }
 
-
-        public async Task<HassState?> SetState(string entityId, string state, object? attributes)
+        /// <inheritdoc/>
+        public async Task<T?> PostApiCall<T>(string apiPath, object? data = null)
         {
+            var apiUrl = $"{_apiUrl}/{apiPath}";
+            var content = "";
 
-            var apiUrl = $"{_apiUrl}/states/{HttpUtility.UrlEncode(entityId)}";
-            var content = JsonSerializer.Serialize<object>(
-                    new
-                    {
-                        state = state,
-                        attributes = attributes
-                    }, _defaultSerializerOptions);
+            if (data != null)
+            {
+                content = JsonSerializer.Serialize(data, _defaultSerializerOptions);
+            }
 
             try
             {
+                using var sc = new StringContent(content, Encoding.UTF8);
+
                 var result = await _httpClient.PostAsync(new Uri(apiUrl),
-                    new StringContent(content, Encoding.UTF8),
+                    sc,
                     CancelSource.Token).ConfigureAwait(false);
 
                 if (result.IsSuccessStatusCode)
                 {
-                    var hassState = await JsonSerializer.DeserializeAsync<HassState>(await result.Content.ReadAsStreamAsync().ConfigureAwait(false),
-                        _defaultSerializerOptions);
+                    return await JsonSerializer.DeserializeAsync<T>(result.Content.ReadAsStream(), null, CancelSource.Token).ConfigureAwait(false);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to post api");
+            }
+            return default;
+        }
 
-                    return hassState;
+        /// <inheritdoc/>
+        public async Task<T?> GetApiCall<T>(string apiPath)
+        {
+            var apiUrl = $"{_apiUrl}/{apiPath}";
+
+            try
+            {
+                var result = await _httpClient.GetAsync(new Uri(apiUrl),
+                    CancelSource.Token).ConfigureAwait(false);
+
+                if (result.IsSuccessStatusCode)
+                {
+                    return await JsonSerializer.DeserializeAsync<T>(result.Content.ReadAsStream(), null, CancelSource.Token).ConfigureAwait(false);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to get api");
+            }
+            return default;
+        }
+
+        /// <inheritdoc/>
+        public async Task<HassState?> SetState(string entityId, string state, object? attributes)
+        {
+            var apiUrl = $"{_apiUrl}/states/{HttpUtility.UrlEncode(entityId)}";
+            var content = JsonSerializer.Serialize<object>(
+                    new { state, attributes }, _defaultSerializerOptions);
+
+            try
+            {
+                using var sc = new StringContent(content, Encoding.UTF8);
+                var result = await _httpClient.PostAsync(new Uri(apiUrl),
+                    sc,
+                    CancelSource.Token).ConfigureAwait(false);
+
+                if (result.IsSuccessStatusCode)
+                {
+                    return await JsonSerializer.DeserializeAsync<HassState>(await result.Content.ReadAsStreamAsync().ConfigureAwait(false),
+                        _defaultSerializerOptions).ConfigureAwait(false);
                 }
             }
             catch (Exception e)
@@ -754,50 +796,34 @@ namespace JoySoftware.HomeAssistant.Client
 
         public async Task<IEnumerable<HassServiceDomain>> GetServices()
         {
-
             HassMessage servicesResult = await SendCommandAndWaitForResponse(new GetServicesCommand()).ConfigureAwait(false);
 
-            var resultMessage =
-                servicesResult.Result as IEnumerable<HassServiceDomain>
+            return servicesResult.Result as IEnumerable<HassServiceDomain>
                     ?? throw new ApplicationException("Unexpected response from GetServices command");
-
-            return resultMessage;
         }
 
         public async Task<HassAreas> GetAreas()
         {
-
             HassMessage servicesResult = await SendCommandAndWaitForResponse(new GetAreasCommand()).ConfigureAwait(false);
 
-            var resultMessage =
-                servicesResult.Result as HassAreas
+            return servicesResult.Result as HassAreas
                     ?? throw new ApplicationException("Unexpected response from GetServices command");
-
-            return resultMessage;
         }
 
         public async Task<HassDevices> GetDevices()
         {
-
             HassMessage devicesResult = await SendCommandAndWaitForResponse(new GetDevicesCommand()).ConfigureAwait(false);
 
-            var resultMessage =
-                devicesResult.Result as HassDevices
+            return devicesResult.Result as HassDevices
                     ?? throw new ApplicationException("Unexpected response from GetDevices command");
-
-            return resultMessage;
         }
 
         public async Task<HassEntities> GetEntities()
         {
-
             HassMessage servicesResult = await SendCommandAndWaitForResponse(new GetEntitiesCommand()).ConfigureAwait(false);
 
-            var resultMessage =
-                servicesResult.Result as HassEntities
+            return servicesResult.Result as HassEntities
                     ?? throw new ApplicationException("Unexpected response from GetServices command");
-
-            return resultMessage;
         }
 
         /// <summary>
@@ -807,7 +833,6 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Uses Pipes to allocate memory where the websocket writes to and
         ///     Write the read message to a channel.
         /// </remarks>
-        /// <returns></returns>
         internal virtual async Task ProcessNextMessage()
         {
             if (_messagePipeline is null)
@@ -815,7 +840,6 @@ namespace JoySoftware.HomeAssistant.Client
                 _logger.LogWarning("Processing message with no {pipeline} set! returning.", nameof(_messagePipeline));
                 return;
             }
-
 
             try
             {
@@ -848,7 +872,6 @@ namespace JoySoftware.HomeAssistant.Client
                         _logger.LogDebug($"Unexpected eventtype {m?.Type}, discarding message!");
                         break;
                 }
-
             }
             catch (OperationCanceledException)
             {
@@ -941,7 +964,7 @@ namespace JoySoftware.HomeAssistant.Client
             return _messagePipeline.SendMessageAsync(message, CancelSource.Token);
         }
 
-        private string FormatCommand(CommandMessage message)
+        private static string FormatCommand(CommandMessage message)
         {
             return message switch
             {
@@ -995,8 +1018,7 @@ namespace JoySoftware.HomeAssistant.Client
                 }
                 else
                 {
-                    CommandMessage? originalCommand;
-                    var resultMsg = _commandsSentAndResponseShouldBeDisregarded.TryRemove(m.Id, out originalCommand) ? null : m;
+                    var resultMsg = _commandsSentAndResponseShouldBeDisregarded.TryRemove(m.Id, out CommandMessage? originalCommand) ? null : m;
 
                     if (m.Success == false && resultMsg is object && originalCommand is object)
                     {
@@ -1017,7 +1039,7 @@ namespace JoySoftware.HomeAssistant.Client
             HassMessage result = await _messageChannel.Reader.ReadAsync(tokenToUse).ConfigureAwait(false);
             if (result.Result is object && result.Result is List<HassState> wsResult)
             {
-                return (List<HassState>)result.Result;
+                return wsResult;
             }
 
             return new List<HassState>();
@@ -1086,7 +1108,6 @@ namespace JoySoftware.HomeAssistant.Client
         {
             try
             {
-
                 await CloseAsync().ConfigureAwait(false);
                 if (_httpClientHandler is object)
                 {
