@@ -77,7 +77,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                 Console.WriteLine($"Number of states: {client.States.Count}");
             }
 
-            var x = await client.GetApiCall<Discovery>("discovery_info");
+            var x = await client.GetState("sensor.temp_outside");
 
             var services = await client.GetServices();
 
