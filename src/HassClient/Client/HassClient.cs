@@ -160,6 +160,13 @@ namespace JoySoftware.HomeAssistant.Client
         Task<HassState?> SetState(string entityId, string state, object? attributes);
 
         /// <summary>
+        ///     Sets the state of an entity
+        /// </summary>
+        /// <param name="entityId">The id</param>
+        /// <returns>Returns the full state object from Home Assistant</returns>
+        Task<HassState?> GetState(string entityId);
+
+        /// <summary>
         ///     Subscribe to all or single events from HomeAssistant
         /// </summary>
         /// <param name="eventType">The type of event subscribed to</param>
@@ -751,6 +758,29 @@ namespace JoySoftware.HomeAssistant.Client
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to set state on {entity} with state {state}", entityId, state);
+            }
+            return null;
+        }
+
+        /// <inheritdoc/>
+        public async Task<HassState?> GetState(string entityId)
+        {
+            var apiUrl = $"{_apiUrl}/states/{HttpUtility.UrlEncode(entityId)}";
+
+            try
+            {
+                var result = await _httpClient.GetAsync(new Uri(apiUrl),
+                    CancelSource.Token).ConfigureAwait(false);
+
+                if (result.IsSuccessStatusCode)
+                {
+                    return await JsonSerializer.DeserializeAsync<HassState>(await result.Content.ReadAsStreamAsync().ConfigureAwait(false),
+                        _defaultSerializerOptions).ConfigureAwait(false);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to get state on {entity}", entityId);
             }
             return null;
         }
