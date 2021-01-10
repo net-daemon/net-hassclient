@@ -59,6 +59,8 @@ namespace JoySoftware.HomeAssistant.Client
         private readonly Task _readMessagePumpTask;
         private readonly Task _writeMessagePumpTask;
 
+        private bool _isDisposed = false;
+
         // Used on DisposeAsync to make sure the tasks are ended
         private readonly CancellationTokenSource _internalCancellationSource = new();
         private readonly CancellationToken _internalCancelToken;
@@ -372,6 +374,10 @@ namespace JoySoftware.HomeAssistant.Client
 
         public async Task CloseAsync()
         {
+            if (_isDisposed)
+            {
+                return;
+            }
             // Close the open websocket. We defenitely do not need it after close
             if (_ws.State == WebSocketState.CloseReceived || _ws.State == WebSocketState.Open)
             {
@@ -380,13 +386,20 @@ namespace JoySoftware.HomeAssistant.Client
             }
 
             // Cancel all activity and wait for complete
-            _internalCancellationSource.Cancel();
-            _internalCancellationSource.Dispose();
+            if (!_internalCancellationSource.IsCancellationRequested)
+            {
+                _internalCancellationSource.Cancel();
+            }
             // Wait for the messagepumps to end
             await Task.WhenAll(
                _readMessagePumpTask,
                _writeMessagePumpTask
+
            ).ConfigureAwait(false);
+            _internalCancellationSource.Dispose();
+            _readMessagePumpTask.Dispose();
+            _writeMessagePumpTask.Dispose();
+            _isDisposed = true;
         }
 
         public async ValueTask DisposeAsync()
