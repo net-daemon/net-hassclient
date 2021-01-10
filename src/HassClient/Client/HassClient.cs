@@ -210,7 +210,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     Used to make sure the client is not closed more than once
         /// </summary>
-        private bool _isClosed = false;
+        private bool _isClosed;
 
         /// <summary>
         ///     Thread safe dicitionary that holds information about all command and command id:s
@@ -465,7 +465,6 @@ namespace JoySoftware.HomeAssistant.Client
             }
             finally
             {
-                _isClosed = true;
                 _ws?.Dispose();
                 _ws = null;
 
@@ -475,8 +474,9 @@ namespace JoySoftware.HomeAssistant.Client
                 _messagePipeline = null;
 
                 CancelSource?.Dispose();
-
                 CancelSource = new CancellationTokenSource();
+
+                _isClosed = true;
                 _isClosing = false;
 
                 _logger.LogTrace("Async close websocket done");
