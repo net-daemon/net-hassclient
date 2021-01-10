@@ -206,7 +206,11 @@ namespace JoySoftware.HomeAssistant.Client
         ///     The max time we will wait for the socket to gracefully close
         /// </summary>
         private const int MaxWaitTimeSocketClose = 5000; // 5 seconds
-                                                         // 5 seconds
+
+        /// <summary>
+        ///     Used to make sure the client is not closed more than once
+        /// </summary>
+        private bool _isClosed = false;
 
         /// <summary>
         ///     Thread safe dicitionary that holds information about all command and command id:s
@@ -407,7 +411,7 @@ namespace JoySoftware.HomeAssistant.Client
         {
             lock (States)
             {
-                if (_isClosing || _ws == null)
+                if (_isClosing || _ws == null || _isClosed)
                 {
                     // Already closed
                     return;
@@ -461,6 +465,7 @@ namespace JoySoftware.HomeAssistant.Client
             }
             finally
             {
+                _isClosed = true;
                 _ws?.Dispose();
                 _ws = null;
 
@@ -472,9 +477,9 @@ namespace JoySoftware.HomeAssistant.Client
                 CancelSource?.Dispose();
 
                 CancelSource = new CancellationTokenSource();
+                _isClosing = false;
 
                 _logger.LogTrace("Async close websocket done");
-                _isClosing = false;
             }
         }
 
