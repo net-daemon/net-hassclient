@@ -21,7 +21,7 @@
             ],
             "connections": [],
             "manufacturer": "Plex",
-            "model": "Plex Web",
+            "model": 1,
             "name": "Plex (Plex Web - Chrome)",
             "sw_version": "4.22.3",
             "id": "49b27477238a4c8fb6cc8fbac32cebbc",

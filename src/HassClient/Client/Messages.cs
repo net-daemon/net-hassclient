@@ -152,10 +152,11 @@ namespace JoySoftware.HomeAssistant.Client
     public class HassDevices : List<HassDevice>
     {
     }
-    public record HassDevice
+    
+      public record HassDevice
     {
         [JsonPropertyName("manufacturer")] public string? Manufacturer { get; set; }
-        [JsonPropertyName("model")] public string? Model { get; set; }
+        [JsonPropertyName("model")] [JsonConverter(typeof(HassDeviceModelConverter))] public  string? Model { get; set; }
         [JsonPropertyName("id")] public string? Id { get; set; }
         [JsonPropertyName("area_id")] public string? AreaId { get; set; }
         [JsonPropertyName("name")] public string? Name { get; set; }
@@ -347,9 +348,11 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 element.WriteTo(writer);
             }
-
+            
             return JsonSerializer.Deserialize<T>(bufferWriter.WrittenSpan, options) ?? default!;
         }
+
+        
 
         /// <summary>
         ///     Parses all json elements to instance result from GetServices call
@@ -464,6 +467,27 @@ namespace JoySoftware.HomeAssistant.Client
         }
     }
 
+    public class HassDeviceModelConverter : JsonConverter<string>
+    {
+        public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.Number)
+            {
+                var stringValue = reader.GetInt32();
+                return stringValue.ToString();
+            }
+            else if (reader.TokenType == JsonTokenType.String)
+            {
+                return reader.GetString();
+            }
+ 
+            throw new System.Text.Json.JsonException();
+        }
+
+        public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options) =>
+            writer.WriteStringValue(value);
+    }
+    
     public class HassEventConverter : JsonConverter<HassEvent>
     {
         public override HassEvent? Read(
