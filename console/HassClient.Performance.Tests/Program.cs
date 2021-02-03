@@ -83,7 +83,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
 
             var config = await client.GetConfig();
             System.Console.WriteLine(config.State);
-            var test = client.States["group.chromecasts"];
+            // var test = client.States["group.chromecasts"];
             if (events)
             {
                 // Subscribe to all events
@@ -91,23 +91,18 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             }
 
             // await client.CallService("light", "toggle", new { entity_id = "light.tomas_rum" });
-            await client.CallService("light", "no_exist", new { entity_id = "light.tomas_rum_not_exist" });
+            // await client.CallService("light", "no_exist", new { entity_id = "light.tomas_rum_not_exist" });
             //var tt = await client.SetState("sensor.csharp", "cool", new {daemon = true});
 
             //var result = await client.SendEvent("test_event", new { data="hello" });
+            // await client.CloseAsync();
+            // return;
             while (true)
             {
                 try
                 {
                     HassEvent eventMsg = await client.ReadEventAsync();
 
-                    // if (nrOfTimes++ > 8)
-                    // {
-                    //     await client.DisposeAsync();
-                    //     System.Console.WriteLine("Closing and returning...");
-                    //     return;
-                    // }
-                    //Console.WriteLine($"Eventtype: {eventMsg.EventType}");
                     if (eventMsg.EventType == "state_changed")
                     {
                         var stateMessage = eventMsg?.Data as HassStateChangedEventData;

@@ -59,7 +59,9 @@ namespace JoySoftware.HomeAssistant.Client
         private readonly Task _readMessagePumpTask;
         private readonly Task _writeMessagePumpTask;
 
-        private bool _isDisposed = false;
+        private bool _isClosed;
+        private bool _isClosing;
+        private object lock_object = new();
 
         // Used on DisposeAsync to make sure the tasks are ended
         private readonly CancellationTokenSource _internalCancellationSource = new();
@@ -160,6 +162,8 @@ namespace JoySoftware.HomeAssistant.Client
         [SuppressMessage("", "CA1508")]
         private async Task WriteMessagePump()
         {
+            _logger.LogTrace("WriteMessagePump: start processing messages..");
+
             while (_ws != null && !_internalCancelToken.IsCancellationRequested && !_ws.CloseStatus.HasValue)
             {
                 try
@@ -209,10 +213,12 @@ namespace JoySoftware.HomeAssistant.Client
                     break;
                 }
             }
+            _logger.LogTrace("WriteMessagePump: end processing messages..");
         }
 
         private async Task ReadMessagePump()
         {
+            _logger.LogTrace("ReadMessagePump: start processing messages..");
             while (_ws != null && !_internalCancelToken.IsCancellationRequested && !_ws.CloseStatus.HasValue)
             {
                 try
@@ -230,6 +236,7 @@ namespace JoySoftware.HomeAssistant.Client
                     _pipe.Reset();
                 }
             }
+            _logger.LogTrace("ReadMessagePump: end processing messages..");
         }
 
         private async Task SendCloseFrameToWebSocket()
@@ -238,16 +245,18 @@ namespace JoySoftware.HomeAssistant.Client
 
             try
             {
-                if (
-                    _ws.State == WebSocketState.Open ||
-                    _ws.State == WebSocketState.CloseReceived
-                    )
+                if (_ws.State == WebSocketState.CloseReceived)
                 {
                     // after this, the socket state which change to CloseSent
                     await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token).ConfigureAwait(false);
                     // now we wait for the server response, which will close the socket
                     while (_ws.State != WebSocketState.Closed && !timeout.Token.IsCancellationRequested)
                         await Task.Delay(100).ConfigureAwait(false);
+                }
+                else if (_ws.State == WebSocketState.Open)
+                {
+                    // Do full close 
+                    await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)
@@ -374,10 +383,15 @@ namespace JoySoftware.HomeAssistant.Client
 
         public async Task CloseAsync()
         {
-            if (_isDisposed)
+            lock (this.lock_object)
             {
-                return;
+                if (_isClosing || _isClosed)
+                {
+                    return;
+                }
+                _isClosing = true;
             }
+
             // Close the open websocket. We defenitely do not need it after close
             if (_ws.State == WebSocketState.CloseReceived || _ws.State == WebSocketState.Open)
             {
@@ -399,7 +413,8 @@ namespace JoySoftware.HomeAssistant.Client
             _internalCancellationSource.Dispose();
             _readMessagePumpTask.Dispose();
             _writeMessagePumpTask.Dispose();
-            _isDisposed = true;
+            _isClosing = false;
+            _isClosed = true;
         }
 
         public async ValueTask DisposeAsync()

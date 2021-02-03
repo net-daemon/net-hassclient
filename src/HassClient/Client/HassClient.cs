@@ -427,6 +427,10 @@ namespace JoySoftware.HomeAssistant.Client
                 // First do websocket close management
                 using var timeout = new CancellationTokenSource(MaxWaitTimeSocketClose);
 
+                // This closes the underlying websocket as well
+                if (_messagePipeline is object)
+                    await _messagePipeline.CloseAsync().ConfigureAwait(false);
+
                 try
                 {
                     if (
@@ -435,11 +439,7 @@ namespace JoySoftware.HomeAssistant.Client
                         _ws.State == WebSocketState.CloseSent
                         )
                     {
-                        // after this, the socket state which change to CloseSent
-                        await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token).ConfigureAwait(false);
-                        // now we wait for the server response, which will close the socket
-                        while (_ws.State != WebSocketState.Closed && !timeout.Token.IsCancellationRequested)
-                            await Task.Delay(100).ConfigureAwait(false);
+                        _logger.LogWarning("Unexpected state, Exepced closed, got {state}", _ws.State);
                     }
                 }
                 catch (OperationCanceledException)
@@ -449,9 +449,6 @@ namespace JoySoftware.HomeAssistant.Client
 
                 // Cancel all async stuff
                 CancelSource.Cancel();
-
-                if (_messagePipeline is object)
-                    await _messagePipeline.CloseAsync().ConfigureAwait(false);
 
                 // Wait for read and write tasks to complete max 5 seconds
                 if (_readMessagePumpTask is object)
