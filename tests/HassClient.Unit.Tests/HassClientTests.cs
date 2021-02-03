@@ -211,7 +211,7 @@ namespace HassClient.Unit.Tests
 
             // ASSERT
             mock.Verify(
-                x => x.CloseOutputAsync(It.IsAny<WebSocketCloseStatus>(),
+                x => x.CloseAsync(It.IsAny<WebSocketCloseStatus>(),
                     It.IsAny<string>(), It.IsAny<CancellationToken>()),
                 Times.Once);
         }
