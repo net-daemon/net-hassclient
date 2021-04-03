@@ -38,9 +38,9 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     Calls a service to home assistant
         /// </summary>
-        /// <param name="domain">The domain for the servie, example "light"</param>
+        /// <param name="domain">The domain for the service, example "light"</param>
         /// <param name="service">The service to call, example "turn_on"</param>
-        /// <param name="serviceData">The service data, use anonumous types, se example</param>
+        /// <param name="serviceData">The service data, use anonymous types, se example</param>
         /// <param name="waitForResponse">If true, it wait for the response from Hass else just ignore</param>
         /// <example>
         ///     Following example turn on light
@@ -65,7 +65,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <param name="host">The host or ip address of Home Assistant</param>
         /// <param name="port">The port of Home Assistant, typically 8123 or 80</param>
         /// <param name="ssl">Set to true if Home Assistant using ssl (recommended secure setup for Home Assistant)</param>
-        /// <param name="token">Authtoken from Home Assistant for access</param>
+        /// <param name="token">AuthToken from Home Assistant for access</param>
         /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
         /// <returns>Returns true if successfully connected</returns>
         Task<bool> ConnectAsync(string host, short port, bool ssl, string token, bool getStatesOnConnect);
@@ -74,7 +74,7 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Connect to Home Assistant
         /// </summary>
         /// <param name="url">The uri of the websocket, typically ws://ip:8123/api/websocket</param>
-        /// <param name="token">Authtoken from Home Assistant for access</param>
+        /// <param name="token">AuthToken from Home Assistant for access</param>
         /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
         /// <returns>Returns true if successfully connected</returns>
         Task<bool> ConnectAsync(Uri url, string token, bool getStatesOnConnect);
@@ -155,6 +155,7 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Sets the state of an entity
         /// </summary>
         /// <param name="entityId">The id</param>
+        /// <param name="state"></param>
         /// <param name="attributes"></param>
         /// <returns>Returns the full state object from Home Assistant</returns>
         Task<HassState?> SetState(string entityId, string state, object? attributes);
@@ -183,7 +184,7 @@ namespace JoySoftware.HomeAssistant.Client
     /// <summary>
     ///     Hides the internals of websocket connection
     ///     to connect, send and receive json messages
-    ///     This class is threadsafe
+    ///     This class is thread safe
     /// </summary>
     public class HassClient : IHassClient
     {
@@ -213,14 +214,14 @@ namespace JoySoftware.HomeAssistant.Client
         private bool _isClosed;
 
         /// <summary>
-        ///     Thread safe dicitionary that holds information about all command and command id:s
-        ///     Is used to correclty deserialize the result messages from commands.
+        ///     Thread safe dictionary that holds information about all command and command id:s
+        ///     Is used to correctly deserialize the result messages from commands.
         /// </summary>
         private readonly ConcurrentDictionary<int, CommandMessage> _commandsSent = new(32, 200);
 
         /// <summary>
-        ///     Thread safe dicitionary that holds information about all command and command id:s
-        ///     Is used to correclty deserialize the result messages from commands.
+        ///     Thread safe dictionary that holds information about all command and command id:s
+        ///     Is used to correctly deserialize the result messages from commands.
         /// </summary>
         private readonly ConcurrentDictionary<int, CommandMessage> _commandsSentAndResponseShouldBeDisregarded =
             new(32, 200);
@@ -270,7 +271,7 @@ namespace JoySoftware.HomeAssistant.Client
         private ITransportPipeline<HassMessage>? _messagePipeline;
 
         /// <summary>
-        ///     Channel used as a async thread safe way to read resultmessages from the websocket
+        ///     Channel used as a async thread safe way to read result messages from the websocket
         /// </summary>
         private Channel<HassMessage> _messageChannel = Channel.CreateBounded<HassMessage>(DefaultChannelSize);
 
@@ -302,6 +303,7 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Instance a new HassClient
         /// </summary>
         /// <param name="logFactory">The LogFactory to use for logging, null uses default values from config.</param>
+        /// <param name="pipelineFactory"></param>
         /// <param name="wsFactory">The factory to use for websockets, mainly for testing purposes</param>
         /// <param name="httpMessageHandler">httpMessage handler (used for mocking)</param>
         internal HassClient(
@@ -319,18 +321,14 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 _httpClientHandler = new HttpClientHandler
                 {
-                    ServerCertificateCustomValidationCallback = (_, cert, __, sslPolicyErrors) =>
+                    ServerCertificateCustomValidationCallback = (_, cert, _, sslPolicyErrors) =>
                    {
                        if (sslPolicyErrors == SslPolicyErrors.None)
                        {
                            return true;   //Is valid
                        }
 
-                       if (cert?.GetCertHashString() == bypassCertificateErrorsForHash.ToUpperInvariant())
-                       {
-                           return true;
-                       }
-                       return false;
+                       return cert?.GetCertHashString() == bypassCertificateErrorsForHash.ToUpperInvariant();
                    }
                 };
 
@@ -351,7 +349,7 @@ namespace JoySoftware.HomeAssistant.Client
         ///     The current states of the entities.
         /// </summary>
         public ConcurrentDictionary<string, HassState> States { get; } =
-            new ConcurrentDictionary<string, HassState>(Environment.ProcessorCount * 2, DefaultChannelSize);
+            new(Environment.ProcessorCount * 2, DefaultChannelSize);
 
         /// <summary>
         ///     Internal property for tests to access the timeout during unit testing
@@ -372,7 +370,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     Calls a service to home assistant
         /// </summary>
-        /// <param name="domain">The domain for the servie, example "light"</param>
+        /// <param name="domain">The domain for the service, example "light"</param>
         /// <param name="service">The service to call, example "turn_on"</param>
         /// <param name="serviceData">The service data, use anonymous types, se example</param>
         /// <param name="waitForResponse">If true, it wait for the response from Hass else just ignore</param>
@@ -439,7 +437,7 @@ namespace JoySoftware.HomeAssistant.Client
                         _ws.State == WebSocketState.CloseSent
                         )
                     {
-                        _logger.LogWarning("Unexpected state, Exepced closed, got {state}", _ws.State);
+                        _logger.LogWarning("Unexpected state, Expected closed, got {state}", _ws.State);
                     }
                 }
                 catch (OperationCanceledException)
@@ -455,10 +453,6 @@ namespace JoySoftware.HomeAssistant.Client
                 {
                     await _readMessagePumpTask.ConfigureAwait(false);
                 }
-            }
-            catch
-            {
-                throw;
             }
             finally
             {
@@ -486,7 +480,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <param name="host">The host or ip address of Home Assistant</param>
         /// <param name="port">The port of Home Assistant, typically 8123 or 80</param>
         /// <param name="ssl">Set to true if Home Assistant using ssl (recommended secure setup for Home Assistant)</param>
-        /// <param name="token">Authtoken from Home Assistant for access</param>
+        /// <param name="token">AuthToken from Home Assistant for access</param>
         /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
         /// <returns>Returns true if successfully connected</returns>
         public Task<bool> ConnectAsync(string host, short port, bool ssl, string token, bool getStatesOnConnect) =>
@@ -496,7 +490,7 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Connect to Home Assistant
         /// </summary>
         /// <param name="url">The uri of the websocket</param>
-        /// <param name="token">Authtoken from Home Assistant for access</param>
+        /// <param name="token">AuthToken from Home Assistant for access</param>
         /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
         /// <returns>Returns true if successfully connected</returns>
         public async Task<bool> ConnectAsync(Uri url, string token,
@@ -525,7 +519,7 @@ namespace JoySoftware.HomeAssistant.Client
                 throw new InvalidOperationException("Already connected to the remote websocket.");
             }
 
-            // Setup default headers for httpclient
+            // Setup default headers for httpClient
             if (_httpClient != null)
             {
                 _httpClient.DefaultRequestHeaders.Clear();
@@ -549,7 +543,7 @@ namespace JoySoftware.HomeAssistant.Client
                     // Initialize the correct states when successfully connecting to the websocket
                     InitStatesOnConnect(ws);
 
-                    // Do the authenticate and get the auhtorization response
+                    // Do the authenticate and get the authorization response
                     HassMessage result = await HandleConnectAndAuthenticate(token, connectTokenSource).ConfigureAwait(false);
 
                     switch (result.Type)
@@ -793,33 +787,19 @@ namespace JoySoftware.HomeAssistant.Client
 
             if (eventType != EventType.All)
             {
-                switch (eventType)
+                command.EventType = eventType switch
                 {
-                    case EventType.HomeAssistantStart:
-                        command.EventType = "homeassistant_start";
-                        break;
-                    case EventType.HomeAssistantStop:
-                        command.EventType = "homeassistant_stop";
-                        break;
-                    case EventType.StateChanged:
-                        command.EventType = "state_changed";
-                        break;
-                    case EventType.ServiceRegistered:
-                        command.EventType = "service_registered";
-                        break;
-                    case EventType.CallService:
-                        command.EventType = "call_service";
-                        break;
-                    case EventType.ServiceExecuted:
-                        command.EventType = "service_executed";
-                        break;
-                    case EventType.PlatformDiscovered:
-                        command.EventType = "platform_discovered";
-                        break;
-                    case EventType.ComponentLoaded:
-                        command.EventType = "component_loaded";
-                        break;
-                }
+                    EventType.All => command.EventType,
+                    EventType.HomeAssistantStart => "homeassistant_start",
+                    EventType.HomeAssistantStop =>  "homeassistant_stop",
+                    EventType.StateChanged =>       "state_changed",
+                    EventType.ServiceRegistered =>  "service_registered",
+                    EventType.CallService =>        "call_service",
+                    EventType.ServiceExecuted =>    "service_executed",
+                    EventType.PlatformDiscovered => "platform_discovered",
+                    EventType.ComponentLoaded =>    "component_loaded",
+                    _ => command.EventType 
+                };
             }
 
             var result = await SendCommandAndWaitForResponse(command).ConfigureAwait(false);
@@ -881,7 +861,7 @@ namespace JoySoftware.HomeAssistant.Client
                 switch (m?.Type)
                 {
                     case "event":
-                        if (m.Event != null)
+                        if (m?.Event != null)
                         {
                             _eventChannel.Writer.TryWrite(m.Event);
                         }
@@ -901,7 +881,7 @@ namespace JoySoftware.HomeAssistant.Client
                             _messageChannel.Writer.TryWrite(resultMessage);
                         break;
                     default:
-                        _logger.LogDebug($"Unexpected eventtype {m?.Type}, discarding message!");
+                        _logger.LogDebug($"Unexpected event type {m?.Type}, discarding message!");
                         break;
                 }
             }
