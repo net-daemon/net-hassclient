@@ -1,9 +1,9 @@
+using JoySoftware.HomeAssistant.Helpers;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Security;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -235,23 +235,12 @@ namespace JoySoftware.HomeAssistant.Client
             IgnoreNullValues = true
         };
 
-        /// <summary>
-        ///     The http client used for post and get operations through the Home Assistant API
-        /// </summary>
-        private readonly HttpClient _httpClient;
-
-        /// <summary>
-        ///     Used when special management of self-signed certificates are ignored
-        /// </summary>
-        private readonly HttpClientHandler? _httpClientHandler;
-
-        /// <summary>
-        ///     The logger to use
-        /// </summary>
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _logger;
+
         private readonly IClientWebSocketFactory _wsFactory;
         private readonly ITransportPipelineFactory<HassMessage>? _pipelineFactory;
-        private readonly ILoggerFactory _loggerFactory;
+        private readonly HttpClient _httpClient;
 
         /// <summary>
         ///     Base url to the API (non socket)
@@ -291,58 +280,33 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         private IClientWebSocket? _ws;
 
-        /// <summary>
-        ///     Instance a new HassClient
-        /// </summary>
-        /// <param name="logFactory">The LogFactory to use for logging, null uses default values from config.</param>
-        public HassClient(ILoggerFactory? logFactory = null) :
-            this(logFactory, new WebSocketMessagePipelineFactory<HassMessage>(), new ClientWebSocketFactory(), null)
-        { }
+        public HassClient(ILoggerFactory? loggerFactory = null) : this(
+            loggerFactory ?? LoggerHelper.CreateDefaultLoggerFactory(),
+            WebSocketHelper.CreatePipelineFactory(),
+            WebSocketHelper.CreateClientFactory(),
+            HttpHelper.CreateHttpClient())
+        {
+        }
 
         /// <summary>
         ///     Instance a new HassClient
         /// </summary>
-        /// <param name="logFactory">The LogFactory to use for logging, null uses default values from config.</param>
+        /// <param name="loggerFactory">The LogFactory to use for logging, null uses default values from config.</param>
         /// <param name="pipelineFactory"></param>
         /// <param name="wsFactory">The factory to use for websockets, mainly for testing purposes</param>
-        /// <param name="httpMessageHandler">httpMessage handler (used for mocking)</param>
-        internal HassClient(
-            ILoggerFactory? logFactory,
-            ITransportPipelineFactory<HassMessage>? pipelineFactory,
-            IClientWebSocketFactory? wsFactory,
-            HttpMessageHandler? httpMessageHandler)
+        /// <param name="httpClient">The client responsible for handling HTTP-requests.</param>
+        public HassClient(
+            ILoggerFactory loggerFactory,
+            ITransportPipelineFactory<HassMessage> pipelineFactory,
+            IClientWebSocketFactory wsFactory,
+            HttpClient httpClient)
         {
-            logFactory ??= DefaultLoggerFactory;
-            wsFactory ??= new ClientWebSocketFactory();
+            _loggerFactory = loggerFactory;
+            _logger = loggerFactory.CreateLogger<HassClient>();
 
-            var bypassCertificateErrorsForHash = Environment.GetEnvironmentVariable("HASSCLIENT_BYPASS_CERT_ERR");
-
-            if (httpMessageHandler is null && bypassCertificateErrorsForHash is object)
-            {
-                _httpClientHandler = new HttpClientHandler
-                {
-                    ServerCertificateCustomValidationCallback = (_, cert, _, sslPolicyErrors) =>
-                   {
-                       if (sslPolicyErrors == SslPolicyErrors.None)
-                       {
-                           return true;   //Is valid
-                       }
-
-                       return cert?.GetCertHashString() == bypassCertificateErrorsForHash.ToUpperInvariant();
-                   }
-                };
-
-                httpMessageHandler = _httpClientHandler;
-            }
-
-            _httpClient = httpMessageHandler != null ?
-                new HttpClient(httpMessageHandler) : new HttpClient();
-
-            _wsFactory = wsFactory;
             _pipelineFactory = pipelineFactory;
-
-            _loggerFactory = logFactory;
-            _logger = logFactory.CreateLogger<HassClient>();
+            _wsFactory = wsFactory;
+            _httpClient = httpClient;
         }
 
         /// <summary>
@@ -355,17 +319,6 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Internal property for tests to access the timeout during unit testing
         /// </summary>
         internal int SocketTimeout { get; set; } = DefaultTimeout;
-
-        /// <summary>
-        ///     The default logger
-        /// </summary>
-        private static ILoggerFactory DefaultLoggerFactory => LoggerFactory.Create(builder =>
-        {
-            builder
-                .ClearProviders()
-                .AddFilter("HassClient.HassClient", LogLevel.Information)
-                .AddConsole();
-        });
 
         /// <summary>
         ///     Calls a service to home assistant
@@ -1121,10 +1074,6 @@ namespace JoySoftware.HomeAssistant.Client
             try
             {
                 await CloseAsync().ConfigureAwait(false);
-                if (_httpClientHandler is object)
-                {
-                    _httpClientHandler.Dispose();
-                }
             }
             catch
             {

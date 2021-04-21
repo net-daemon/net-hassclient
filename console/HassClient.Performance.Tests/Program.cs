@@ -1,9 +1,10 @@
 ﻿using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using HassClientIntegrationTests.Mocks;
+using JoySoftware.HomeAssistant.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace JoySoftware.HomeAssistant.Client.Performance.Tests
@@ -49,17 +50,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
         private static async Task ConnectToHomeAssistant(string ip, short port, bool events, string token)
         {
             // Environment.SetEnvironmentVariable("HASSCLIENT_BYPASS_CERT_ERR", "BFCC28167558E74CD0AA3045719E158D2B21F79E");
-            ILoggerFactory factory = LoggerFactory.Create(builder =>
-            {
-                builder
-                    .ClearProviders()
-                    // .AddFilter("HassClient.HassClient", LogLevel.Trace)
-                    .AddConsole()
-                    .AddDebug()
-                    .SetMinimumLevel(LogLevel.Trace);
-            });
-
-            await using IHassClient client = new HassClient(factory);
+            await using IHassClient client = CreateHassClient();
             var token_env = Environment.GetEnvironmentVariable("HOMEASSISTANT__TOKEN");
             if (token_env != null)
                 token = token_env;
@@ -133,6 +124,27 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                 }
             }
         }
+
+        private static IHassClient CreateHassClient()
+        {
+            var services = new ServiceCollection();
+            services.AddTransient<ILoggerFactory>(_ => CreateLoggerFactory());
+            services.AddHassClient();
+
+            var provider = services.BuildServiceProvider();
+            return provider.GetRequiredService<IHassClient>();
+        }
+
+        private static ILoggerFactory CreateLoggerFactory()
+        {
+            return LoggerFactory.Create(builder => builder
+                .ClearProviders()
+                // .AddFilter("HassClient.HassClient", LogLevel.Trace)
+                .AddConsole()
+                .AddDebug()
+                .SetMinimumLevel(LogLevel.Trace));
+        }
+        
         public class Discovery
         {
             public string base_url { get; set; }
