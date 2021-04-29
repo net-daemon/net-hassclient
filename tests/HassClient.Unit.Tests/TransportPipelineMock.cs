@@ -1,4 +1,5 @@
 using JoySoftware.HomeAssistant.Client;
+using JoySoftware.HomeAssistant.Messages;
 using Moq;
 
 namespace HassClient.Unit.Tests
