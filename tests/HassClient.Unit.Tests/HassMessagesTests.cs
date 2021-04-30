@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text.Json;
-using JoySoftware.HomeAssistant.Client;
+using JoySoftware.HomeAssistant.Messages;
+using JoySoftware.HomeAssistant.Model;
 using Xunit;
 
 namespace HassClient.Unit.Tests

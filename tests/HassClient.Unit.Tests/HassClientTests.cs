@@ -8,6 +8,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using JoySoftware.HomeAssistant.Client;
+using JoySoftware.HomeAssistant.Messages;
+using JoySoftware.HomeAssistant.Model;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;

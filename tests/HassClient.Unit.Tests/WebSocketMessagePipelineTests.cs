@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using JoySoftware.HomeAssistant.Client;
+using JoySoftware.HomeAssistant.Messages;
 using Xunit;
 
 namespace HassClient.Unit.Tests
