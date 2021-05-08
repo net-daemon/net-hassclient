@@ -161,14 +161,6 @@ namespace HassClient.Unit.Tests
             Assert.Equal(expectedDateTime, typedAttributes.RuntimeInfo.NextScheduledEvent);
             Assert.False(typedAttributes.RuntimeInfo.HasError);
             Assert.NotNull(typedAttributes.RuntimeInfo);
-
-            var runtimeInfo = newState.Attributes["runtime_info"] as Dictionary<string, object>;
-
-            Assert.IsType<JsonElement>(runtimeInfo["next_scheduled_event"]);
-            Assert.IsType<JsonElement>(runtimeInfo["has_error"]);
-            Assert.IsType<JsonElement>(runtimeInfo["app_attributes"] is ICollection);
-
-
         }
 
         record RuntimeInfo
