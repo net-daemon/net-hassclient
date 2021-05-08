@@ -4,6 +4,7 @@ using System.CommandLine.Invocation;
 using System.Threading.Tasks;
 using HassClientIntegrationTests.Mocks;
 using JoySoftware.HomeAssistant.Extensions;
+using JoySoftware.HomeAssistant.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

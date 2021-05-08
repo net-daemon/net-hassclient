@@ -1,14 +1,14 @@
 using System;
 using System.Linq;
-using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using HassClientIntegrationTests.Mocks;
 using JoySoftware.HomeAssistant.Client;
 using JoySoftware.HomeAssistant.Extensions;
+using JoySoftware.HomeAssistant.Messages;
+using JoySoftware.HomeAssistant.Model;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Xunit;
 

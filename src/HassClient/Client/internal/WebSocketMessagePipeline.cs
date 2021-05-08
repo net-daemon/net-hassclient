@@ -1,3 +1,4 @@
+using JoySoftware.HomeAssistant.Messages;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;

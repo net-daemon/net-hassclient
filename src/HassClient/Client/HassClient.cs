@@ -1,4 +1,7 @@
 using JoySoftware.HomeAssistant.Helpers;
+using JoySoftware.HomeAssistant.Helpers.Json;
+using JoySoftware.HomeAssistant.Messages;
+using JoySoftware.HomeAssistant.Model;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
