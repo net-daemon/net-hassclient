@@ -1,5 +1,7 @@
-﻿using System;
+﻿using JoySoftware.HomeAssistant.Helpers.Json;
+using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace JoySoftware.HomeAssistant.Model
@@ -10,7 +12,10 @@ namespace JoySoftware.HomeAssistant.Model
     
     public record HassState
     {
-        [JsonPropertyName("attributes")] public Dictionary<string, object>? Attributes { get; set; }
+        [JsonPropertyName("attributes")] public JsonElement? AttributesJson { get; set; }
+        public Dictionary<string, object>? Attributes => AttributesJson?.ToObject<Dictionary<string, object>>() ?? new();
+        public T? AttributesAs<T>() => AttributesJson.HasValue ? AttributesJson.Value.ToObject<T>() : default;
+
         [JsonPropertyName("entity_id")] public string EntityId { get; set; } = "";
 
         [JsonPropertyName("last_changed")] public DateTime LastChanged { get; set; } = DateTime.MinValue;
