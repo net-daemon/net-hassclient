@@ -100,7 +100,13 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
             return JsonSerializer.Deserialize<T>(bufferWriter.WrittenSpan, options) ?? default!;
         }
 
-        
+        public static JsonElement? ToJsonElement<T>(this T source, JsonSerializerOptions? options = null)
+        {
+            if (source == null) return null;
+            var json = JsonSerializer.Serialize<T>(source, options);
+            return JsonDocument.Parse(json).RootElement;
+        }
+
 
         /// <summary>
         ///     Parses all json elements to instance result from GetServices call

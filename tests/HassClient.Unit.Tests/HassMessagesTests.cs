@@ -7,6 +7,7 @@ using JoySoftware.HomeAssistant.Client;
 using JoySoftware.HomeAssistant.Helpers.Json;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Text;
 using System.Text.Json.Serialization;
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -161,6 +162,33 @@ namespace HassClient.Unit.Tests
             Assert.Equal(expectedDateTime, typedAttributes.RuntimeInfo.NextScheduledEvent);
             Assert.False(typedAttributes.RuntimeInfo.HasError);
             Assert.NotNull(typedAttributes.RuntimeInfo);
+        }
+
+        [Fact]
+        public void Attributes_Init()
+        {
+            var expectedDateTime = DateTimeOffset.Parse("2021-05-08T15:26:02.4236657+02:00");
+            var state = new HassState()
+            {
+                Attributes = new Dictionary<string, object>()
+                {
+                    ["next_scheduled_event"] = expectedDateTime,
+                    ["has_error"] = false,
+                    ["app_attributes"] = new object[] {1,2}
+                }
+            };
+
+            // The attributes set in the dictionary will be converted to JsonElement when they are retrieved again
+            // This is because the dictionary is actually saved as a JsonElement and deserialized again
+            Assert.Equal(expectedDateTime, (state.Attributes["next_scheduled_event"] as JsonElement?)?.GetDateTimeOffset());
+            Assert.False((state.Attributes["has_error"] as JsonElement?)?.GetBoolean());
+            Assert.Equal(2,(state.Attributes["app_attributes"] as JsonElement?)?.GetArrayLength());
+
+            // We can also deserialize them into a typed object
+            var runtimeInfo = state.AttributesAs<RuntimeInfo>();
+            Assert.Equal(expectedDateTime, runtimeInfo.NextScheduledEvent);
+            Assert.False(runtimeInfo.HasError);
+            Assert.NotNull(runtimeInfo.AppAttributes);
         }
 
         record RuntimeInfo
