@@ -647,15 +647,16 @@ namespace JoySoftware.HomeAssistant.Client
             var apiUrl = $"{_apiUrl}/{apiPath}";
             var content = "";
 
-            if (data != null)
-            {
-                content = JsonSerializer.Serialize(data, _defaultSerializerOptions);
-            }
-
             try
             {
                 using var sc = new StringContent(content, Encoding.UTF8);
-                sc.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+
+                if (data != null)
+                {
+                    content = JsonSerializer.Serialize(data, _defaultSerializerOptions);
+                    sc.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
+                }
+
                 var result = await _httpClient.PostAsync(new Uri(apiUrl),
                     sc,
                     CancelSource.Token).ConfigureAwait(false);
