@@ -1,6 +1,7 @@
 ﻿using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using HassClientIntegrationTests.Mocks;
 using JoySoftware.HomeAssistant.Extensions;
@@ -48,6 +49,11 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             return cmd;
         }
 
+        public record EventData
+        {
+            [JsonPropertyName("temperature")]
+            public double Temperature { get; set; }
+        }
         private static async Task ConnectToHomeAssistant(string ip, short port, bool events, string token)
         {
             // Environment.SetEnvironmentVariable("HASSCLIENT_BYPASS_CERT_ERR", "BFCC28167558E74CD0AA3045719E158D2B21F79E");
@@ -68,13 +74,11 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             {
                 Console.WriteLine($"Number of states: {client.States.Count}");
             }
-
-            var x = await client.GetState("sensor.temp_outside");
-
-            var services = await client.GetServices();
-
-            var config = await client.GetConfig();
-            System.Console.WriteLine(config.State);
+            
+            var data = new EventData {Temperature=4.3};
+            await client.TriggerWebhook("my-super-secret-id", data);
+            // await client.TriggerWebhook("my-super-secret-id", new {temperature = 4.1});
+           
             // var test = client.States["group.chromecasts"];
             if (events)
             {

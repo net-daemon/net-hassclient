@@ -118,6 +118,13 @@ namespace JoySoftware.HomeAssistant.Client
         public Task<T?> PostApiCall<T>(string apiPath, object? data = null);
 
         /// <summary>
+        ///     Trigger a state change using trigger templates
+        /// </summary>
+        /// <param name="id">webhook id</param>
+        /// <param name="data">data being sent</param>
+        public Task TriggerWebhook(string id, object? data);
+
+        /// <summary>
         ///     Gets all registered Entities from entity registry from Home Assistant
         /// </summary>
         Task<HassEntities> GetEntities();
@@ -648,14 +655,21 @@ namespace JoySoftware.HomeAssistant.Client
             try
             {
                 using var sc = new StringContent(content, Encoding.UTF8);
-
+                sc.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
                 var result = await _httpClient.PostAsync(new Uri(apiUrl),
                     sc,
                     CancelSource.Token).ConfigureAwait(false);
 
                 if (result.IsSuccessStatusCode)
                 {
-                    return await JsonSerializer.DeserializeAsync<T>(result.Content.ReadAsStream(), null, CancelSource.Token).ConfigureAwait(false);
+                    if (result.Content.Headers.ContentLength > 0)
+                    {
+                        return await JsonSerializer.DeserializeAsync<T>(result.Content.ReadAsStream(), null, CancelSource.Token).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        return default;
+                    }
                 }
             }
             catch (Exception e)
@@ -1082,6 +1096,13 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 // Ignore errors
             }
+        }
+
+        /// <inheritdoc/>
+        public async Task TriggerWebhook(string id, object? data)
+        {
+            var encodedId = HttpUtility.UrlEncode(id);
+            await PostApiCall<object>($"webhook/{encodedId}", data ).ConfigureAwait(false);
         }
     }
 }
