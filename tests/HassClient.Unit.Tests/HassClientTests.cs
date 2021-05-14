@@ -988,6 +988,43 @@ namespace HassClient.Unit.Tests
                     ItExpr.IsAny<CancellationToken>()
                 );
         }
+
+        [Fact]
+        public async Task HttpClientShouldCallCorrectHttpMessageHandlerOnWebhooksUsingNoData()
+        {
+            // ARRANGE
+            var mock = new HassWebSocketMock();
+            var httpMessageHandlerMock = new Mock<HttpMessageHandler>();
+            httpMessageHandlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(
+                    () => new HttpResponseMessage()
+                    {
+                        StatusCode = HttpStatusCode.OK, // Set non success return code
+                    }); ;
+
+            // Get the default state hass client
+            await using var hassClient = await mock.GetHassConnectedClient(false, httpMessageHandlerMock.Object).ConfigureAwait(false);
+
+            await hassClient.TriggerWebhook("secret_id", null).ConfigureAwait(false);
+
+            // ACT and ASSERT
+            // Calls connect without getting the states initially
+            httpMessageHandlerMock.Protected()
+                .Verify(
+                    "SendAsync",
+                    Times.Exactly(1), // we expected a single external request
+                    ItExpr.Is<HttpRequestMessage>(req =>
+                            req.Method == HttpMethod.Post // we expected a GET request
+                            && req.RequestUri ==
+                            new Uri("http://anyurldoesntmatter.org/api/webhook/secret_id") // to this uri
+                    ),
+                    ItExpr.IsAny<CancellationToken>()
+                );
+        }
+
         class WebHookData {
             public WebHookData(double temperature) 
             {
