@@ -649,11 +649,14 @@ namespace JoySoftware.HomeAssistant.Client
 
             try
             {
-                using var sc = new StringContent(content, Encoding.UTF8);
-
                 if (data != null)
                 {
                     content = JsonSerializer.Serialize(data, _defaultSerializerOptions);
+                }
+                using var sc = new StringContent(content, Encoding.UTF8);
+
+                if (content.Length > 0)
+                {
                     sc.Headers.ContentType = new MediaTypeWithQualityHeaderValue("application/json");
                 }
 
