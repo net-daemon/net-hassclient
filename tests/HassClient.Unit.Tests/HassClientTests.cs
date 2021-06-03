@@ -455,8 +455,8 @@ namespace HassClient.Unit.Tests
 
             var stateMessage = eventMsg.Data as HassStateChangedEventData;
 
-            Assert.Equal(true, stateMessage?.NewState.State);
-            Assert.Equal(false, stateMessage?.OldState.State);
+            Assert.Equal("true", stateMessage?.NewState?.State);
+            Assert.Equal("false", stateMessage?.OldState?.State);
         }
 
         [Fact]
@@ -474,8 +474,8 @@ namespace HassClient.Unit.Tests
 
             var stateMessage = eventMsg.Data as HassStateChangedEventData;
 
-            Assert.Equal(3.21, stateMessage?.NewState.State);
-            Assert.Equal(1.23, stateMessage?.OldState.State);
+            Assert.Equal("3.21", stateMessage?.NewState?.State);
+            Assert.Equal("1.23", stateMessage?.OldState?.State);
         }
 
 
@@ -494,8 +494,8 @@ namespace HassClient.Unit.Tests
 
             var stateMessage = eventMsg.Data as HassStateChangedEventData;
 
-            Assert.Equal(321, stateMessage?.NewState.State);
-            Assert.Equal(123, stateMessage?.OldState.State);
+            Assert.Equal("321", stateMessage?.NewState?.State);
+            Assert.Equal("123", stateMessage?.OldState?.State);
         }
 
         [Fact]

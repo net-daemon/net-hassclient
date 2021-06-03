@@ -27,7 +27,7 @@ namespace JoySoftware.HomeAssistant.Model
 
         [JsonPropertyName("last_changed")] public DateTime LastChanged { get; set; } = DateTime.MinValue;
         [JsonPropertyName("last_updated")] public DateTime LastUpdated { get; set; } = DateTime.MinValue;
-        [JsonPropertyName("state")] public dynamic? State { get; set; } = "";
+        [JsonPropertyName("state")] public string? State { get; set; } = "";
         [JsonPropertyName("context")] public HassContext? Context { get; set; }
     }
 }
