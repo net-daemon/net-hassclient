@@ -935,7 +935,7 @@ namespace JoySoftware.HomeAssistant.Client
             _logger.LogTrace($"Sends message {message.Type}");
             if (message is CommandMessage commandMessage)
             {
-                commandMessage.Id = ++_messageId;
+                commandMessage.Id = Interlocked.Increment(ref _messageId);
                 if (waitForResponse)
                 {
                     //We save the type of command so we can deserialize the correct message later
@@ -976,7 +976,7 @@ namespace JoySoftware.HomeAssistant.Client
                     switch (command?.Type)
                     {
                         case "get_states":
-                            m.Result = m.ResultElement?.ToHassStates(_defaultSerializerOptions);
+                            m.Result = m.ResultElement?.ToObject<HassStates>(_defaultSerializerOptions);
                             break;
                         case "get_config":
                             m.Result = m.ResultElement?.ToObject<HassConfig>(_defaultSerializerOptions);

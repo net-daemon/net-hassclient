@@ -69,25 +69,6 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
             };
         }
 
-        public static HassStates ToHassStates(this JsonElement element, JsonSerializerOptions? options = null)
-        {
-            var bufferWriter = new ArrayBufferWriter<byte>();
-            using (var writer = new Utf8JsonWriter(bufferWriter))
-            {
-                element.WriteTo(writer);
-            }
-
-            var hassStates = JsonSerializer.Deserialize<HassStates>(bufferWriter.WrittenSpan, options)
-                ?? throw new ApplicationException("Hass states desrialization resulted in empty result");
-
-            foreach (var hassState in hassStates)
-            {
-                hassState.State = ((JsonElement)hassState.State).ToDynamicValue();
-            }
-
-            return hassStates;
-        }
-
         [return: MaybeNull]
         public static T ToObject<T>(this JsonElement element, JsonSerializerOptions? options = null)
         {
