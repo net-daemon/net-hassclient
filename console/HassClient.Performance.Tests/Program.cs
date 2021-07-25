@@ -109,7 +109,6 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                     else if (eventMsg.EventType == "call_service")
                     {
                         var serviceMessage = eventMsg?.Data as HassServiceEventData;
-                        serviceMessage.ServiceData = null;
                         Console.WriteLine($"{serviceMessage.Service}: {serviceMessage.ServiceData}");
                     }
                     else
