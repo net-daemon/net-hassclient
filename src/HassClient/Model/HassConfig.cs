@@ -6,7 +6,7 @@ namespace JoySoftware.HomeAssistant.Model
     public record HassConfig
     {
         [JsonPropertyName("components")]
-        public IEnumerable<string>? Components { get; init; }
+        public IReadOnlyCollection<string>? Components { get; init; }
 
         [JsonPropertyName("config_dir")]
         public string? ConfigDir { get; init; }

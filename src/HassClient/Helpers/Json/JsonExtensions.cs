@@ -88,12 +88,11 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
             return JsonDocument.Parse(json).RootElement;
         }
 
-
         /// <summary>
         ///     Parses all json elements to instance result from GetServices call
         /// </summary>
         /// <param name="element">JsonElement containing the result data</param>
-        public static IEnumerable<HassServiceDomain> ToServicesResult(this JsonElement element)
+        public static IReadOnlyCollection<HassServiceDomain> ToServicesResult(this JsonElement element)
         {
             var result = new List<HassServiceDomain>();
 

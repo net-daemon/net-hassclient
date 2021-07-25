@@ -6,6 +6,6 @@ namespace JoySoftware.HomeAssistant.Model
     {
         public string? Service { get; init; }
         public string? Description { get; init; }
-        public IEnumerable<HassServiceField>? Fields { get; init; }
+        public IReadOnlyCollection<HassServiceField>? Fields { get; init; }
     }
 }

@@ -91,7 +91,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     Gets the configuration of the connected Home Assistant instance
         /// </summary>
-        Task<IEnumerable<HassServiceDomain>> GetServices();
+        Task<IReadOnlyCollection<HassServiceDomain>> GetServices();
 
         /// <summary>
         ///     Gets all registered Areas from Home Assistant
@@ -189,7 +189,7 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Get all state for all entities in Home Assistant
         /// </summary>
         /// <param name="token">Provided token</param>
-        Task<IEnumerable<HassState>> GetAllStates(CancellationToken? token = null);
+        Task<IReadOnlyCollection<HassState>> GetAllStates(CancellationToken? token = null);
     }
 
     /// <summary>
@@ -749,11 +749,11 @@ namespace JoySoftware.HomeAssistant.Client
             }
         }
 
-        public async Task<IEnumerable<HassServiceDomain>> GetServices()
+        public async Task<IReadOnlyCollection<HassServiceDomain>> GetServices()
         {
             HassMessage servicesResult = await SendCommandAndWaitForResponse(new GetServicesCommand()).ConfigureAwait(false);
 
-            return servicesResult.Result as IEnumerable<HassServiceDomain>
+            return servicesResult.Result as IReadOnlyCollection<HassServiceDomain>
                     ?? throw new ApplicationException("Unexpected response from GetServices command");
         }
 
@@ -991,7 +991,7 @@ namespace JoySoftware.HomeAssistant.Client
 
             return m;
         }
-        public async Task<IEnumerable<HassState>> GetAllStates(CancellationToken? token = null)
+        public async Task<IReadOnlyCollection<HassState>> GetAllStates(CancellationToken? token = null)
         {
             var tokenToUse = token ?? CancelSource.Token;
 
