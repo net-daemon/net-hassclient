@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using JoySoftware.HomeAssistant.Model;
+using System.Text.Json.Serialization;
 
 namespace JoySoftware.HomeAssistant.Messages
 {
@@ -14,5 +15,8 @@ namespace JoySoftware.HomeAssistant.Messages
 
         [JsonPropertyName("service_data")]
         public object? ServiceData { get; set; }
+
+        [JsonPropertyName("target")]
+        public HassTarget? Target { get; set; }
     }
 }

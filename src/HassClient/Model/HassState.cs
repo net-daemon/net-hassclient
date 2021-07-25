@@ -10,7 +10,6 @@ namespace JoySoftware.HomeAssistant.Model
     public class HassStates : List<HassState>
     {
     }
-    
     public record HassState
     {
         [JsonPropertyName("attributes")] public JsonElement? AttributesJson { get; set; }
