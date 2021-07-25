@@ -336,7 +336,7 @@ namespace JoySoftware.HomeAssistant.Client
         //     await CallService(domain, service, serviceData, null, waitForResponse);
 
         /// <inheritdoc/>
-        public async Task<bool> CallService(string domain, string service, object? serviceData, HassTarget? target = null, bool waitForResponse = true)
+        public async Task<bool> CallService(string domain, string service, object? serviceData = null, HassTarget? target = null, bool waitForResponse = true)
         {
             try
             {

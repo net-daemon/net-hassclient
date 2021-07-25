@@ -82,7 +82,7 @@ namespace HassClient.Unit.Tests
             // Do not add a fake service call message result
 
             // ACT
-            var callServiceTask = hassClient.CallService("light", "turn_on", new { entity_id = "light.tomas_rum" });
+            var callServiceTask = hassClient.CallService("light", "turn_on", target: new HassTarget { EntityIds = new string[] { "light.tomas_rum" } });
             hassClient.CancelSource.Cancel();
 
             // ASSERT
