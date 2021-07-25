@@ -36,6 +36,6 @@ namespace JoySoftware.HomeAssistant.Model
         public string? State { get; init; }
 
         [JsonPropertyName("whitelist_external_dirs")]
-        public IEnumerable<string>? WhitelistExternalDirs { get; init; }
+        public IReadOnlyCollection<string>? WhitelistExternalDirs { get; init; }
     }
 }

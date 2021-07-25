@@ -96,12 +96,12 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     Gets all registered Areas from Home Assistant
         /// </summary>
-        Task<HassAreas> GetAreas();
+        Task<IReadOnlyCollection<HassArea>> GetAreas();
 
         /// <summary>
         ///     Gets all registered Devices from Home Assistant
         /// </summary>
-        Task<HassDevices> GetDevices();
+        Task<IReadOnlyCollection<HassDevice>> GetDevices();
 
         /// <summary>
         ///     Get to Home Assistant API
@@ -128,7 +128,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     Gets all registered Entities from entity registry from Home Assistant
         /// </summary>
-        Task<HassEntities> GetEntities();
+        Task<IReadOnlyCollection<HassEntity>> GetEntities();
 
         /// <summary>
         ///     Pings Home Assistant to check if connection is alive
@@ -718,27 +718,35 @@ namespace JoySoftware.HomeAssistant.Client
 
         public async Task<bool> SubscribeToEvents(EventType eventType = EventType.All)
         {
-            var command = new SubscribeEventCommand();
-
             if (eventType != EventType.All)
             {
-                command.EventType = eventType switch
+                var command = new SubscribeEventCommand()
                 {
-                    EventType.All => command.EventType,
-                    EventType.HomeAssistantStart => "homeassistant_start",
-                    EventType.HomeAssistantStop => "homeassistant_stop",
-                    EventType.StateChanged => "state_changed",
-                    EventType.ServiceRegistered => "service_registered",
-                    EventType.CallService => "call_service",
-                    EventType.ServiceExecuted => "service_executed",
-                    EventType.PlatformDiscovered => "platform_discovered",
-                    EventType.ComponentLoaded => "component_loaded",
-                    _ => command.EventType
+                    EventType = eventType switch
+                    {
+                        EventType.HomeAssistantStart => "homeassistant_start",
+                        EventType.HomeAssistantStop => "homeassistant_stop",
+                        EventType.StateChanged => "state_changed",
+                        EventType.ServiceRegistered => "service_registered",
+                        EventType.CallService => "call_service",
+                        EventType.ServiceExecuted => "service_executed",
+                        EventType.PlatformDiscovered => "platform_discovered",
+                        EventType.ComponentLoaded => "component_loaded",
+                        EventType.TimeChanged => "time_changed",
+                        EventType.AutomationReloaded => "automation_reloaded",
+                        EventType.SceneReloaded => "scene_reloaded",
+                        _ => throw new ArgumentException($"Event type {eventType} not supported", nameof(eventType))
+                    }
                 };
+                var result = await SendCommandAndWaitForResponse(command).ConfigureAwait(false);
+                return result.Success ?? false;
             }
-
-            var result = await SendCommandAndWaitForResponse(command).ConfigureAwait(false);
-            return result.Success ?? false;
+            else
+            {
+                var command = new SubscribeEventCommand();
+                var result = await SendCommandAndWaitForResponse(command).ConfigureAwait(false);
+                return result.Success ?? false;
+            }
         }
 
         public async Task<IEnumerable<HassServiceDomain>> GetServices()
@@ -749,27 +757,27 @@ namespace JoySoftware.HomeAssistant.Client
                     ?? throw new ApplicationException("Unexpected response from GetServices command");
         }
 
-        public async Task<HassAreas> GetAreas()
+        public async Task<IReadOnlyCollection<HassArea>> GetAreas()
         {
             HassMessage servicesResult = await SendCommandAndWaitForResponse(new GetAreasCommand()).ConfigureAwait(false);
 
-            return servicesResult.Result as HassAreas
+            return servicesResult.Result as IReadOnlyCollection<HassArea>
                     ?? throw new ApplicationException("Unexpected response from GetServices command");
         }
 
-        public async Task<HassDevices> GetDevices()
+        public async Task<IReadOnlyCollection<HassDevice>> GetDevices()
         {
             HassMessage devicesResult = await SendCommandAndWaitForResponse(new GetDevicesCommand()).ConfigureAwait(false);
 
-            return devicesResult.Result as HassDevices
+            return devicesResult.Result as IReadOnlyCollection<HassDevice>
                     ?? throw new ApplicationException("Unexpected response from GetDevices command");
         }
 
-        public async Task<HassEntities> GetEntities()
+        public async Task<IReadOnlyCollection<HassEntity>> GetEntities()
         {
             HassMessage servicesResult = await SendCommandAndWaitForResponse(new GetEntitiesCommand()).ConfigureAwait(false);
 
-            return servicesResult.Result as HassEntities
+            return servicesResult.Result as IReadOnlyCollection<HassEntity>
                     ?? throw new ApplicationException("Unexpected response from GetServices command");
         }
 
@@ -942,7 +950,7 @@ namespace JoySoftware.HomeAssistant.Client
                     switch (command?.Type)
                     {
                         case "get_states":
-                            m.Result = m.ResultElement?.ToObject<HassStates>(_defaultSerializerOptions);
+                            m.Result = m.ResultElement?.ToObject<IReadOnlyCollection<HassState>>(_defaultSerializerOptions);
                             break;
                         case "get_config":
                             m.Result = m.ResultElement?.ToObject<HassConfig>(_defaultSerializerOptions);
@@ -955,13 +963,13 @@ namespace JoySoftware.HomeAssistant.Client
                         case "call_service":
                             break; // Do nothing
                         case "config/area_registry/list":
-                            m.Result = m.ResultElement?.ToObject<HassAreas>(_defaultSerializerOptions);
+                            m.Result = m.ResultElement?.ToObject<IReadOnlyCollection<HassArea>>(_defaultSerializerOptions);
                             break;
                         case "config/device_registry/list":
-                            m.Result = m.ResultElement?.ToObject<HassDevices>(_defaultSerializerOptions);
+                            m.Result = m.ResultElement?.ToObject<IReadOnlyCollection<HassDevice>>(_defaultSerializerOptions);
                             break;
                         case "config/entity_registry/list":
-                            m.Result = m.ResultElement?.ToObject<HassEntities>(_defaultSerializerOptions);
+                            m.Result = m.ResultElement?.ToObject<IReadOnlyCollection<HassEntity>>(_defaultSerializerOptions);
                             break;
                         default:
                             _logger.LogError($"The command message {command?.Type} is not supported");

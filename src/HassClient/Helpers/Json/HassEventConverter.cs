@@ -23,6 +23,7 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
             {
                 m.Data = m.DataElement?.ToObject<HassServiceEventData>(options);
                 if (m.Data != null)
+                    
                     ((HassServiceEventData)m.Data).Data = ((HassServiceEventData)m.Data).ServiceData?.ToDynamic();
             }
             else

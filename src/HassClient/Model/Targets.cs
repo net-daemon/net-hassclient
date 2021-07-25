@@ -12,18 +12,18 @@ namespace JoySoftware.HomeAssistant.Model
         ///     Zero or more entity id to target with the service call
         /// </summary>
         [JsonPropertyName("entity_id")]
-        public IEnumerable<string>? EntityIds { get; init; }
+        public IReadOnlyCollection<string>? EntityIds { get; init; }
 
         /// <summary>
         ///     Zero or more device id to target with the service call
         /// </summary>
         [JsonPropertyName("device_id")]
-        public IEnumerable<string>? DeviceIds { get; init; }
+        public IReadOnlyCollection<string>? DeviceIds { get; init; }
 
         /// <summary>
         ///     Zero or more area id to target with the service call
         /// </summary>
         [JsonPropertyName("area_id")]
-        public IEnumerable<string>? AreaIds { get; init; }
+        public IReadOnlyCollection<string>? AreaIds { get; init; }
     }
 }

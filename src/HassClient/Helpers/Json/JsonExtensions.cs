@@ -77,7 +77,7 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
             {
                 element.WriteTo(writer);
             }
-            
+
             return JsonSerializer.Deserialize<T>(bufferWriter.WrittenSpan, options) ?? default!;
         }
 
@@ -110,7 +110,7 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
                 result.Add(serviceDomain);
             }
 
-            IEnumerable<HassService> getServices(JsonElement element)
+            IReadOnlyCollection<HassService> getServices(JsonElement element)
             {
                 var servicesList = new List<HassService>();
                 foreach (var serviceDomainProperty in element.EnumerateObject())
