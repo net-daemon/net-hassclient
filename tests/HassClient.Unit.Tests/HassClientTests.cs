@@ -82,7 +82,7 @@ namespace HassClient.Unit.Tests
             // Do not add a fake service call message result
 
             // ACT
-            var callServiceTask = hassClient.CallService("light", "turn_on", new { entity_id = "light.tomas_rum" });
+            var callServiceTask = hassClient.CallService("light", "turn_on", target: new HassTarget { EntityIds = new string[] { "light.tomas_rum" } });
             hassClient.CancelSource.Cancel();
 
             // ASSERT
@@ -112,7 +112,7 @@ namespace HassClient.Unit.Tests
                                     }");
 
             // ACT
-            var result = await hassClient.CallService("light", "turn_on", new { entity_id = "light.tomas_rum" }).ConfigureAwait(false);
+            var result = await hassClient.CallService("light", "turn_on", null, target: new HassTarget { EntityIds = new string[] { "light.test" } }).ConfigureAwait(false);
 
             // Assert
             Assert.True(result);
@@ -141,7 +141,7 @@ namespace HassClient.Unit.Tests
                                     }");
 
             // ACT
-            var result = await hassClient.CallService("light", "turn_on", new { entity_id = "light.tomas_rum" }, false).ConfigureAwait(false);
+            var result = await hassClient.CallService("light", "turn_on", new { entity_id = "light.tomas_rum" }, waitForResponse: false).ConfigureAwait(false);
 
             // Assert
             Assert.True(result);
@@ -1025,8 +1025,9 @@ namespace HassClient.Unit.Tests
                 );
         }
 
-        class WebHookData {
-            public WebHookData(double temperature) 
+        class WebHookData
+        {
+            public WebHookData(double temperature)
             {
                 this.temperature = temperature;
             }

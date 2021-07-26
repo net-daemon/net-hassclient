@@ -6,13 +6,13 @@ namespace JoySoftware.HomeAssistant.Model
     public record HassServiceEventData
     {
         [JsonPropertyName("domain")]
-        public string Domain { get; set; } = string.Empty;
+        public string Domain { get; init; } = string.Empty;
 
         [JsonPropertyName("service")]
-        public string Service { get; set; } = string.Empty;
+        public string Service { get; init; } = string.Empty;
 
         [JsonPropertyName("service_data")]
-        public JsonElement? ServiceData { get; set; }
+        public JsonElement? ServiceData { get; init; }
 
         public dynamic? Data { get; set; }
     }

@@ -6,12 +6,12 @@ namespace JoySoftware.HomeAssistant.Model
     public record HassStateChangedEventData
     {
         [JsonPropertyName("entity_id")]
-        public string EntityId { get; set; } = "";
+        public string EntityId { get; init; } = "";
 
         [JsonPropertyName("new_state")]
-        public HassState? NewState { get; set; }
+        public HassState? NewState { get; init; }
 
         [JsonPropertyName("old_state")]
-        public HassState? OldState { get; set; }
+        public HassState? OldState { get; init; }
     }
 }

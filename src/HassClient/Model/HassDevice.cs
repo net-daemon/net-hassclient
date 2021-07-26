@@ -4,29 +4,25 @@ using System.Text.Json.Serialization;
 
 namespace JoySoftware.HomeAssistant.Model
 {
-    public class HassDevices : List<HassDevice>
-    {
-    }
-    
     public record HassDevice
     {
         [JsonPropertyName("manufacturer")]
-        public string? Manufacturer { get; set; }
+        public string? Manufacturer { get; init; }
 
         [JsonPropertyName("model")]
         [JsonConverter(typeof(HassDeviceModelConverter))]
-        public string? Model { get; set; }
+        public string? Model { get; init; }
 
         [JsonPropertyName("id")]
-        public string? Id { get; set; }
+        public string? Id { get; init; }
 
         [JsonPropertyName("area_id")]
-        public string? AreaId { get; set; }
+        public string? AreaId { get; init; }
 
         [JsonPropertyName("name")]
-        public string? Name { get; set; }
+        public string? Name { get; init; }
 
         [JsonPropertyName("name_by_user")]
-        public string? NameByUser { get; set; }
+        public string? NameByUser { get; init; }
     }
 }

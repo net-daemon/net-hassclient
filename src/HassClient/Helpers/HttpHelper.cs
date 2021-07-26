@@ -10,7 +10,6 @@ namespace JoySoftware.HomeAssistant.Helpers
         {
             return new(CreateHttpMessageHandler());
         }
-        
         public static HttpMessageHandler CreateHttpMessageHandler()
         {
             var bypassCertificateErrorsForHash = Environment.GetEnvironmentVariable("HASSCLIENT_BYPASS_CERT_ERR");

@@ -11,6 +11,8 @@
         CallService = 6,
         ServiceExecuted = 7,
         PlatformDiscovered = 8,
-        ComponentLoaded = 9
+        ComponentLoaded = 9,
+        AutomationReloaded = 10,
+        SceneReloaded = 11
     }
 }

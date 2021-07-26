@@ -7,6 +7,6 @@ namespace JoySoftware.HomeAssistant.Messages
         public SubscribeEventCommand() => Type = "subscribe_events";
 
         [JsonPropertyName("event_type")]
-        public string? EventType { get; set; }
+        public string? EventType { get; init; }
     }
 }

@@ -6,7 +6,7 @@ namespace JoySoftware.HomeAssistant.Model
     public record HassConfig
     {
         [JsonPropertyName("components")]
-        public IList<string>? Components { get; init; }
+        public IReadOnlyCollection<string>? Components { get; init; }
 
         [JsonPropertyName("config_dir")]
         public string? ConfigDir { get; init; }
@@ -36,6 +36,6 @@ namespace JoySoftware.HomeAssistant.Model
         public string? State { get; init; }
 
         [JsonPropertyName("whitelist_external_dirs")]
-        public IList<string>? WhitelistExternalDirs { get; init; }
+        public IReadOnlyCollection<string>? WhitelistExternalDirs { get; init; }
     }
 }

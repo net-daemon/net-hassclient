@@ -7,6 +7,6 @@ namespace JoySoftware.HomeAssistant.Messages
         public HassAuthMessage() => Type = "auth";
 
         [JsonPropertyName("access_token")]
-        public string AccessToken { get; set; } = string.Empty;
+        public string AccessToken { get; init; } = string.Empty;
     }
 }
