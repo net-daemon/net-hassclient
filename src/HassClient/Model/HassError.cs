@@ -5,9 +5,9 @@ namespace JoySoftware.HomeAssistant.Model
     public record HassError
     {
         [JsonPropertyName("code")]
-        public object? Code { get; set; }
+        public object? Code { get; init; }
 
         [JsonPropertyName("message")]
-        public string? Message { get; set; }
+        public string? Message { get; init; }
     }
 }

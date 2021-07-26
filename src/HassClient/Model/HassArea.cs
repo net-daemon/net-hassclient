@@ -3,16 +3,12 @@ using System.Text.Json.Serialization;
 
 namespace JoySoftware.HomeAssistant.Model
 {
-    public class HassAreas : List<HassArea>
-    {
-    }
-    
     public record HassArea
     {
         [JsonPropertyName("name")]
-        public string? Name { get; set; }
+        public string? Name { get; init; }
 
         [JsonPropertyName("area_id")]
-        public string? Id { get; set; }
+        public string? Id { get; init; }
     }
 }

@@ -74,11 +74,11 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
             {
                 Console.WriteLine($"Number of states: {client.States.Count}");
             }
-            
-            var data = new EventData {Temperature=4.3};
-            await client.TriggerWebhook("my-super-secret-id", data);
+
+            // var data = new EventData {Temperature=4.3};
+            // await client.TriggerWebhook("my-super-secret-id", data);
             // await client.TriggerWebhook("my-super-secret-id", new {temperature = 4.1});
-           
+
             // var test = client.States["group.chromecasts"];
             if (events)
             {
@@ -86,7 +86,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                 await client.SubscribeToEvents();
             }
 
-            // await client.CallService("light", "toggle", new { entity_id = "light.tomas_rum" });
+            await client.CallService("light", "toggle", null, new HassTarget { AreaIds = new string[] { "bedroom" } });
             // await client.CallService("light", "no_exist", new { entity_id = "light.tomas_rum_not_exist" });
             //var tt = await client.SetState("sensor.csharp", "cool", new {daemon = true});
 
@@ -109,7 +109,6 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                     else if (eventMsg.EventType == "call_service")
                     {
                         var serviceMessage = eventMsg?.Data as HassServiceEventData;
-                        serviceMessage.ServiceData = null;
                         Console.WriteLine($"{serviceMessage.Service}: {serviceMessage.ServiceData}");
                     }
                     else
@@ -149,7 +148,7 @@ namespace JoySoftware.HomeAssistant.Client.Performance.Tests
                 .AddDebug()
                 .SetMinimumLevel(LogLevel.Trace));
         }
-        
+
         public class Discovery
         {
             public string base_url { get; set; }

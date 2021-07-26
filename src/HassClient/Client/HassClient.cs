@@ -44,18 +44,19 @@ namespace JoySoftware.HomeAssistant.Client
         /// <param name="domain">The domain for the service, example "light"</param>
         /// <param name="service">The service to call, example "turn_on"</param>
         /// <param name="serviceData">The service data, use anonymous types, se example</param>
+        /// <param name="target">The target entity, device or area</param>
         /// <param name="waitForResponse">If true, it wait for the response from Hass else just ignore</param>
         /// <example>
         ///     Following example turn on light
         ///     <code>
         ///         var client = new HassClient();
         ///         await client.ConnectAsync("192.168.1.2", 8123, false);
-        ///         await client.CallService("light", "turn_on", new {entity_id="light.myawesomelight"});
+        ///         await client.CallService("light", "turn_on", target = new {entity_id=["light.myawesomelight"]});
         ///         await client.CloseAsync();
         ///     </code>
         /// </example>
         /// <returns>True if successfully called service</returns>
-        Task<bool> CallService(string domain, string service, object serviceData, bool waitForResponse = true);
+        Task<bool> CallService(string domain, string service, object? serviceData = null, HassTarget? target = null, bool waitForResponse = true);
 
         /// <summary>
         ///     Gracefully closes the connection to Home Assistant
@@ -90,17 +91,17 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     Gets the configuration of the connected Home Assistant instance
         /// </summary>
-        Task<IEnumerable<HassServiceDomain>> GetServices();
+        Task<IReadOnlyCollection<HassServiceDomain>> GetServices();
 
         /// <summary>
         ///     Gets all registered Areas from Home Assistant
         /// </summary>
-        Task<HassAreas> GetAreas();
+        Task<IReadOnlyCollection<HassArea>> GetAreas();
 
         /// <summary>
         ///     Gets all registered Devices from Home Assistant
         /// </summary>
-        Task<HassDevices> GetDevices();
+        Task<IReadOnlyCollection<HassDevice>> GetDevices();
 
         /// <summary>
         ///     Get to Home Assistant API
@@ -127,7 +128,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <summary>
         ///     Gets all registered Entities from entity registry from Home Assistant
         /// </summary>
-        Task<HassEntities> GetEntities();
+        Task<IReadOnlyCollection<HassEntity>> GetEntities();
 
         /// <summary>
         ///     Pings Home Assistant to check if connection is alive
@@ -188,7 +189,7 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Get all state for all entities in Home Assistant
         /// </summary>
         /// <param name="token">Provided token</param>
-        Task<IEnumerable<HassState>> GetAllStates(CancellationToken? token = null);
+        Task<IReadOnlyCollection<HassState>> GetAllStates(CancellationToken? token = null);
     }
 
     /// <summary>
@@ -330,24 +331,12 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         internal int SocketTimeout { get; set; } = DefaultTimeout;
 
-        /// <summary>
-        ///     Calls a service to home assistant
-        /// </summary>
-        /// <param name="domain">The domain for the service, example "light"</param>
-        /// <param name="service">The service to call, example "turn_on"</param>
-        /// <param name="serviceData">The service data, use anonymous types, se example</param>
-        /// <param name="waitForResponse">If true, it wait for the response from Hass else just ignore</param>
-        /// <example>
-        ///     Following example turn on light
-        ///     <code>
-        /// var client = new HassClient();
-        /// await client.ConnectAsync("192.168.1.2", 8123, false);
-        /// await client.CallService("light", "turn_on", new {entity_id="light.myawesomelight"});
-        /// await client.CloseAsync();
-        /// </code>
-        /// </example>
-        /// <returns>True if successfully called service</returns>
-        public async Task<bool> CallService(string domain, string service, object serviceData, bool waitForResponse = true)
+        // /// <inheritdoc/>
+        // public async Task<bool> CallService(string domain, string service, object serviceData, bool waitForResponse = true) =>
+        //     await CallService(domain, service, serviceData, null, waitForResponse);
+
+        /// <inheritdoc/>
+        public async Task<bool> CallService(string domain, string service, object? serviceData = null, HassTarget? target = null, bool waitForResponse = true)
         {
             try
             {
@@ -355,7 +344,8 @@ namespace JoySoftware.HomeAssistant.Client
                 {
                     Domain = domain,
                     Service = service,
-                    ServiceData = serviceData
+                    ServiceData = serviceData,
+                    Target = target
                 }, waitForResponse).ConfigureAwait(false);
                 return result.Success ?? false;
             }
@@ -437,25 +427,11 @@ namespace JoySoftware.HomeAssistant.Client
             }
         }
 
-        /// <summary>
-        ///     Connect to Home Assistant
-        /// </summary>
-        /// <param name="host">The host or ip address of Home Assistant</param>
-        /// <param name="port">The port of Home Assistant, typically 8123 or 80</param>
-        /// <param name="ssl">Set to true if Home Assistant using ssl (recommended secure setup for Home Assistant)</param>
-        /// <param name="token">AuthToken from Home Assistant for access</param>
-        /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
-        /// <returns>Returns true if successfully connected</returns>
+        //// <inheritdoc/>
         public Task<bool> ConnectAsync(string host, short port, bool ssl, string token, bool getStatesOnConnect) =>
             ConnectAsync(new Uri($"{(ssl ? "wss" : "ws")}://{host}:{port}/api/websocket"), token, getStatesOnConnect);
 
-        /// <summary>
-        ///     Connect to Home Assistant
-        /// </summary>
-        /// <param name="url">The uri of the websocket</param>
-        /// <param name="token">AuthToken from Home Assistant for access</param>
-        /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
-        /// <returns>Returns true if successfully connected</returns>
+        /// <inheritdoc/>
         public async Task<bool> ConnectAsync(Uri url, string token,
             bool getStatesOnConnect = true)
         {
@@ -546,9 +522,7 @@ namespace JoySoftware.HomeAssistant.Client
             return false;
         }
 
-        /// <summary>
-        ///     Gets the configuration of the connected Home Assistant instance
-        /// </summary>
+        /// <inheritdoc/>
         public async Task<HassConfig> GetConfig()
         {
             HassMessage hassResult = await SendCommandAndWaitForResponse(new GetConfigCommand()).ConfigureAwait(false);
@@ -564,11 +538,7 @@ namespace JoySoftware.HomeAssistant.Client
             throw new ApplicationException($"The result not expected! {resultMessage}");
         }
 
-        /// <summary>
-        ///     Pings Home Assistant to check if connection is alive
-        /// </summary>
-        /// <param name="timeout">The timeout to wait for Home Assistant to return pong message</param>
-        /// <returns>True if connection is alive.</returns>
+        /// <inheritdoc/>
         public async Task<bool> PingAsync(int timeout)
         {
             using var timerTokenSource = new CancellationTokenSource(timeout);
@@ -591,26 +561,17 @@ namespace JoySoftware.HomeAssistant.Client
             return false;
         }
 
-        /// <summary>
-        ///     Returns next incoming event and completes async operation
-        /// </summary>
-        /// <remarks>Set subscribeEvents=true on ConnectAsync to use.</remarks>
-        /// <exception>OperationCanceledException if the operation is canceled.</exception>
-        /// <returns>Returns next event</returns>
+        /// <inheritdoc/>
         public async Task<HassEvent> ReadEventAsync() => await _eventChannel.Reader.ReadAsync(CancelSource.Token).ConfigureAwait(false);
 
-        /// <summary>
-        ///     Returns next incoming event and completes async operation
-        /// </summary>
-        /// <remarks>Set subscribeEvents=true on ConnectAsync to use.</remarks>
-        /// <exception>OperationCanceledException if the operation is canceled.</exception>
-        /// <returns>Returns next event</returns>
+        /// <inheritdoc/>
         public async Task<HassEvent> ReadEventAsync(CancellationToken token)
         {
             using var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(CancelSource.Token, token);
             return await _eventChannel.Reader.ReadAsync(cancelSource.Token).ConfigureAwait(false);
         }
 
+        /// <inheritdoc/>
         public async Task<bool> SendEvent(string eventId, object? data = null)
         {
             var apiUrl = $"{_apiUrl}/events/{HttpUtility.UrlEncode(eventId)}";
@@ -757,58 +718,66 @@ namespace JoySoftware.HomeAssistant.Client
 
         public async Task<bool> SubscribeToEvents(EventType eventType = EventType.All)
         {
-            var command = new SubscribeEventCommand();
-
             if (eventType != EventType.All)
             {
-                command.EventType = eventType switch
+                var command = new SubscribeEventCommand()
                 {
-                    EventType.All => command.EventType,
-                    EventType.HomeAssistantStart => "homeassistant_start",
-                    EventType.HomeAssistantStop =>  "homeassistant_stop",
-                    EventType.StateChanged =>       "state_changed",
-                    EventType.ServiceRegistered =>  "service_registered",
-                    EventType.CallService =>        "call_service",
-                    EventType.ServiceExecuted =>    "service_executed",
-                    EventType.PlatformDiscovered => "platform_discovered",
-                    EventType.ComponentLoaded =>    "component_loaded",
-                    _ => command.EventType 
+                    EventType = eventType switch
+                    {
+                        EventType.HomeAssistantStart => "homeassistant_start",
+                        EventType.HomeAssistantStop => "homeassistant_stop",
+                        EventType.StateChanged => "state_changed",
+                        EventType.ServiceRegistered => "service_registered",
+                        EventType.CallService => "call_service",
+                        EventType.ServiceExecuted => "service_executed",
+                        EventType.PlatformDiscovered => "platform_discovered",
+                        EventType.ComponentLoaded => "component_loaded",
+                        EventType.TimeChanged => "time_changed",
+                        EventType.AutomationReloaded => "automation_reloaded",
+                        EventType.SceneReloaded => "scene_reloaded",
+                        _ => throw new ArgumentException($"Event type {eventType} not supported", nameof(eventType))
+                    }
                 };
+                var result = await SendCommandAndWaitForResponse(command).ConfigureAwait(false);
+                return result.Success ?? false;
             }
-
-            var result = await SendCommandAndWaitForResponse(command).ConfigureAwait(false);
-            return result.Success ?? false;
+            else
+            {
+                var command = new SubscribeEventCommand();
+                var result = await SendCommandAndWaitForResponse(command).ConfigureAwait(false);
+                return result.Success ?? false;
+            }
         }
 
-        public async Task<IEnumerable<HassServiceDomain>> GetServices()
+        public async Task<IReadOnlyCollection<HassServiceDomain>> GetServices()
         {
             HassMessage servicesResult = await SendCommandAndWaitForResponse(new GetServicesCommand()).ConfigureAwait(false);
 
-            return servicesResult.Result as IEnumerable<HassServiceDomain>
+            return servicesResult.Result as IReadOnlyCollection<HassServiceDomain>
                     ?? throw new ApplicationException("Unexpected response from GetServices command");
         }
 
-        public async Task<HassAreas> GetAreas()
+        public async Task<IReadOnlyCollection<HassArea>> GetAreas()
         {
             HassMessage servicesResult = await SendCommandAndWaitForResponse(new GetAreasCommand()).ConfigureAwait(false);
 
-            return servicesResult.Result as HassAreas
+            return servicesResult.Result as IReadOnlyCollection<HassArea>
                     ?? throw new ApplicationException("Unexpected response from GetServices command");
         }
 
-        public async Task<HassDevices> GetDevices()
+        public async Task<IReadOnlyCollection<HassDevice>> GetDevices()
         {
             HassMessage devicesResult = await SendCommandAndWaitForResponse(new GetDevicesCommand()).ConfigureAwait(false);
 
-            return devicesResult.Result as HassDevices
+            return devicesResult.Result as IReadOnlyCollection<HassDevice>
                     ?? throw new ApplicationException("Unexpected response from GetDevices command");
         }
 
-        public async Task<HassEntities> GetEntities()
+        public async Task<IReadOnlyCollection<HassEntity>> GetEntities()
         {
             HassMessage servicesResult = await SendCommandAndWaitForResponse(new GetEntitiesCommand()).ConfigureAwait(false);
 
-            return servicesResult.Result as HassEntities
+            return servicesResult.Result as IReadOnlyCollection<HassEntity>
                     ?? throw new ApplicationException("Unexpected response from GetServices command");
         }
 
@@ -870,6 +839,11 @@ namespace JoySoftware.HomeAssistant.Client
             }
         }
 
+        /// <summary>
+        ///     Sends a command message and wait for result
+        /// </summary>
+        /// <param name="message">The message to send</param>
+        /// <param name="waitForResponse">true if it wait for response</param>
         internal virtual async ValueTask<HassMessage> SendCommandAndWaitForResponse(CommandMessage message, bool waitForResponse = true)
         {
             using var timerTokenSource = new CancellationTokenSource(SocketTimeout);
@@ -954,7 +928,7 @@ namespace JoySoftware.HomeAssistant.Client
         {
             return message switch
             {
-                CallServiceCommand cc => $"call_service: {cc.Domain}.{cc.Service} ({cc.ServiceData})",
+                CallServiceCommand cc => $"call_service: {cc.Domain}.{cc.Service} [{cc.ServiceData}] ({cc.Target})",
                 _ => message.Type
             };
         }
@@ -976,7 +950,7 @@ namespace JoySoftware.HomeAssistant.Client
                     switch (command?.Type)
                     {
                         case "get_states":
-                            m.Result = m.ResultElement?.ToObject<HassStates>(_defaultSerializerOptions);
+                            m.Result = m.ResultElement?.ToObject<IReadOnlyCollection<HassState>>(_defaultSerializerOptions);
                             break;
                         case "get_config":
                             m.Result = m.ResultElement?.ToObject<HassConfig>(_defaultSerializerOptions);
@@ -989,13 +963,13 @@ namespace JoySoftware.HomeAssistant.Client
                         case "call_service":
                             break; // Do nothing
                         case "config/area_registry/list":
-                            m.Result = m.ResultElement?.ToObject<HassAreas>(_defaultSerializerOptions);
+                            m.Result = m.ResultElement?.ToObject<IReadOnlyCollection<HassArea>>(_defaultSerializerOptions);
                             break;
                         case "config/device_registry/list":
-                            m.Result = m.ResultElement?.ToObject<HassDevices>(_defaultSerializerOptions);
+                            m.Result = m.ResultElement?.ToObject<IReadOnlyCollection<HassDevice>>(_defaultSerializerOptions);
                             break;
                         case "config/entity_registry/list":
-                            m.Result = m.ResultElement?.ToObject<HassEntities>(_defaultSerializerOptions);
+                            m.Result = m.ResultElement?.ToObject<IReadOnlyCollection<HassEntity>>(_defaultSerializerOptions);
                             break;
                         default:
                             _logger.LogError($"The command message {command?.Type} is not supported");
@@ -1017,7 +991,7 @@ namespace JoySoftware.HomeAssistant.Client
 
             return m;
         }
-        public async Task<IEnumerable<HassState>> GetAllStates(CancellationToken? token = null)
+        public async Task<IReadOnlyCollection<HassState>> GetAllStates(CancellationToken? token = null)
         {
             var tokenToUse = token ?? CancelSource.Token;
 
@@ -1106,7 +1080,7 @@ namespace JoySoftware.HomeAssistant.Client
         public async Task TriggerWebhook(string id, object? data)
         {
             var encodedId = HttpUtility.UrlEncode(id);
-            await PostApiCall<object>($"webhook/{encodedId}", data ).ConfigureAwait(false);
+            await PostApiCall<object>($"webhook/{encodedId}", data).ConfigureAwait(false);
         }
     }
 }

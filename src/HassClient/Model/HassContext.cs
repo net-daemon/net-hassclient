@@ -5,12 +5,12 @@ namespace JoySoftware.HomeAssistant.Model
     public record HassContext
     {
         [JsonPropertyName("id")]
-        public string Id { get; set; } = string.Empty;
+        public string Id { get; init; } = string.Empty;
 
         [JsonPropertyName("parent_id")]
-        public string? ParentId { get; set; }
+        public string? ParentId { get; init; }
 
         [JsonPropertyName("user_id")]
-        public string? UserId { get; set; }
+        public string? UserId { get; init; }
     }
 }
