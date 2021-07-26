@@ -6,7 +6,7 @@ namespace JoySoftware.HomeAssistant.Model
 {
     public record HassEvent
     {
-        public dynamic? Data { get; set; }
+        public dynamic? Data { get; set; } // keeping set cause it is created after serialization
 
         [JsonPropertyName("data")]
         public JsonElement? DataElement { get; init; }

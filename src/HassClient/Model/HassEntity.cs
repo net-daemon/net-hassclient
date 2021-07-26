@@ -3,25 +3,21 @@ using System.Text.Json.Serialization;
 
 namespace JoySoftware.HomeAssistant.Model
 {
-    public class HassEntities : List<HassEntity>
-    {
-    }
-
     public record HassEntity
     {
         [JsonPropertyName("device_id")]
-        public string? DeviceId { get; set; }
+        public string? DeviceId { get; init; }
 
         [JsonPropertyName("entity_id")]
-        public string? EntityId { get; set; }
+        public string? EntityId { get; init; }
 
         [JsonPropertyName("name")]
-        public string? Name { get; set; }
+        public string? Name { get; init; }
 
         [JsonPropertyName("icon")]
-        public string? Icon { get; set; }
+        public string? Icon { get; init; }
 
         [JsonPropertyName("platform")]
-        public string? Platform { get; set; }
+        public string? Platform { get; init; }
     }
 }
