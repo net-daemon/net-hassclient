@@ -8,6 +8,7 @@
             "device_id": "42cdda32a2a3428e86c2e27699d79ead",
             "disabled_by": null,
             "entity_id": "media_player.tv_uppe2",
+            "area_id": "some_area_id",
             "name": null,
             "icon": null,
             "platform": "cast"
