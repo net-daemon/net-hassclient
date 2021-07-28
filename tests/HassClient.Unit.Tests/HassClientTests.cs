@@ -1285,6 +1285,7 @@ namespace HassClient.Unit.Tests
             Assert.NotNull(result);
             Assert.NotNull(first);
             Assert.Equal("42cdda32a2a3428e86c2e27699d79ead", first.DeviceId);
+            Assert.Equal("some_area_id", first.AreaId);
             Assert.Equal("media_player.tv_uppe2", first.EntityId);
 
             Assert.Equal(2, result.Count);

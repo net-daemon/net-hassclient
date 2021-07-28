@@ -11,6 +11,9 @@ namespace JoySoftware.HomeAssistant.Model
         [JsonPropertyName("entity_id")]
         public string? EntityId { get; init; }
 
+        [JsonPropertyName("area_id")]
+        public string? AreaId { get; init; }
+
         [JsonPropertyName("name")]
         public string? Name { get; init; }
 
