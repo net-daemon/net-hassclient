@@ -133,6 +133,7 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
                 var serviceFields = new List<HassServiceField>();
 
                 string? serviceDescription = null;
+                bool? required = null;
                 TargetSelector? target = null;
 
                 foreach (var serviceProperty in element.EnumerateObject())
@@ -141,6 +142,9 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
                     {
                         case "description":
                             serviceDescription = serviceProperty.Value.GetString();
+                            break;
+                        case "required":
+                            required = serviceProperty.Value.GetBoolean();
                             break;
                         case "fields":
                             foreach (var fieldsProperty in serviceProperty.Value.EnumerateObject())
@@ -158,6 +162,7 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
                     Service = service,
                     Fields = serviceFields,
                     Description = serviceDescription,
+                    Required = required,
                     Target = target
                 };
             }
