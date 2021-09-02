@@ -191,6 +191,7 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
             {
                 object? example = null;
                 string? fieldDescription = null;
+                bool? required = null;
                 object? selector = null;
 
                 foreach (var fieldProperty in element.EnumerateObject())
@@ -199,6 +200,9 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
                     {
                         case "description":
                             fieldDescription = fieldProperty.Value.GetString();
+                            break;
+                        case "required":
+                            required = fieldProperty.Value.GetBoolean();
                             break;
                         case "example":
                             switch (fieldProperty.Value.ValueKind)
@@ -238,6 +242,7 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
                     Field = fieldName,
                     Example = example,
                     Description = fieldDescription,
+                    Required = required,
                     Selector = selector
                 };
             }
