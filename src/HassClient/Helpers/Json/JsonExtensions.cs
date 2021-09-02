@@ -5,12 +5,19 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Globalization;
+using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 
 namespace JoySoftware.HomeAssistant.Helpers.Json
 {
     internal static class JsonExtensions
     {
+        private static readonly JsonSerializerOptions SnakeCaseNamingPolicySerializerOptions = new()
+        {
+            PropertyNamingPolicy = SnakeCaseNamingPolicy.Instance
+        };
+
         private static object? ParseDataType(string? state)
         {
             if (long.TryParse(state, NumberStyles.Number, CultureInfo.InvariantCulture, out long intValue))
@@ -95,6 +102,7 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
         public static IReadOnlyCollection<HassServiceDomain> ToServicesResult(this JsonElement element)
         {
             var result = new List<HassServiceDomain>();
+            Type[] executingAssemblyTypes = Assembly.GetExecutingAssembly().GetTypes();
 
             if (element.ValueKind != JsonValueKind.Object)
                 throw new ApplicationException("Not expected result from the GetServices result");
@@ -124,6 +132,7 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
                 var serviceFields = new List<HassServiceField>();
 
                 string? serviceDescription = null;
+                TargetSelector? target = null;
 
                 foreach (var serviceProperty in element.EnumerateObject())
                 {
@@ -137,7 +146,9 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
                             {
                                 serviceFields.Add(getField(fieldsProperty.Name, fieldsProperty.Value));
                             }
-
+                            break;
+                        case "target":
+                            target = getSelector(serviceProperty.Name, serviceProperty.Value) as TargetSelector;
                             break;
                     }
                 }
@@ -145,14 +156,43 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
                 {
                     Service = service,
                     Fields = serviceFields,
-                    Description = serviceDescription
+                    Description = serviceDescription,
+                    Target = target
                 };
+            }
+
+            object? getSelector(string selectorName, JsonElement element)
+            {
+                var selectorType = executingAssemblyTypes.FirstOrDefault(x => string.Equals($"{selectorName}Selector", x.Name, StringComparison.OrdinalIgnoreCase));
+
+                if (selectorType is null)
+                {
+                    return null;
+                }
+
+                if (element.ValueKind == JsonValueKind.Object && !element.EnumerateObject().Any() ||
+                    element.ValueKind != JsonValueKind.Object && element.GetString() is null)
+                {
+                    return Activator.CreateInstance(selectorType);
+                }
+
+                var bufferWriter = new ArrayBufferWriter<byte>();
+                using (var writer = new Utf8JsonWriter(bufferWriter))
+                {
+                    element.WriteTo(writer);
+                }
+
+                return JsonSerializer.Deserialize(bufferWriter.WrittenSpan,
+                        selectorType,
+                        SnakeCaseNamingPolicySerializerOptions);
             }
 
             HassServiceField getField(string fieldName, JsonElement element)
             {
                 object? example = null;
                 string? fieldDescription = null;
+                object? selector = null;
+
                 foreach (var fieldProperty in element.EnumerateObject())
                 {
                     switch (fieldProperty.Name)
@@ -187,6 +227,10 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
                                     break;
                             }
                             break;
+                        case "selector":
+                            var selectorProperty = fieldProperty.Value.EnumerateObject().First();
+                            selector = getSelector(selectorProperty.Name, selectorProperty.Value);
+                            break;
                     }
                 }
                 return new HassServiceField
@@ -194,6 +238,7 @@ namespace JoySoftware.HomeAssistant.Helpers.Json
                     Field = fieldName,
                     Example = example,
                     Description = fieldDescription,
+                    Selector = selector
                 };
             }
 
