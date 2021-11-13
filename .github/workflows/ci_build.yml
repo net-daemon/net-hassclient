@@ -14,12 +14,12 @@ jobs:
     name: 🔨 Build sources (CI)
     runs-on: ubuntu-latest
     steps:
-      - name: 📤 Checkout the repository 
+      - name: 📤 Checkout the repository
         uses: actions/checkout@main
-      - name: 🥅 Install .Net 5
+      - name: 🥅 Install .Net 6
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: '5.0.100' # SDK Version
+          dotnet-version: "6.0.x" # SDK Version
       - name: 🛠️ Build code
         run: dotnet build
       - name: 👀 Test code

@@ -10,6 +10,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Text.Json.Serialization;
 
 namespace JoySoftware.HomeAssistant.Client
 {
@@ -106,7 +107,7 @@ namespace JoySoftware.HomeAssistant.Client
         private readonly JsonSerializerOptions _defaultSerializerOptions = new()
         {
             WriteIndented = false,
-            IgnoreNullValues = true
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
         /// <summary>
@@ -175,7 +176,7 @@ namespace JoySoftware.HomeAssistant.Client
 
                         if (_ws.State != WebSocketState.Open && _ws.State != WebSocketState.CloseReceived)
                         {
-                            _logger.LogTrace("WriteMessagePump, state not Open or CloseReceived, exiting WriteMessagePump: {socketState}", _ws.State.ToString());
+                            _logger.LogTrace("WriteMessagePump, state not Open or CloseReceived, exiting WriteMessagePump: {SocketState}", _ws.State.ToString());
                             return;
                         }
 
@@ -187,7 +188,7 @@ namespace JoySoftware.HomeAssistant.Client
                             if (!(messageToSend is HassAuthMessage))
                             {
                                 // We log everything but AuthMessage due to security reasons
-                                _logger.LogTrace("SendAsync, message: {result}", Encoding.UTF8.GetString(result));
+                                _logger.LogTrace("SendAsync, message: {Result}", Encoding.UTF8.GetString(result));
                             }
                             {
                                 _logger.LogTrace("Sending auth message, not shown for security reasons");
@@ -298,13 +299,13 @@ namespace JoySoftware.HomeAssistant.Client
                                 var strMessageReceived = Encoding.UTF8.GetString(memory.Slice(0, result.Count).ToArray());
                                 if (_messageLogLevel == "All")
                                 {
-                                    _logger.LogTrace("ReadClientSocket, message: {strMessageReceived}", strMessageReceived);
+                                    _logger.LogTrace("ReadClientSocket, message: {MessageReceived}", strMessageReceived);
                                 }
                                 else if (_messageLogLevel == "Default")
                                 {
                                     // Log all but events
                                     if (!strMessageReceived.Contains("\"type\": \"event\"", StringComparison.InvariantCultureIgnoreCase))
-                                        _logger.LogTrace("ReadClientSocket, message: {strMessageReceived}", strMessageReceived);
+                                        _logger.LogTrace("ReadClientSocket, message: {MessageReceived}", strMessageReceived);
                                 }
                             }
 
