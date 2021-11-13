@@ -16,6 +16,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.Extensions.Logging;
+using System.Text.Json.Serialization;
 
 [assembly: InternalsVisibleTo("HassClientIntegrationTests")]
 [assembly: InternalsVisibleTo("HassClient.Performance.Tests")]
@@ -243,7 +244,7 @@ namespace JoySoftware.HomeAssistant.Client
         private readonly JsonSerializerOptions _defaultSerializerOptions = new()
         {
             WriteIndented = false,
-            IgnoreNullValues = true
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
         private readonly ILoggerFactory _loggerFactory;
@@ -390,7 +391,7 @@ namespace JoySoftware.HomeAssistant.Client
                         _ws.State == WebSocketState.CloseSent
                         )
                     {
-                        _logger.LogWarning("Unexpected state, Expected closed, got {state}", _ws.State);
+                        _logger.LogWarning("Unexpected state, Expected closed, got {State}", _ws.State);
                     }
                 }
                 catch (OperationCanceledException)
@@ -629,7 +630,8 @@ namespace JoySoftware.HomeAssistant.Client
                 {
                     if (result.Content.Headers.ContentLength > 0)
                     {
-                        return await JsonSerializer.DeserializeAsync<T>(result.Content.ReadAsStream(), null, CancelSource.Token).ConfigureAwait(false);
+                        var stream = await result.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                        return await JsonSerializer.DeserializeAsync<T>(stream, (JsonSerializerOptions?)null, CancelSource.Token).ConfigureAwait(false);
                     }
                     else
                     {
@@ -656,7 +658,8 @@ namespace JoySoftware.HomeAssistant.Client
 
                 if (result.IsSuccessStatusCode)
                 {
-                    return await JsonSerializer.DeserializeAsync<T>(result.Content.ReadAsStream(), null, CancelSource.Token).ConfigureAwait(false);
+                    var content = await result.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                    return await JsonSerializer.DeserializeAsync<T>(content, (JsonSerializerOptions?)null, CancelSource.Token).ConfigureAwait(false);
                 }
             }
             catch (Exception e)
@@ -688,7 +691,7 @@ namespace JoySoftware.HomeAssistant.Client
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Failed to set state on {entity} with state {state}", entityId, state);
+                _logger.LogError(e, "Failed to set state on {Entity} with state {State}", entityId, state);
             }
             return null;
         }
@@ -711,7 +714,7 @@ namespace JoySoftware.HomeAssistant.Client
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Failed to get state on {entity}", entityId);
+                _logger.LogError(e, "Failed to get state on {Entity}", entityId);
             }
             return null;
         }
@@ -792,7 +795,7 @@ namespace JoySoftware.HomeAssistant.Client
         {
             if (_messagePipeline is null)
             {
-                _logger.LogWarning("Processing message with no {pipeline} set! returning.", nameof(_messagePipeline));
+                _logger.LogWarning("Processing message with no {Pipeline} set! returning.", nameof(_messagePipeline));
                 return;
             }
 
@@ -902,7 +905,7 @@ namespace JoySoftware.HomeAssistant.Client
         {
             if (_messagePipeline is null)
             {
-                _logger.LogWarning("SendMessage called with no {pipeline} set!", nameof(_messagePipeline));
+                _logger.LogWarning("SendMessage called with no {Pipeline} set!", nameof(_messagePipeline));
                 throw new ApplicationException($"SendMessage called with no {nameof(_messagePipeline)} set!");
             }
 
@@ -1074,6 +1077,7 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 // Ignore errors
             }
+            GC.SuppressFinalize(this);
         }
 
         /// <inheritdoc/>

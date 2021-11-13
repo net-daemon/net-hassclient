@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Net.Security;
 
@@ -6,10 +7,8 @@ namespace JoySoftware.HomeAssistant.Helpers
 {
     internal static class HttpHelper
     {
-        public static HttpClient CreateHttpClient()
-        {
-            return new(CreateHttpMessageHandler());
-        }
+        [SuppressMessage("", "CA2000")]
+        public static HttpClient CreateHttpClient() => new(CreateHttpMessageHandler());
         public static HttpMessageHandler CreateHttpMessageHandler()
         {
             var bypassCertificateErrorsForHash = Environment.GetEnvironmentVariable("HASSCLIENT_BYPASS_CERT_ERR");

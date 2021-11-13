@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/console/HassClient.Performance.Tests/bin/Debug/net5.0/HassClient.Performance.Tests",
+            "program": "${workspaceFolder}/console/HassClient.Performance.Tests/bin/Debug/net6.0/HassClient.Performance.Tests",
             "args": [
                 "-c",
                 "-i 192.168.1.20",

@@ -35,6 +35,11 @@ Just add ruleset file to a solution and open it.
     <Rule Id="CA1031" Action="None" />
     <!-- Lots of catching rare null pointer exceptions in properties. Might refactor those in the future -->
     <Rule Id="CA1065" Action="None" />
+    <!-- Message template error is ok -->
+    <Rule Id="CA1065" Action="None" />
+    <Rule Id="CA2254" Action="None" />
+    <!-- Performance warning of logging -->
+    <Rule Id="CA1848" Action="None" />
 
 
   </Rules>
