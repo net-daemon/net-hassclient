@@ -19,7 +19,7 @@ jobs:
       - name: 🥅 Install .Net 6
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: "6.0.100" # SDK Version
+          dotnet-version: "6.0.x" # SDK Version
       - name: 🛠️ Build code
         run: dotnet build
       - name: 👀 Test code
