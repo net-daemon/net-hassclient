@@ -403,7 +403,7 @@ namespace JoySoftware.HomeAssistant.Client
                 CancelSource.Cancel();
 
                 // Wait for read and write tasks to complete max 5 seconds
-                if (_readMessagePumpTask is object)
+                if (_readMessagePumpTask is not null)
                 {
                     await _readMessagePumpTask.ConfigureAwait(false);
                 }
@@ -480,6 +480,11 @@ namespace JoySoftware.HomeAssistant.Client
 
                 if (ws.State == WebSocketState.Open)
                 {
+                    // Sets these states so the client can reconnect and close successfully 
+                    // if the component is a singleton. This should probably be refactored to one
+                    // state.
+                    _isClosed = false;
+                    _isClosing = false;
                     // Initialize the correct states when successfully connecting to the websocket
                     InitStatesOnConnect(ws);
 
