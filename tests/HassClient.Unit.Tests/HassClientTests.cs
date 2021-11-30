@@ -1290,5 +1290,44 @@ namespace HassClient.Unit.Tests
 
             Assert.Equal(2, result.Count);
         }
+
+        [Fact]
+        public async Task TestEventToObservableSubscription()
+        {
+            // ARRANGE
+            var gotCorrectEvent = false;
+            var cancelSource = new CancellationTokenSource(5000);
+            var mock = new HassWebSocketMock();
+
+            // Get the connected hass client
+            await using var hassClient = await mock.GetHassConnectedClient().ConfigureAwait(false);
+
+            var subscribeTask = hassClient.SubscribeToEvents();
+            // Add result success
+            mock.AddResponse(@"{""id"": 2, ""type"": ""result"", ""success"": true, ""result"": null}");
+            await subscribeTask.ConfigureAwait(false);
+
+            // Subscribe to correct events
+            hassClient.HassEventsObservable.Subscribe(s =>
+            {
+                if (s.EventType == "state_changed")
+                {
+                    gotCorrectEvent = true;
+                    cancelSource.Cancel();
+                }
+            });
+            // Add response event message, see event.json as reference
+            mock.AddResponse(HassWebSocketMock.EventMessage);
+
+            try
+            {
+                await Task.Delay(5000, cancelSource.Token);
+            }
+            catch (TaskCanceledException)
+            {
+                // normal case ignore
+            }
+            Assert.True(gotCorrectEvent, "Observable event did not fire in the subscription");
+        }
     }
 }

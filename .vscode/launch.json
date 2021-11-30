@@ -9,15 +9,8 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/console/HassClient.Performance.Tests/bin/Debug/net6.0/HassClient.Performance.Tests",
-            "args": [
-                "-c",
-                "-i 192.168.1.20",
-                "-p 8124",
-                "-e false",
-                "-t none"
-            ],
-            "cwd": "${workspaceFolder}/console/HassClient.Performance.Tests",
+            "program": "${workspaceFolder}/console/HassClient.TestService/bin/Debug/net6.0/HassClient.TestService",
+            "cwd": "${workspaceFolder}/console/HassClient.TestService",
             "console": "internalConsole",
             "stopAtEntry": false
         },

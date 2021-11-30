@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "HassClient.Performance.Tests": {
-      "commandName": "Project",
-      "commandLineArgs": "-c --ip 192.168.1.7 --port 8123 --events true --token \"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiIzY2U4ZDdmMjg5NTc0MDY4YjA5Nzk2ZGMyZmNjYWI3NCIsImlhdCI6MTU3OTY3MTA2MywiZXhwIjoxODk1MDMxMDYzfQ.MuQTEYy9HDkV62GzY6fX9ECn_U8vFd5ffashw3sz_3M\""
-    }
-  }
-}

@@ -17,6 +17,8 @@ using System.Threading.Tasks;
 using System.Web;
 using Microsoft.Extensions.Logging;
 using System.Text.Json.Serialization;
+using System.Reactive.Linq;
+using System.Diagnostics.CodeAnalysis;
 
 [assembly: InternalsVisibleTo("HassClientIntegrationTests")]
 [assembly: InternalsVisibleTo("HassClient.Performance.Tests")]
@@ -83,6 +85,16 @@ namespace JoySoftware.HomeAssistant.Client
         /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
         /// <returns>Returns true if successfully connected</returns>
         Task<bool> ConnectAsync(Uri url, string token, bool getStatesOnConnect);
+
+        /// <summary>
+        ///     Maintain connection to Home Assistant and process messages
+        /// </summary>
+        /// <param name="host">The host or ip address of Home Assistant</param>
+        /// <param name="port">The port of Home Assistant, typically 8123 or 80</param>
+        /// <param name="ssl">Set to true if Home Assistant using ssl (recommended secure setup for Home Assistant)</param>
+        /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
+        /// <param name="cancelToken">AuthToken from Home Assistant for access</param>
+        Task Run(string host, short port, bool ssl, string hassToken, CancellationToken cancelToken);
 
         /// <summary>
         ///     Gets the configuration of the connected Home Assistant instance
@@ -225,6 +237,8 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         private bool _isClosed;
 
+        private bool _subscriberToEventChannelExists;
+
         /// <summary>
         ///     Thread safe dictionary that holds information about all command and command id:s
         ///     Is used to correctly deserialize the result messages from commands.
@@ -237,6 +251,11 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         private readonly ConcurrentDictionary<int, CommandMessage> _commandsSentAndResponseShouldBeDisregarded =
             new(32, 200);
+
+        /// <summary>
+        ///     Currently running tasks for handling new events from HomeAssistant
+        /// </summary>
+        private readonly ConcurrentDictionary<Task, object?> _backgroundTasks = new();
 
         /// <summary>
         ///     Default Json serialization options, Hass expects intended
@@ -292,6 +311,10 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         private IClientWebSocket? _ws;
 
+        public IObservable<HassEvent> HassEventsObservable { get; }
+
+        private event EventHandler<HassEvent>? HassEvents;
+
         public HassClient(ILoggerFactory? loggerFactory = null) : this(
             loggerFactory ?? LoggerHelper.CreateDefaultLoggerFactory(),
             WebSocketHelper.CreatePipelineFactory(),
@@ -319,6 +342,11 @@ namespace JoySoftware.HomeAssistant.Client
             _pipelineFactory = pipelineFactory;
             _wsFactory = wsFactory;
             _httpClient = httpClient;
+
+            HassEventsObservable = Observable.FromEventPattern<EventHandler<HassEvent>, HassEvent>(
+                a => HassEvents += a,
+                a => HassEvents -= a).Select(e => e.EventArgs)
+                .AsConcurrent(t => TrackBackgroundTask(t));
         }
 
         /// <summary>
@@ -568,11 +596,16 @@ namespace JoySoftware.HomeAssistant.Client
         }
 
         /// <inheritdoc/>
-        public async Task<HassEvent> ReadEventAsync() => await _eventChannel.Reader.ReadAsync(CancelSource.Token).ConfigureAwait(false);
+        public async Task<HassEvent> ReadEventAsync()
+        {
+            _subscriberToEventChannelExists = true;
+            return await _eventChannel.Reader.ReadAsync(CancelSource.Token).ConfigureAwait(false);
+        }
 
         /// <inheritdoc/>
         public async Task<HassEvent> ReadEventAsync(CancellationToken token)
         {
+            _subscriberToEventChannelExists = true;
             using var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(CancelSource.Token, token);
             return await _eventChannel.Reader.ReadAsync(cancelSource.Token).ConfigureAwait(false);
         }
@@ -814,7 +847,12 @@ namespace JoySoftware.HomeAssistant.Client
                     case "event":
                         if (m?.Event != null)
                         {
-                            _eventChannel.Writer.TryWrite(m.Event);
+                            // Only write event to event channel if someone wants to read it
+                            if (_subscriberToEventChannelExists)
+                                _eventChannel.Writer.TryWrite(m.Event);
+
+                            // Send to observable subscribers
+                            HassEvents?.Invoke(this, m.Event);
                         }
 
                         break;
@@ -1077,6 +1115,16 @@ namespace JoySoftware.HomeAssistant.Client
             try
             {
                 await CloseAsync().ConfigureAwait(false);
+                try
+                {
+                    using var waitTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    await Task.WhenAny(Task.WhenAll(_backgroundTasks.Keys), waitTokenSource.Token.AsTask())
+                        .ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogTrace(e, "Failed to cancel the running tasks");
+                }
             }
             catch
             {
@@ -1090,6 +1138,107 @@ namespace JoySoftware.HomeAssistant.Client
         {
             var encodedId = HttpUtility.UrlEncode(id);
             await PostApiCall<object>($"webhook/{encodedId}", data).ConfigureAwait(false);
+        }
+
+        private void TrackBackgroundTask(Task task, string? description = null)
+        {
+            _backgroundTasks.TryAdd(task, null);
+
+            [SuppressMessage("", "CA1031")]
+            async Task Wrap()
+            {
+                try
+                {
+                    await task.ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, description == null ? null : "Exception in background task: " + description);
+                }
+                finally
+                {
+                    _backgroundTasks.TryRemove(task, out var _);
+                }
+            }
+            // We do not handle task here cause exceptions
+            // are handled in the Wrap local functions and
+            // all tasks should be cancelable
+            _ = Wrap();
+        }
+
+        // Set ConnectionTimeout to 30 seconds
+        private const int _connectionTimeout = 30000;
+        public async Task Run(string host, short port, bool ssl, string hassToken, CancellationToken cancelToken)
+        {
+            while (!cancelToken.IsCancellationRequested)
+            {
+                // Combine the iternal token with external to go out of loop if disconnected
+
+
+                _logger.LogDebug("Connecting to Home Assistant ...");
+                if (!await ConnectAsync(host, port, ssl, hassToken, true).ConfigureAwait(false))
+                {
+                    _logger.LogDebug("Failed to connect to Home Assistant, delaying {_connectionTimeout} s", _connectionTimeout / 1000);
+                    await Delay(_connectionTimeout, cancelToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+                    CancelSource.Token, cancelToken);
+                    // Connection successful
+                    await DelayUntilRunningState(connectTokenSource.Token).ConfigureAwait(false);
+                    if (await SubscribeToEvents().ConfigureAwait(false))
+                    {
+                        // Just wait until someone stops the HassClient
+                        _logger.LogDebug("Connection to Home Assistant successful!");
+                        // await Task.Delay(-1, connectTokenSource.Token);
+                        try
+                        {
+                            await connectTokenSource.Token.AsTask().ConfigureAwait(false);
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            _logger.LogDebug("Connection to Home Assistant cancelled!");
+                        }
+                        if (!cancelToken.IsCancellationRequested)
+                        {
+                            _logger.LogDebug("Connection to Home Assistant disconnected, delaying {_connectionTimeout} s before reconnect ...", _connectionTimeout / 1000);
+                            await Delay(_connectionTimeout, cancelToken).ConfigureAwait(false);
+                        }
+
+                    }
+                    await CloseAsync().ConfigureAwait(false);
+                }
+            }
+        }
+        private async Task DelayUntilRunningState(CancellationToken cancelToken)
+        {
+            bool hasRetried = false;
+            while (!cancelToken.IsCancellationRequested)
+            {
+                var hassConfig = await GetConfig().ConfigureAwait(false);
+
+                if (hassConfig.State == "RUNNING")
+                {
+                    return;
+                }
+                if (!hasRetried)
+                    _logger.LogInformation("Home Assistant is not ready yet, state: {State}, Waiting ...", hassConfig.State);
+                hasRetried = true;
+            }
+        }
+
+        private async static Task Delay(int timeout, CancellationToken cancelToken)
+        {
+            try
+            {
+                // We wait a timeout before reconnecting again
+                await Task.Delay(timeout, cancelToken).ConfigureAwait(false);
+            }
+            catch (TaskCanceledException)
+            {
+                // Noop, we expect this to happen
+            }
         }
     }
 }
