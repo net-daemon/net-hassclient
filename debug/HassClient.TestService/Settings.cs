@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging;
-
 namespace JoySoftware.HomeAssistant.Client.TestService;
 
 /// <summary>
@@ -25,7 +23,3 @@ public class HomeAssistantSettings
     public string Token { get; set; } = "";
 }
 
-public class LogSettings
-{
-    public LogLevel LogLevel { get; set; } = LogLevel.Debug;
-}

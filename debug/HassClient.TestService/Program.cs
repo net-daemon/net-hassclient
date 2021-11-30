@@ -1,11 +1,4 @@
-﻿using System;
-using Microsoft.Extensions.Hosting;
-using JoySoftware.HomeAssistant.Extensions;
-using Microsoft.Extensions.Configuration;
-using JoySoftware.HomeAssistant.Client.TestService;
-using Microsoft.Extensions.DependencyInjection;
-
-#pragma warning disable CA1812
+﻿#pragma warning disable CA1812
 
 try
 {

@@ -3,7 +3,6 @@ using JoySoftware.HomeAssistant.Helpers;
 using JoySoftware.HomeAssistant.Messages;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Http;
 
