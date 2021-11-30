@@ -27,6 +27,12 @@ namespace JoySoftware.HomeAssistant.Extensions
             services.AddSingleton(
                 s => s.GetRequiredService<IHassClient>().HassEventsObservable
                 );
+
+            // Adds observable so we can inject IObservable<ConnectionStatus>
+            services.AddSingleton(
+                s => s.GetRequiredService<IHassClient>().ConnectionStatusObservable
+                );
+            
             return services;
         }
 

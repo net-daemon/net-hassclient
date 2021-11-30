@@ -9,12 +9,18 @@ internal class DebugService : BackgroundService
 {
     private readonly IHassClient _hassClient;
     private readonly HomeAssistantSettings _haSettings;
-    public DebugService(IHassClient hassClient, IOptions<HomeAssistantSettings> settings, IObservable<HassEvent> events, ILogger<DebugService> logger)
+    public DebugService(
+        IHassClient hassClient,
+        IOptions<HomeAssistantSettings> settings,
+        IObservable<HassEvent> events,
+        IObservable<ConnectionStatus> connectionStatus,
+        ILogger<DebugService> logger)
     {
         _haSettings = settings.Value;
         _hassClient = hassClient;
 
         events.Subscribe(e => HandleEvent(e, logger));
+        connectionStatus.Subscribe(e => HandleConnectionStatus(e, logger));
     }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -31,4 +37,8 @@ internal class DebugService : BackgroundService
         logger.LogDebug("New event ({type})", hassEvent.EventType);
     }
 
+    private static void HandleConnectionStatus(ConnectionStatus connectionStatus, ILogger logger)
+    {
+        logger.LogInformation("Connection changed status ({connectionStatus})", connectionStatus);
+    }
 }

@@ -157,6 +157,12 @@ namespace JoySoftware.HomeAssistant.Client
         IObservable<HassEvent> HassEventsObservable { get; }
 
         /// <summary>
+        ///     Expose connection status as observable
+        /// </summary>
+        /// <value></value>
+        IObservable<ConnectionStatus> ConnectionStatusObservable { get; }
+
+        /// <summary>
         ///     Returns next incoming event and completes async operation
         /// </summary>
         /// <remarks>Set subscribeEvents=true on ConnectAsync to use.</remarks>
@@ -319,7 +325,10 @@ namespace JoySoftware.HomeAssistant.Client
 
         public IObservable<HassEvent> HassEventsObservable { get; }
 
+        public IObservable<ConnectionStatus> ConnectionStatusObservable { get; }
+
         private event EventHandler<HassEvent>? HassEvents;
+        private event EventHandler<ConnectionStatus>? ConnectionStautsEvents;
 
         public HassClient(ILoggerFactory? loggerFactory = null) : this(
             loggerFactory ?? LoggerHelper.CreateDefaultLoggerFactory(),
@@ -353,6 +362,12 @@ namespace JoySoftware.HomeAssistant.Client
                 a => HassEvents += a,
                 a => HassEvents -= a).Select(e => e.EventArgs)
                 .AsConcurrent(t => TrackBackgroundTask(t));
+
+            ConnectionStatusObservable = Observable.FromEventPattern<EventHandler<ConnectionStatus>, ConnectionStatus>(
+                a => ConnectionStautsEvents += a,
+                a => ConnectionStautsEvents -= a).Select(e => e.EventArgs)
+                .AsConcurrent(t => TrackBackgroundTask(t));
+
         }
 
         /// <summary>
@@ -402,10 +417,9 @@ namespace JoySoftware.HomeAssistant.Client
                     // Already closed
                     return;
                 }
-
                 _isClosing = true;
             }
-
+            ConnectionStautsEvents?.Invoke(this, ConnectionStatus.Disconnected);
             try
             {
                 _logger.LogTrace("Async close websocket");
@@ -538,6 +552,7 @@ namespace JoySoftware.HomeAssistant.Client
                             }
 
                             _logger.LogTrace($"Connected to websocket ({url}) on host {url.Host} and the api ({_apiUrl})");
+                            ConnectionStautsEvents?.Invoke(this, ConnectionStatus.WebSocketConnected);
                             return true;
 
                         case "auth_invalid":
@@ -1204,17 +1219,24 @@ namespace JoySoftware.HomeAssistant.Client
                         {
                             _logger.LogDebug("Connection to Home Assistant cancelled!");
                         }
+                        finally
+                        {
+                            await CloseAsync().ConfigureAwait(false);
+                        }
                         if (!cancelToken.IsCancellationRequested)
                         {
                             _logger.LogDebug("Connection to Home Assistant disconnected, delaying {_connectionTimeout} s before reconnect ...", _connectionTimeout / 1000);
                             await Delay(_connectionTimeout, cancelToken).ConfigureAwait(false);
                         }
-
                     }
-                    await CloseAsync().ConfigureAwait(false);
+                    else
+                    {
+                        await CloseAsync().ConfigureAwait(false);
+                    }
                 }
             }
         }
+
         private async Task DelayUntilRunningState(CancellationToken cancelToken)
         {
             bool hasRetried = false;
@@ -1224,10 +1246,16 @@ namespace JoySoftware.HomeAssistant.Client
 
                 if (hassConfig.State == "RUNNING")
                 {
+                    ConnectionStautsEvents?.Invoke(this, ConnectionStatus.Connected);
                     return;
+
                 }
+
                 if (!hasRetried)
+                {
+                    ConnectionStautsEvents?.Invoke(this, ConnectionStatus.NotRunning);
                     _logger.LogInformation("Home Assistant is not ready yet, state: {State}, Waiting ...", hassConfig.State);
+                }
                 hasRetried = true;
             }
         }
