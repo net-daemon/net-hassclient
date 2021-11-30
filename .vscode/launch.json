@@ -9,10 +9,14 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/console/HassClient.TestService/bin/Debug/net6.0/HassClient.TestService",
-            "cwd": "${workspaceFolder}/console/HassClient.TestService",
+            "program": "${workspaceFolder}/debug/HassClient.TestService/bin/Debug/net6.0/HassClient.TestService",
+            "cwd": "${workspaceFolder}/debug/HassClient.TestService",
             "console": "internalConsole",
-            "stopAtEntry": false
+            "stopAtEntry": false,
+            "env": {
+                "DOTNET_ENVIRONMENT": "Development"
+            },
+            "justMyCode": false
         },
         {
             "name": ".NET Core Attach",

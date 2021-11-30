@@ -14,28 +14,24 @@ namespace JoySoftware.HomeAssistant.Extensions
         public static IServiceCollection AddHassClient(this IServiceCollection services)
         {
             return services
-                .AddClientFactory()
+                .AddWebSocketFactory()
                 .AddPipelineFactory()
-                .AddHttpFactory()
+                .AddHttpClientAndFactory()
                 .AddHassClientImpl();
         }
 
         private static IServiceCollection AddHassClientImpl(this IServiceCollection services)
         {
-            services.TryAddTransient<IHassClient>(provider =>
-            {
-                var loggerFactory = provider.GetService<ILoggerFactory>() ?? LoggerHelper.CreateDefaultLoggerFactory();
-                var pipelineFactory = provider.GetRequiredService<ITransportPipelineFactory<HassMessage>>();
-                var clientFactory = provider.GetRequiredService<IClientWebSocketFactory>();
-                var httpFactory = provider.GetRequiredService<IHttpClientFactory>();
-
-                return new HassClient(loggerFactory, pipelineFactory, clientFactory, httpFactory.CreateClient());
-            });
-
+            services.AddSingleton<HassClient>();
+            services.AddSingleton<IHassClient>(s => s.GetRequiredService<HassClient>());
+            // Adds observable so we can inject IObservable<HassEvent>
+            services.AddSingleton(
+                s => s.GetRequiredService<IHassClient>().HassEventsObservable
+                );
             return services;
         }
 
-        private static IServiceCollection AddClientFactory(this IServiceCollection services)
+        private static IServiceCollection AddWebSocketFactory(this IServiceCollection services)
         {
             services.TryAddTransient<IClientWebSocketFactory, ClientWebSocketFactory>();
             return services;
@@ -47,8 +43,9 @@ namespace JoySoftware.HomeAssistant.Extensions
             return services;
         }
 
-        private static IServiceCollection AddHttpFactory(this IServiceCollection services)
+        private static IServiceCollection AddHttpClientAndFactory(this IServiceCollection services)
         {
+            services.AddSingleton(s => s.GetRequiredService<IHttpClientFactory>().CreateClient());
             services.AddHttpClient<IHassClient, HassClient>().ConfigurePrimaryHttpMessageHandler(ConfigureHttpMessageHandler);
             return services;
         }

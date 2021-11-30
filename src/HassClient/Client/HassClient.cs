@@ -151,6 +151,12 @@ namespace JoySoftware.HomeAssistant.Client
         Task<bool> PingAsync(int timeout);
 
         /// <summary>
+        ///     Expose events from Home Assistant as observable
+        /// </summary>
+        /// <value></value>
+        IObservable<HassEvent> HassEventsObservable { get; }
+
+        /// <summary>
         ///     Returns next incoming event and completes async operation
         /// </summary>
         /// <remarks>Set subscribeEvents=true on ConnectAsync to use.</remarks>
@@ -1173,8 +1179,6 @@ namespace JoySoftware.HomeAssistant.Client
             while (!cancelToken.IsCancellationRequested)
             {
                 // Combine the iternal token with external to go out of loop if disconnected
-
-
                 _logger.LogDebug("Connecting to Home Assistant ...");
                 if (!await ConnectAsync(host, port, ssl, hassToken, true).ConfigureAwait(false))
                 {

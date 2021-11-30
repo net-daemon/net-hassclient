@@ -9,9 +9,6 @@
 		"terminal.integrated.shell.linux": "/bin/bash",
 		"dotnet-test-explorer.testProjectPath": "tests/HassClient.Integration.Tests"
 	},
-	"remoteEnv": {
-		"HOMEASSISTANT__TOKEN": "${localEnv:HOMEASSISTANT__TOKEN}"
-	},
 	// Uncomment the next line if you want to publish any ports.
 	// "appPort": [
 	// 	5001
