@@ -8,6 +8,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using JoySoftware.HomeAssistant.Client;
 using JoySoftware.HomeAssistant.Extensions;
+using JoySoftware.HomeAssistant.Messages;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -140,15 +141,17 @@ namespace HassClient.Unit.Tests
 
         public JoySoftware.HomeAssistant.Client.HassClient GetHassClient(HttpMessageHandler httpMessageHandler = null)
         {
+
             var services = new ServiceCollection();
             services.AddTransient<ILoggerFactory>(_ => Logger.LoggerFactory);
             services.AddTransient<IClientWebSocketFactory>(_ => WebSocketMockFactory.Object);
             services.AddTransient<HttpMessageHandler>(_ => httpMessageHandler);
-            services.AddHassClient();
+            services.AddPipelineFactory();
+            services.AddHttpClientAndFactory();
 
             var provider = services.BuildServiceProvider();
             // TODO: Get rid of cast. Tests shouldn't rely on internal behaviour.
-            return (JoySoftware.HomeAssistant.Client.HassClient) provider.GetRequiredService<IHassClient>();
+            return (JoySoftware.HomeAssistant.Client.HassClient)provider.GetRequiredService<IHassClient>();
         }
 
         /// <summary>

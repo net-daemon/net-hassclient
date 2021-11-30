@@ -19,7 +19,7 @@ namespace JoySoftware.HomeAssistant.Extensions
                 .AddHassClientImpl();
         }
 
-        private static IServiceCollection AddHassClientImpl(this IServiceCollection services)
+        internal static IServiceCollection AddHassClientImpl(this IServiceCollection services)
         {
             services.AddSingleton<HassClient>();
             services.AddSingleton<IHassClient>(s => s.GetRequiredService<HassClient>());
@@ -32,30 +32,30 @@ namespace JoySoftware.HomeAssistant.Extensions
             services.AddSingleton(
                 s => s.GetRequiredService<IHassClient>().ConnectionStatusObservable
                 );
-            
+
             return services;
         }
 
-        private static IServiceCollection AddWebSocketFactory(this IServiceCollection services)
+        internal static IServiceCollection AddWebSocketFactory(this IServiceCollection services)
         {
             services.TryAddTransient<IClientWebSocketFactory, ClientWebSocketFactory>();
             return services;
         }
 
-        private static IServiceCollection AddPipelineFactory(this IServiceCollection services)
+        internal static IServiceCollection AddPipelineFactory(this IServiceCollection services)
         {
             services.TryAddTransient<ITransportPipelineFactory<HassMessage>, WebSocketMessagePipelineFactory<HassMessage>>();
             return services;
         }
 
-        private static IServiceCollection AddHttpClientAndFactory(this IServiceCollection services)
+        internal static IServiceCollection AddHttpClientAndFactory(this IServiceCollection services)
         {
             services.AddSingleton(s => s.GetRequiredService<IHttpClientFactory>().CreateClient());
             services.AddHttpClient<IHassClient, HassClient>().ConfigurePrimaryHttpMessageHandler(ConfigureHttpMessageHandler);
             return services;
         }
 
-        private static HttpMessageHandler ConfigureHttpMessageHandler(IServiceProvider provider)
+        internal static HttpMessageHandler ConfigureHttpMessageHandler(IServiceProvider provider)
         {
             var handler = provider.GetService<HttpMessageHandler>();
             return handler ?? HttpHelper.CreateHttpMessageHandler();
