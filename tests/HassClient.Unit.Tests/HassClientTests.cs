@@ -1329,5 +1329,15 @@ namespace HassClient.Unit.Tests
             }
             Assert.True(gotCorrectEvent, "Observable event did not fire in the subscription");
         }
+
+        // [Fact]
+        // public async Task TestRunIsConnecting()
+        // {
+        //     var mock = new HassWebSocketMock();
+        //     var hassClient = mock.GetAutorizedHassClient();
+        //     var cancelSource = new CancellationTokenSource(5000);
+
+        //     await hassClient.Run("fakehost", 0, false, "fakeToken", cancelSource.Token);
+        // }
     }
 }

@@ -75,7 +75,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <param name="token">AuthToken from Home Assistant for access</param>
         /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
         /// <returns>Returns true if successfully connected</returns>
-        Task<bool> ConnectAsync(string host, short port, bool ssl, string token, bool getStatesOnConnect);
+        Task<HassClientConnectionState> ConnectAsync(string host, short port, bool ssl, string token, bool getStatesOnConnect);
 
         /// <summary>
         ///     Connect to Home Assistant
@@ -84,17 +84,7 @@ namespace JoySoftware.HomeAssistant.Client
         /// <param name="token">AuthToken from Home Assistant for access</param>
         /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
         /// <returns>Returns true if successfully connected</returns>
-        Task<bool> ConnectAsync(Uri url, string token, bool getStatesOnConnect);
-
-        /// <summary>
-        ///     Maintain connection to Home Assistant and process messages
-        /// </summary>
-        /// <param name="host">The host or ip address of Home Assistant</param>
-        /// <param name="port">The port of Home Assistant, typically 8123 or 80</param>
-        /// <param name="ssl">Set to true if Home Assistant using ssl (recommended secure setup for Home Assistant)</param>
-        /// <param name="getStatesOnConnect">Reads all states initially, this is the default behaviour</param>
-        /// <param name="cancelToken">AuthToken from Home Assistant for access</param>
-        Task Run(string host, short port, bool ssl, string hassToken, CancellationToken cancelToken);
+        Task<HassClientConnectionState> ConnectAsync(Uri url, string token, bool getStatesOnConnect);
 
         /// <summary>
         ///     Gets the configuration of the connected Home Assistant instance
@@ -157,12 +147,6 @@ namespace JoySoftware.HomeAssistant.Client
         IObservable<HassEvent> HassEventsObservable { get; }
 
         /// <summary>
-        ///     Expose connection status as observable
-        /// </summary>
-        /// <value></value>
-        IObservable<ConnectionStatus> ConnectionStatusObservable { get; }
-
-        /// <summary>
         ///     Returns next incoming event and completes async operation
         /// </summary>
         /// <remarks>Set subscribeEvents=true on ConnectAsync to use.</remarks>
@@ -215,6 +199,12 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         /// <param name="token">Provided token</param>
         Task<IReadOnlyCollection<HassState>> GetAllStates(CancellationToken? token = null);
+
+        /// <summary>
+        ///     The status of connection to Home Assistant
+        /// </summary>
+        /// <value></value>
+        HassClientConnectionState ConnectionState { get; }
     }
 
     /// <summary>
@@ -228,6 +218,12 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Used to cancel all asynchronous work, is internal so we can test
         /// </summary>
         internal CancellationTokenSource CancelSource = new();
+
+        private readonly Subject<ConnectionStatus> _connectionStatusSubject = new();
+        private HassClientConnectionState _connectionState;
+
+        /// <inheritdoc/>
+        public HassClientConnectionState ConnectionState => _connectionState;
 
         /// <summary>
         ///     Default size for channel
@@ -323,21 +319,9 @@ namespace JoySoftware.HomeAssistant.Client
         /// </summary>
         private IClientWebSocket? _ws;
 
-        public IObservable<HassEvent> HassEventsObservable { get; }
+        private readonly Subject<HassEvent> _hassEventSubject = new();
 
-        public IObservable<ConnectionStatus> ConnectionStatusObservable { get; }
-
-        private event EventHandler<HassEvent>? HassEvents;
-        private event EventHandler<ConnectionStatus>? ConnectionStautsEvents;
-
-        public HassClient(ILoggerFactory? loggerFactory = null) : this(
-            loggerFactory ?? LoggerHelper.CreateDefaultLoggerFactory(),
-            WebSocketHelper.CreatePipelineFactory(),
-            WebSocketHelper.CreateClientFactory(),
-            HttpHelper.CreateHttpClient())
-        {
-        }
-
+        public IObservable<HassEvent> HassEventsObservable => _hassEventSubject;
         /// <summary>
         ///     Instance a new HassClient
         /// </summary>
@@ -357,17 +341,7 @@ namespace JoySoftware.HomeAssistant.Client
             _pipelineFactory = pipelineFactory;
             _wsFactory = wsFactory;
             _httpClient = httpClient;
-
-            HassEventsObservable = Observable.FromEventPattern<EventHandler<HassEvent>, HassEvent>(
-                a => HassEvents += a,
-                a => HassEvents -= a).Select(e => e.EventArgs)
-                .AsConcurrent(t => TrackBackgroundTask(t));
-
-            ConnectionStatusObservable = Observable.FromEventPattern<EventHandler<ConnectionStatus>, ConnectionStatus>(
-                a => ConnectionStautsEvents += a,
-                a => ConnectionStautsEvents -= a).Select(e => e.EventArgs)
-                .AsConcurrent(t => TrackBackgroundTask(t));
-
+            _connectionState = new(CancelSource.Token, _connectionStatusSubject);
         }
 
         /// <summary>
@@ -380,6 +354,8 @@ namespace JoySoftware.HomeAssistant.Client
         ///     Internal property for tests to access the timeout during unit testing
         /// </summary>
         internal int SocketTimeout { get; set; } = DefaultTimeout;
+
+        public ConnectionStatus ConnectionStatus => _connectionState.ConnectionStatus;
 
         // /// <inheritdoc/>
         // public async Task<bool> CallService(string domain, string service, object serviceData, bool waitForResponse = true) =>
@@ -405,6 +381,8 @@ namespace JoySoftware.HomeAssistant.Client
             }
         }
 
+        private void SetConnectionStatus(ConnectionStatus connectionStatus) => _connectionStatusSubject.OnNext(connectionStatus);
+
         /// <summary>
         ///     Closes the websocket
         /// </summary>
@@ -419,7 +397,7 @@ namespace JoySoftware.HomeAssistant.Client
                 }
                 _isClosing = true;
             }
-            ConnectionStautsEvents?.Invoke(this, ConnectionStatus.Disconnected);
+            SetConnectionStatus(ConnectionStatus.Disconnected);
             try
             {
                 _logger.LogTrace("Async close websocket");
@@ -477,11 +455,11 @@ namespace JoySoftware.HomeAssistant.Client
         }
 
         //// <inheritdoc/>
-        public Task<bool> ConnectAsync(string host, short port, bool ssl, string token, bool getStatesOnConnect) =>
+        public Task<HassClientConnectionState> ConnectAsync(string host, short port, bool ssl, string token, bool getStatesOnConnect) =>
             ConnectAsync(new Uri($"{(ssl ? "wss" : "ws")}://{host}:{port}/api/websocket"), token, getStatesOnConnect);
 
         /// <inheritdoc/>
-        public async Task<bool> ConnectAsync(Uri url, string token,
+        public async Task<HassClientConnectionState> ConnectAsync(Uri url, string token,
             bool getStatesOnConnect = true)
         {
             if (url == null)
@@ -552,29 +530,41 @@ namespace JoySoftware.HomeAssistant.Client
                             }
 
                             _logger.LogTrace($"Connected to websocket ({url}) on host {url.Host} and the api ({_apiUrl})");
-                            ConnectionStautsEvents?.Invoke(this, ConnectionStatus.WebSocketConnected);
-                            return true;
+
+                            var hassConfig = await GetConfig().ConfigureAwait(false);
+
+                            // Find out the state of Home Assistant
+                            if (hassConfig.State == "RUNNING")
+                            {
+                                SetConnectionStatus(ConnectionStatus.Connected);
+                            }
+                            else
+                            {
+                                SetConnectionStatus(ConnectionStatus.NotReady);
+                            }
+
+                            return _connectionState;
 
                         case "auth_invalid":
                             _logger.LogError($"Failed to authenticate ({result.Message})");
-                            return false;
+                            return _connectionState;
 
                         default:
                             _logger.LogError($"Unexpected response ({result.Type})");
-                            return false;
+                            return _connectionState;
                     }
                 }
 
                 _logger.LogDebug($"Failed to connect to websocket socket state: {ws.State}");
 
-                return false;
+                return _connectionState;
             }
             catch (Exception e)
             {
                 _logger.LogDebug(e, $"Failed to connect to Home Assistant on {url}");
             }
 
-            return false;
+            return _connectionState;
         }
 
         /// <inheritdoc/>
@@ -873,7 +863,7 @@ namespace JoySoftware.HomeAssistant.Client
                                 _eventChannel.Writer.TryWrite(m.Event);
 
                             // Send to observable subscribers
-                            HassEvents?.Invoke(this, m.Event);
+                            _hassEventSubject.OnNext(m.Event);
                         }
 
                         break;
@@ -1100,7 +1090,8 @@ namespace JoySoftware.HomeAssistant.Client
 
             CancelSource = new CancellationTokenSource();
             _readMessagePumpTask = Task.Run(ReadMessagePump);
-            // _writeMessagePumpTask = Task.Run(WriteMessagePump);
+
+            _connectionState = new(CancelSource.Token, _connectionStatusSubject);
         }
 
         /// <summary>
@@ -1151,6 +1142,8 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 // Ignore errors
             }
+            _hassEventSubject.Dispose();
+            _connectionStatusSubject.Dispose();
             GC.SuppressFinalize(this);
         }
 
@@ -1185,92 +1178,6 @@ namespace JoySoftware.HomeAssistant.Client
             // are handled in the Wrap local functions and
             // all tasks should be cancelable
             _ = Wrap();
-        }
-
-        // Set ConnectionTimeout to 30 seconds
-        private const int _connectionTimeout = 30000;
-        public async Task Run(string host, short port, bool ssl, string hassToken, CancellationToken cancelToken)
-        {
-            while (!cancelToken.IsCancellationRequested)
-            {
-                // Combine the iternal token with external to go out of loop if disconnected
-                _logger.LogDebug("Connecting to Home Assistant ...");
-                if (!await ConnectAsync(host, port, ssl, hassToken, true).ConfigureAwait(false))
-                {
-                    _logger.LogDebug("Failed to connect to Home Assistant, delaying {_connectionTimeout} s", _connectionTimeout / 1000);
-                    await Delay(_connectionTimeout, cancelToken).ConfigureAwait(false);
-                }
-                else
-                {
-                    using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
-                    CancelSource.Token, cancelToken);
-                    // Connection successful
-                    await DelayUntilRunningState(connectTokenSource.Token).ConfigureAwait(false);
-                    if (await SubscribeToEvents().ConfigureAwait(false))
-                    {
-                        // Just wait until someone stops the HassClient
-                        _logger.LogDebug("Connection to Home Assistant successful!");
-                        // await Task.Delay(-1, connectTokenSource.Token);
-                        try
-                        {
-                            await connectTokenSource.Token.AsTask().ConfigureAwait(false);
-                        }
-                        catch (TaskCanceledException)
-                        {
-                            _logger.LogDebug("Connection to Home Assistant cancelled!");
-                        }
-                        finally
-                        {
-                            await CloseAsync().ConfigureAwait(false);
-                        }
-                        if (!cancelToken.IsCancellationRequested)
-                        {
-                            _logger.LogDebug("Connection to Home Assistant disconnected, delaying {_connectionTimeout} s before reconnect ...", _connectionTimeout / 1000);
-                            await Delay(_connectionTimeout, cancelToken).ConfigureAwait(false);
-                        }
-                    }
-                    else
-                    {
-                        await CloseAsync().ConfigureAwait(false);
-                    }
-                }
-            }
-        }
-
-        private async Task DelayUntilRunningState(CancellationToken cancelToken)
-        {
-            bool hasRetried = false;
-            while (!cancelToken.IsCancellationRequested)
-            {
-                var hassConfig = await GetConfig().ConfigureAwait(false);
-
-                if (hassConfig.State == "RUNNING")
-                {
-                    ConnectionStautsEvents?.Invoke(this, ConnectionStatus.Connected);
-                    return;
-
-                }
-
-                if (!hasRetried)
-                {
-                    ConnectionStautsEvents?.Invoke(this, ConnectionStatus.NotRunning);
-                    _logger.LogInformation("Home Assistant is not ready yet, state: {State}, Waiting ...", hassConfig.State);
-                }
-                hasRetried = true;
-            }
-        }
-
-        private async static Task Delay(int timeout, CancellationToken cancelToken)
-        {
-            try
-            {
-                // We wait a timeout before reconnecting again
-                await Task.Delay(timeout, cancelToken).ConfigureAwait(false);
-            }
-            catch (TaskCanceledException)
-            {
-                // Noop, we expect this to happen
-            }
         }
     }
 }

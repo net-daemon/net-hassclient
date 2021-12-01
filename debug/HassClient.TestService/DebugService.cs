@@ -1,3 +1,4 @@
+using JoySoftware.HomeAssistant.Runner;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,24 +8,26 @@ namespace JoySoftware.HomeAssistant.Client.TestService;
 
 internal class DebugService : BackgroundService
 {
-    private readonly IHassClient _hassClient;
+    private readonly IHassClientRunner _hassClientRunner;
+
     private readonly HomeAssistantSettings _haSettings;
     public DebugService(
-        IHassClient hassClient,
+        IHassClientRunner hassClientRunner,
         IOptions<HomeAssistantSettings> settings,
         IObservable<HassEvent> events,
         IObservable<ConnectionStatus> connectionStatus,
         ILogger<DebugService> logger)
     {
         _haSettings = settings.Value;
-        _hassClient = hassClient;
+        _hassClientRunner = hassClientRunner;
 
         events.Subscribe(e => HandleEvent(e, logger));
         connectionStatus.Subscribe(e => HandleConnectionStatus(e, logger));
+
     }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await _hassClient.Run(
+        await _hassClientRunner.Run(
                     _haSettings.Host,
                     _haSettings.Port,
                     _haSettings.Ssl,

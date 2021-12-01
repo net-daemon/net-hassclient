@@ -1,6 +1,7 @@
 ﻿using JoySoftware.HomeAssistant.Client;
 using JoySoftware.HomeAssistant.Helpers;
 using JoySoftware.HomeAssistant.Messages;
+using JoySoftware.HomeAssistant.Runner;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
@@ -28,10 +29,13 @@ namespace JoySoftware.HomeAssistant.Extensions
                 s => s.GetRequiredService<IHassClient>().HassEventsObservable
                 );
 
-            // Adds observable so we can inject IObservable<ConnectionStatus>
             services.AddSingleton(
-                s => s.GetRequiredService<IHassClient>().ConnectionStatusObservable
+                s => s.GetRequiredService<IHassClient>().ConnectionState.ConnectionStateObservable
                 );
+
+            services.AddSingleton<HassClientRunner>();
+            services.AddSingleton<IHassClientRunner>(s => s.GetRequiredService<HassClientRunner>());
+            // Adds observable so we can inject IObservable<ConnectionStatus>
 
             return services;
         }
