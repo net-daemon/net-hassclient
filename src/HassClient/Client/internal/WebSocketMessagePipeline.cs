@@ -232,6 +232,24 @@ namespace JoySoftware.HomeAssistant.Client
                     // Canceled the thread just leave
                     break;
                 }
+                catch (Exception e)
+                {
+                    _logger.LogTrace(e, "Websocket error");
+                    try
+                    {
+                        await _ws.CloseAsync(WebSocketCloseStatus.EndpointUnavailable, "Remote disconnected",
+                            _internalCancelToken).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // Suppress any error 
+                    }
+                    finally
+                    {
+                        _internalCancellationSource.Cancel();
+                    }
+                    break;
+                }
                 finally
                 {
                     // Always make sure the pipe is reset and ready to use next process message
@@ -326,7 +344,8 @@ namespace JoySoftware.HomeAssistant.Client
                             await SendCloseFrameToWebSocket().ConfigureAwait(false);
 
                             // Cancel so the write thread is canceled before pipe is complete
-                            _internalCancellationSource.Cancel();
+                            if (!_internalCancellationSource.IsCancellationRequested)
+                                _internalCancellationSource.Cancel();
                         }
 
                         // Continue reading next part of websocket message

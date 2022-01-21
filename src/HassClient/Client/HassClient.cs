@@ -798,10 +798,11 @@ namespace JoySoftware.HomeAssistant.Client
         /// </remarks>
         internal virtual async Task ProcessNextMessage()
         {
-            if (_messagePipeline is null)
+            if (_messagePipeline is null || !_messagePipeline.IsValid)
             {
-                _logger.LogWarning("Processing message with no {Pipeline} set! returning.", nameof(_messagePipeline));
-                return;
+                if (!CancelSource.IsCancellationRequested)
+                    CancelSource.Cancel();  // Cancels all operations on a faulty pipeline
+                throw new InvalidOperationException($"Processing message fail.");
             }
 
             try
