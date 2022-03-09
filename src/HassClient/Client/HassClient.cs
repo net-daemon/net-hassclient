@@ -802,7 +802,7 @@ namespace JoySoftware.HomeAssistant.Client
             {
                 if (!CancelSource.IsCancellationRequested)
                     CancelSource.Cancel();  // Cancels all operations on a faulty pipeline
-                throw new InvalidOperationException($"Processing message fail.");
+                return;
             }
 
             try
