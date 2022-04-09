@@ -70,12 +70,6 @@ namespace JoySoftware.HomeAssistant.Model
     {
     }
 
-    public record SelectSelector
-    {
-        [Required]
-        public IReadOnlyCollection<string>? Options { get; init; }
-    }
-
     public record TargetSelector
     {
         public AreaSelector? Area { get; init; }
