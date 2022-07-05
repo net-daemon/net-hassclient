@@ -29,4 +29,4 @@ jobs:
       - name: 🎁 pack DaemonRunner
         run: dotnet pack ${{github.workspace}}/src/HassClient/HassClient.csproj --configuration Release -p:PackageVersion=${{ steps.version.outputs.version }}-beta
       - name: 📨 push to nuget
-        run: dotnet nuget push **/*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json --no-symbols true
+        run: dotnet nuget push **/*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json --no-symbols
